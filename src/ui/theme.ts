@@ -148,7 +148,7 @@ export const IMAGES = {
 
 /** Sticker aspect ratios (width / height), so a sticker sized by height keeps its die-cut shape. */
 export const STICKER_RATIO = {
-  'sticker-full': 252 / 703,
+  'sticker-full': 252 / 702,
   'sticker-full-3q': 227 / 703,
   'sticker-reading': 301 / 276,
   'sticker-thinking': 285 / 282,

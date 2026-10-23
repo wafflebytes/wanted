@@ -60,7 +60,7 @@ def largest_blob(im: Image.Image) -> Image.Image:
     return mask
 
 
-def cutout(im: Image.Image) -> Image.Image:
+def cutout(im: Image.Image, floor: bool = False) -> Image.Image:
     im = im.convert("RGBA")
     w, h = im.size
     px = im.load()
@@ -68,13 +68,21 @@ def cutout(im: Image.Image) -> Image.Image:
     seen = bytearray(w * h)
     q = deque((x, y) for x in range(w) for y in (0, h - 1))
     q.extend((x, y) for y in range(h) for x in (0, w - 1))
+
+    def clear(r: int, g: int, b: int, y: int) -> bool:
+        if abs(r - bg[0]) + abs(g - bg[1]) + abs(b - bg[2]) <= CREAM_TOL * 3:
+            return True
+        # Full-body poses stand on a soft grey floor shadow; in the floor band, drop it too.
+        # The shoes' ink outline stops the fill, so soles and socks stay.
+        return floor and y > h * 0.88 and min(r, g, b) > 150 and max(r, g, b) - min(r, g, b) < 42
+
     while q:
         x, y = q.popleft()
         if x < 0 or y < 0 or x >= w or y >= h or seen[y * w + x]:
             continue
         seen[y * w + x] = 1
         r, g, b, _ = px[x, y]
-        if abs(r - bg[0]) + abs(g - bg[1]) + abs(b - bg[2]) > CREAM_TOL * 3:
+        if not clear(r, g, b, y):
             continue
         px[x, y] = (0, 0, 0, 0)
         q.extend(((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)))
@@ -94,7 +102,7 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     sheet = Image.open(SHEET)
     for name, box in CROPS.items():
-        s = cutout(sheet.crop(box))
+        s = cutout(sheet.crop(box), floor=name.startswith("gus-full"))
         s.save(OUT / f"{name}.webp", "WEBP", quality=92, method=6)
         print(name, s.size)
 
