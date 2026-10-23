@@ -10,7 +10,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useArtist } from '@/ui/artist';
-import { Btn, Chip, Empty, Group, ListRow, Row, Section, SkewBar } from '@/ui/components/core';
+import { Btn, Chip, Empty, Group, ListRow, Row, Section, SkewBar, FeatureCard } from '@/ui/components/core';
 import { GusLine } from '@/ui/components/Gus';
 import { Prov } from '@/ui/components/Receipts';
 import { ScreenHeader } from '@/ui/components/ScreenHeader';
@@ -77,7 +77,7 @@ export default function CrowdScreen() {
 
               {data.who ? (
                 <Section title="Who they are" trailing={<Prov kind="qloo" receipts={data.receipts} title="Who your crowd is" />}>
-                  <View style={{ backgroundColor: C.card, borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.lg }}>
+                  <FeatureCard tone="stage" style={{ gap: S.lg }}>
                     {data.who.line ? <T v="title2">{cap(data.who.line)}</T> : null}
                     <View style={{ gap: S.sm }}>
                       <T v="label">Age</T>
@@ -101,7 +101,7 @@ export default function CrowdScreen() {
                         <T v="caption">less</T>
                       </Row>
                     </Row>
-                  </View>
+                  </FeatureCard>
                 </Section>
               ) : null}
             </View>

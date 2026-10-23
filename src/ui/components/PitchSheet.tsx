@@ -7,7 +7,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState } from 'react';
 import { Linking, Platform, ScrollView, Share, TextInput, View } from 'react-native';
-import { GlassSheet, GlassSheetContent, GlassSheetTitle } from '@/components/glassyui/glass-sheet';
+import { Sheet } from './Sheet';
 import type { DayKey, Receipt } from '@/lib/types';
 import { api } from '../api';
 import { haptic } from '../haptics';
@@ -72,12 +72,29 @@ export function PitchSheet({ slug, target, onClose }: { slug: string; target: Pi
   const mail = () => Linking.openURL(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
 
   return (
-    <GlassSheet open={!!target} onOpenChange={(o) => !o && onClose()}>
-      <GlassSheetContent closeLabel="Close pitch">
-        <GlassSheetTitle>Pitch {ev?.room.name ?? target?.cityName ?? ''}</GlassSheetTitle>
-        <ScrollView style={{ maxHeight: 620 }} contentContainerStyle={{ gap: 14, paddingTop: 10 }}>
+    <Sheet
+      open={!!target}
+      onClose={onClose}
+      closeLabel="Close pitch"
+      title={`Pitch ${ev?.room.name ?? target?.cityName ?? ''}`}
+      subtitle={ev ? `${target?.cityName ?? ''}${target?.date ? ` · ${target.date.day.charAt(0).toUpperCase()}${target.date.day.slice(1)} ${target.date.date}` : ''}` : 'Gus is drafting'}
+      large
+      footer={
+        ev ? (
+          <Row gap={8}>
+            <Btn tone="action" size="lg" onPress={copy} style={{ flex: 1 }} full icon={<Icon name="copy" variant="bold" size={18} color={C.text} />}>
+              {copied ? 'Copied' : 'Copy email'}
+            </Btn>
+            <Btn size="lg" onPress={Platform.OS === 'web' ? mail : share} icon={<Icon name={Platform.OS === 'web' ? 'mail' : 'share'} size={18} color={C.text} />}>
+              {Platform.OS === 'web' ? 'Mail' : 'Share'}
+            </Btn>
+          </Row>
+        ) : null
+      }
+    >
+        <View style={{ gap: 14 }}>
           {err ? <T color={C.bad}>{err}</T> : null}
-          {!res && !err ? <GusLine line={null} thinking="Drafting the pitch. Every number has to come from the evidence…" orb="composing" /> : null}
+          {!res && !err ? <GusLine line={null} thinking="Drafting the pitch. Every number has to come from the evidence" /> : null}
           {ev ? (
             <>
               <View style={{ gap: 8 }}>
@@ -127,18 +144,10 @@ export function PitchSheet({ slug, target, onClose }: { slug: string; target: Pi
                 </Row>
                 {!res!.email.check.ok ? <T v="caption">{res!.email.check.problems.join('; ')}</T> : null}
               </View>
-              <Row gap={8} wrap>
-                <Btn tone="action" onPress={copy}>
-                  {copied ? 'Copied' : 'Copy email'}
-                </Btn>
-                <Btn onPress={mail}>Open in Mail</Btn>
-                {Platform.OS !== 'web' ? <Btn onPress={share}>Share</Btn> : null}
-              </Row>
               <T v="caption">Qloo predicts taste, not headcounts, so the pitch never promises a capacity or ticket number.</T>
             </>
           ) : null}
-        </ScrollView>
-      </GlassSheetContent>
-    </GlassSheet>
+        </View>
+    </Sheet>
   );
 }

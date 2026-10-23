@@ -7,16 +7,17 @@ import Head from 'expo-router/head';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GlassSheet, GlassSheetContent, GlassSheetTitle } from '@/components/glassyui/glass-sheet';
+import { Sheet } from '@/ui/components/Sheet';
+import { useLocalSearchParams } from 'expo-router';
 import { inRegions, REGION_LABELS, type Region } from '@/lib/regions';
 import type { Roast, RoomBand, TourPlan, TourStop } from '@/lib/types';
 import { api } from '@/ui/api';
 import { useArtist } from '@/ui/artist';
-import { Btn, Card, Chip, Empty, Group, IconBtn, ListRow, Row, Section, Segmented } from '@/ui/components/core';
+import { BigStat, Btn, Card, Chip, Empty, FeatureCard, Group, IconBtn, ListRow, Row, Section, Segmented } from '@/ui/components/core';
 import { ScreenHeader } from '@/ui/components/ScreenHeader';
 import { TAB_BAR_SPACE } from '@/ui/components/TabBar';
 import { ScoreDial, VanRun } from '@/ui/components/Dial';
-import { GusLine, moodForScore } from '@/ui/components/Gus';
+import { GusLine, GusWorking, moodForScore } from '@/ui/components/Gus';
 import { PitchSheet, type PitchTarget } from '@/ui/components/PitchSheet';
 import { DemoTag, Prov } from '@/ui/components/Receipts';
 import { T } from '@/ui/components/T';
@@ -96,6 +97,19 @@ export default function Tour() {
     }
   };
 
+  // Gus's actions arrive as params: ?do=plan re-routes the van, ?pitch=city opens the pitch.
+  const params = useLocalSearchParams<{ do?: string; pitch?: string; t?: string }>();
+  useEffect(() => {
+    if (!c || !params.t) return;
+    if (params.do === 'plan') act({ kind: 'new' }, 'new');
+    else if (params.pitch) {
+      const stop = plan?.stops.find((x) => x.metroId === params.pitch);
+      const name = stop?.city ?? state?.opened.find((o) => o.city === params.pitch)?.name ?? params.pitch;
+      setPitch({ city: params.pitch, cityName: name, roomId: stop?.room?.id ?? null, date: stop ? { date: stop.date, day: stop.day } : null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.t, !!c]);
+
   const roasts = (plan?.roasts ?? []).filter((r) => !dismissed.has(r.id));
   const proofBy = useMemo(() => Object.fromEntries((state?.opened ?? []).map((o) => [o.city, o.proof])), [state]);
   const alternatives = useMemo(() => {
@@ -120,18 +134,28 @@ export default function Tour() {
         <ScreenHeader title="Tour" subtitle={plan ? `${fmtDate(plan.stops[0]?.date)} – ${fmtDate(plan.stops[plan.stops.length - 1]?.date)}` : undefined} slug={slug} />
 
         {plan ? (
-          <View style={{ backgroundColor: C.card, borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.lg }}>
-            <Row gap={S.lg} style={{ alignItems: 'center' }}>
-              <ScoreDial score={plan.total} size={132} />
-              <View style={{ flex: 1, gap: S.md }}>
-                <MiniStat icon="calendar" value={`${plan.stops.length}`} label="dates" />
-                <MiniStat icon="van" value={`${driveH}`} label="hours driving" />
-                <MiniStat icon="danger" value={`${roasts.length}`} label={roasts.length === 1 ? 'roast' : 'roasts'} color={roasts.length ? C.flame : C.good} />
-              </View>
-            </Row>
+          <>
+            <FeatureCard tone="stage" style={{ paddingBottom: S.sm }}>
+              <Row style={{ justifyContent: 'space-between' }}>
+                <T v="eyebrow" color="rgba(235,235,245,0.72)">
+                  {state?.artist.name ?? 'Your'} · {plan.stops.length}-date run
+                </T>
+                {state?.artist.isDemo ? <DemoTag /> : null}
+              </Row>
+              <Row gap={S.md} style={{ alignItems: 'center' }}>
+                <ScoreDial score={plan.total} size={136} />
+                <View style={{ flex: 1, gap: S.md }}>
+                  <Row gap={S.lg}>
+                    <BigStat label="Dates" value={plan.stops.length} />
+                    <BigStat label="Driving" value={`${driveH}h`} />
+                  </Row>
+                  <BigStat label="Roasts" value={roasts.length} color={roasts.length ? '#FF8A7A' : C.good} sub={roasts.length ? 'Gus has notes' : 'Clean route'} />
+                </View>
+              </Row>
+              <VanRun runKey={runKey} width={Math.min(width, 720) - S.gutter * 2 - S.lg * 2} />
+            </FeatureCard>
             <GusLine line={plan.gusLine} mood={moodForScore(plan.total)} model={plan.gusModel} />
-            <VanRun runKey={runKey} width={Math.min(width, 720) - S.gutter * 2 - S.lg * 2} />
-          </View>
+          </>
         ) : null}
 
         {c ? (
@@ -157,11 +181,11 @@ export default function Tour() {
           </Section>
         ) : null}
 
-        {!plan && !loading && busy !== 'new' ? <Empty title="No route yet" line="Pick your regions and dates. I'll route the van and tell you what's wrong with it." /> : null}
-        {busy === 'new' ? <GusLine line={null} thinking="Routing the van. Nearest neighbor, then 2-opt…" orb="solving" /> : null}
+        {!plan && !loading && busy !== 'new' ? <GusLine line="Pick your regions and dates. I'll route the van and tell you what's wrong with it." mood="reading" model="gus-lite" /> : null}
+        {busy === 'new' ? <GusWorking label="Routing the van" step="Nearest neighbor, then 2-opt, then the roasts" /> : null}
 
         {roasts.length ? (
-          <Section title={`Roasts · ${roasts.length}`} tint={C.flame}>
+          <Section title={`Gus roasts · ${roasts.length}`} tint="#FF8A7A">
             {roasts.map((r) => (
               <RoastCard
                 key={r.id}
@@ -213,11 +237,29 @@ export default function Tour() {
         ) : null}
       </ScrollView>
 
-      <GlassSheet open={editing && !!c} onOpenChange={(o) => !o && setEditing(false)}>
-        <GlassSheetContent closeLabel="Done">
+      <Sheet
+        open={editing && !!c}
+        onClose={() => setEditing(false)}
+        closeLabel="Done"
+        title="Constraints"
+        subtitle="Where, when and how big"
+        footer={
+          <Btn
+            tone="scout"
+            size="lg"
+            full
+            busy={busy === 'new'}
+            onPress={async () => {
+              setEditing(false);
+              await act({ kind: 'new' }, 'new');
+            }}
+          >
+            {plan ? 'Plan again from scratch' : 'Plan the tour'}
+          </Btn>
+        }
+      >
           {c ? (
             <View style={{ gap: S.xl }}>
-              <GlassSheetTitle>Constraints</GlassSheetTitle>
               <Section title="Regions">
                 <Row gap={S.sm} wrap>
                   {(Object.keys(REGION_LABELS) as Region[]).map((r) => {
@@ -262,28 +304,13 @@ export default function Tour() {
                   style={{ color: C.text, fontFamily: F.mono, fontSize: 17, backgroundColor: C.fill, borderRadius: 12, paddingHorizontal: S.md, minHeight: 44, outlineStyle: 'none' } as object}
                 />
               </Section>
-              <Btn
-                tone="scout"
-                size="lg"
-                full
-                busy={busy === 'new'}
-                onPress={async () => {
-                  setEditing(false);
-                  await act({ kind: 'new' }, 'new');
-                }}
-              >
-                {plan ? 'Plan again from scratch' : 'Plan the tour'}
-              </Btn>
             </View>
           ) : null}
-        </GlassSheetContent>
-      </GlassSheet>
+      </Sheet>
 
-      <GlassSheet open={!!why} onOpenChange={(o) => !o && setWhy(null)}>
-        <GlassSheetContent closeLabel="Close">
+      <Sheet open={!!why} onClose={() => setWhy(null)} title={why ? RULE_LABEL[why.rule] : ''} subtitle="Why Gus flagged it">
           {why ? (
             <View style={{ gap: S.lg }}>
-              <GlassSheetTitle>{RULE_LABEL[why.rule]}</GlassSheetTitle>
               <T v="gus">“{why.line}”</T>
               <T v="body">{why.why}</T>
               <Row gap={S.sm}>
@@ -309,13 +336,10 @@ export default function Tour() {
               <T v="caption">Roasts are rules in code (PRD 6.4). Every Fix is simulated first; Gus only writes the line. Gus roasts routes, not people.</T>
             </View>
           ) : null}
-        </GlassSheetContent>
-      </GlassSheet>
+      </Sheet>
 
-      <GlassSheet open={swapFor !== null} onOpenChange={(o) => !o && setSwapFor(null)}>
-        <GlassSheetContent closeLabel="Close">
-          <GlassSheetTitle>Swap {swapFor !== null ? plan?.stops[swapFor]?.city : ''} for…</GlassSheetTitle>
-          <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ paddingTop: S.sm }}>
+      <Sheet open={swapFor !== null} onClose={() => setSwapFor(null)} title={`Swap ${swapFor !== null ? (plan?.stops[swapFor]?.city ?? '') : ''}`} subtitle="Best-scoring cities not on the route">
+          <View>
             <Group>
               {alternatives.map((m) => (
                 <ListRow
@@ -331,9 +355,8 @@ export default function Tour() {
               ))}
             </Group>
             {!alternatives.length ? <T v="footnote">No other scored cities in these regions.</T> : null}
-          </ScrollView>
-        </GlassSheetContent>
-      </GlassSheet>
+          </View>
+      </Sheet>
 
       {slug && roomFor !== null && plan ? (
         <RoomPicker
@@ -365,32 +388,32 @@ function MiniStat({ icon, value, label, color = C.text }: { icon: IconName; valu
   );
 }
 
-const SEVERITY = (n: number) => (n >= 3 ? C.bad : n === 2 ? C.flame : C.warn);
+const SEVERITY = (n: number) => (n >= 3 ? '#FF8A7A' : n === 2 ? '#FFB199' : C.warn);
 
 function RoastCard({ r, busy, onFix, onWhy, onDismiss }: { r: Roast; busy: boolean; onFix?: () => void; onWhy: () => void; onDismiss: () => void }) {
   return (
-    <View style={{ backgroundColor: C.card, borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.md }}>
+    <FeatureCard tone="roast">
       <Row style={{ justifyContent: 'space-between' }}>
         <Row gap={6}>
-          <Icon name="danger" variant="bold" size={15} color={SEVERITY(r.severity)} />
-          <T style={{ fontFamily: F.monoBold, fontSize: 12, letterSpacing: 0.8, color: SEVERITY(r.severity) }}>{RULE_LABEL[r.rule].toUpperCase()}</T>
+          <Icon name="danger" variant="bold" size={16} color={SEVERITY(r.severity)} />
+          <T v="eyebrow" color={SEVERITY(r.severity)}>
+            {RULE_LABEL[r.rule]}
+          </T>
         </Row>
-        <IconBtn size={30} icon={<Icon name="close" size={18} color={C.text3} />} label={`Dismiss ${RULE_LABEL[r.rule]}`} onPress={onDismiss} tint="transparent" />
+        <IconBtn size={32} icon={<Icon name="close" size={18} color="rgba(255,255,255,0.6)" />} label={`Dismiss ${RULE_LABEL[r.rule]}`} onPress={onDismiss} tint="rgba(255,255,255,0.08)" />
       </Row>
-      <T v="gus" style={{ fontSize: 19, lineHeight: 24 }}>
+      <T v="gus" style={{ fontSize: 22, lineHeight: 27 }}>
         “{r.line}”
       </T>
       <Row gap={S.sm}>
         {onFix ? (
-          <Btn size="sm" tone="scout" busy={busy} onPress={onFix} accessibilityLabel={`Fix: ${RULE_LABEL[r.rule]}${r.gain ? `, plus ${r.gain.toFixed(1)} Tour Score` : ''}`}>
-            {r.gain ? `Fix  +${r.gain.toFixed(1)}` : 'Fix'}
+          <Btn tone="scout" busy={busy} onPress={onFix} accessibilityLabel={`Fix: ${RULE_LABEL[r.rule]}${r.gain ? `, plus ${r.gain.toFixed(1)} Tour Score` : ''}`} icon={<Icon name="flash" variant="bold" size={16} color={C.text} />}>
+            {r.gain ? `Fix it  +${r.gain.toFixed(1)}` : 'Fix it'}
           </Btn>
         ) : null}
-        <Btn size="sm" onPress={onWhy}>
-          Why
-        </Btn>
+        <Btn onPress={onWhy}>Why</Btn>
       </Row>
-    </View>
+    </FeatureCard>
   );
 }
 
@@ -533,11 +556,9 @@ function StopRow({
 function RoomPicker({ slug, stop, onClose, onPick }: { slug: string; stop: TourStop; onClose: () => void; onPick: (id: string) => void }) {
   const { data } = useApi<CityData>(`/artist/${slug}/city/${stop.metroId}`);
   return (
-    <GlassSheet open onOpenChange={(o) => !o && onClose()}>
-      <GlassSheetContent closeLabel="Close">
-        <GlassSheetTitle>Rooms in {stop.city}</GlassSheetTitle>
-        <ScrollView style={{ maxHeight: 480 }} contentContainerStyle={{ paddingTop: S.sm }}>
-          {!data ? <GusLine line={null} thinking="Pulling Qloo's rooms…" orb="searching" compact /> : null}
+    <Sheet open onClose={onClose} title={`Rooms in ${stop.city}`} subtitle={`For ${stop.day.charAt(0).toUpperCase()}${stop.day.slice(1)} ${fmtDate(stop.date)}`}>
+        <View>
+          {!data ? <GusWorking label="Pulling Qloo's rooms" style={{ alignSelf: 'flex-start' }} /> : null}
           {data ? (
             <Group>
               {data.rooms.map((r) => {
@@ -556,8 +577,7 @@ function RoomPicker({ slug, stop, onClose, onPick }: { slug: string; stop: TourS
               })}
             </Group>
           ) : null}
-        </ScrollView>
-      </GlassSheetContent>
-    </GlassSheet>
+        </View>
+    </Sheet>
   );
 }

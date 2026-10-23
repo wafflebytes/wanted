@@ -10,7 +10,7 @@ import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, absoluteUrl } from '@/ui/api';
 import { useArtist } from '@/ui/artist';
-import { Btn, Chip, Empty, Group, ListRow, Row, Section } from '@/ui/components/core';
+import { BigStat, Btn, Chip, Empty, FeatureCard, Group, ListRow, Progress, Row, Section } from '@/ui/components/core';
 import { GusLine } from '@/ui/components/Gus';
 import { Poster, POSTER_RATIO } from '@/ui/components/Poster';
 import { DemoTag, Prov } from '@/ui/components/Receipts';
@@ -181,11 +181,17 @@ export default function Posters() {
 
             {o ? (
               <View style={{ paddingHorizontal: S.gutter, gap: S.xl }}>
-                <View style={{ flexDirection: 'row', backgroundColor: C.card, borderRadius: R.card, borderCurve: 'continuous', paddingVertical: S.md }}>
-                  <Cell value={`${o.proof?.signatures ?? 0}`} label="Signatures" color={C.fans} />
-                  <Cell value={o.proof?.ratio !== null && o.proof?.ratio !== undefined ? `${o.proof.ratio.toFixed(1)}×` : '—'} label="vs. predicted" color={o.proof?.crossed ? C.good : C.text} />
-                  <Cell value={`${poster?.deputiesLeft ?? '—'}`} label="Deputy spots" color={C.gold} />
-                </View>
+                <FeatureCard tone={o.proof?.crossed ? 'proof' : 'stage'}>
+                  <T v="eyebrow" color={o.proof?.crossed ? C.good : '#E3B8FF'}>
+                    {o.proof?.crossed ? `Proven · ${o.name}` : `Fans say · ${o.name}`}
+                  </T>
+                  <Row gap={S.xl} style={{ alignItems: 'flex-start' }}>
+                    <BigStat label="Signed" value={o.proof?.signatures ?? 0} size="lg" />
+                    <BigStat label="Vs. predicted" value={o.proof?.ratio !== null && o.proof?.ratio !== undefined ? `${o.proof.ratio.toFixed(1)}×` : '—'} color={o.proof?.crossed ? C.good : C.text} />
+                    <BigStat label="Deputies left" value={`${poster?.deputiesLeft ?? '—'}`} color={C.gold} />
+                  </Row>
+                  <Progress value={(o.proof?.signatures ?? 0) / 50} color={o.proof?.crossed ? C.good : C.purpleHi} height={8} />
+                </FeatureCard>
 
                 <View style={{ gap: S.md }}>
                   <Btn tone="scout" size="lg" full onPress={share} icon={<Icon name="share" variant="bold" size={20} color={C.text} />}>

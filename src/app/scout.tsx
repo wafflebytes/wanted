@@ -13,15 +13,18 @@ import { GlassSegmentedControl, GlassSegmentedControlItem } from '@/components/g
 import type { Region } from '@/lib/regions';
 import type { ActEntity, RoomBand } from '@/lib/types';
 import { api, ApiError, streamNdjson } from '@/ui/api';
-import { Btn, Card, Chip, Row } from '@/ui/components/core';
+import { Btn, Card, Chip, FeatureCard, Row } from '@/ui/components/core';
 import { Prov } from '@/ui/components/Receipts';
 import { T } from '@/ui/components/T';
-import { Dictate } from '@/ui/fx/Dictate';
-import { Orb } from '@/ui/fx/Orb';
+import { useListen } from '@/ui/agent/listen';
+import { GusSticker, GusWorking, VoiceBars } from '@/ui/components/Gus';
+import { SheetButton } from '@/ui/components/Sheet';
+import { Beam } from '@/ui/fx/Beam';
+import { VoiceGlow } from '@/ui/fx/VoiceGlow';
 import { haptic } from '@/ui/haptics';
 import { prime } from '@/ui/hooks';
 import { defaultStart, session } from '@/ui/session';
-import { C, F, IMAGES, R } from '@/ui/theme';
+import { C, F, IMAGES, R, S } from '@/ui/theme';
 import { Icon } from '@/ui/icons/Icon';
 
 type Lookup = { role: 'self' | 'reference'; name: string; candidates: ActEntity[]; receipts: never[] };
@@ -58,6 +61,8 @@ export default function Scout() {
   const params = useLocalSearchParams<{ preset?: string }>();
   const preset = params.preset ? PRESETS[params.preset] : null;
   const [text, setText] = useState(preset?.text ?? '');
+  // Say it instead of typing it: the transcript fills the box live; a pause ends the take.
+  const listen = useListen({ onPartial: setText, onFinal: setText });
   const [name, setName] = useState('');
   const [kind, setKind] = useState<'music' | 'comedy'>(preset?.kind ?? 'music');
   const [band, setBand] = useState<RoomBand>('small');
@@ -164,44 +169,49 @@ export default function Scout() {
         <title>Scout · Wanted</title>
       </Head>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 40, paddingHorizontal: 20, gap: 18, maxWidth: 680, width: '100%', alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
-        <Row style={{ justifyContent: 'space-between' }}>
-          <T v="label" color={C.purpleHi}>
+        <Row style={{ justifyContent: 'space-between', minHeight: 44 }}>
+          <T v="eyebrow" color={C.purpleHi}>
             Scout
           </T>
-          <Btn size="sm" tone="ghost" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} accessibilityLabel="Close Scout">
-            Close
-          </Btn>
+          <SheetButton icon="close" label="Close Scout" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
         </Row>
 
         {phase === 'ask' ? (
           <>
-            <T v="title">Who do you sound like?</T>
-            <T v="small">Name 1 to 3 acts (or paste a Spotify artist link). Add dates, regions and room size if you like; Gus parses the rest.</T>
-            <Dictate
-              onText={setText}
-              renderButton={({ listening, toggle }) => (
-                <Pressable accessibilityRole="button" accessibilityLabel={listening ? 'Stop dictation' : 'Dictate'} onPress={toggle} style={{ position: 'absolute', right: 10, bottom: 10 }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: listening ? C.flame : 'rgba(255,255,255,0.08)' }}>
-                    <Icon name={listening ? 'stop' : 'mic'} variant={listening ? 'bold' : 'linear'} size={19} color={C.text} />
-                  </View>
-                </Pressable>
-              )}
-            >
-              {(button) => (
-                <View style={{ backgroundColor: C.card, borderRadius: R.md, padding: 14, paddingRight: 56, minHeight: 120 }}>
-                  <TextInput
-                    value={text}
-                    onChangeText={setText}
-                    placeholder="I sound like Phoebe Bridgers and Japanese Breakfast. Ten dates, Midwest and East Coast, small rooms."
-                    placeholderTextColor={C.text3}
-                    multiline
-                    accessibilityLabel="Describe your sound and tour"
-                    style={{ color: C.text, fontFamily: F.serif, fontSize: 21, lineHeight: 27, minHeight: 92, outlineStyle: 'none' } as object}
-                  />
-                  {button}
+            <Row gap={S.sm} style={{ alignItems: 'flex-end' }}>
+              <View style={{ flex: 1, gap: S.xs }}>
+                <T v="largeTitle">Who do you sound like?</T>
+                <T v="callout" color={C.text2}>
+                  Say it or type it: 1 to 3 acts, plus dates, regions and room size if you like. Gus parses the rest.
+                </T>
+              </View>
+              <GusSticker mood={listen.listening ? 'wave' : 'thinking'} size={104} tilt={3} style={{ marginBottom: -S.xl, marginRight: -S.sm }} />
+            </Row>
+            <VoiceGlow active={listen.listening} stream={listen.stream} radius={24}>
+              <View style={{ backgroundColor: C.cardHi, borderRadius: 24, borderCurve: 'continuous', padding: S.lg, paddingBottom: 64, minHeight: 156, borderWidth: 1, borderColor: listen.listening ? 'rgba(255,176,0,0.5)' : 'rgba(255,255,255,0.08)' }}>
+                <TextInput
+                  value={text}
+                  onChangeText={setText}
+                  placeholder="I sound like Phoebe Bridgers and Japanese Breakfast. Ten dates, Midwest and East Coast, small rooms."
+                  placeholderTextColor={C.text3}
+                  multiline
+                  accessibilityLabel="Describe your sound and tour"
+                  style={{ color: C.text, fontFamily: F.serif, fontSize: 22, lineHeight: 28, minHeight: 84, outlineStyle: 'none' } as object}
+                />
+                <View style={{ position: 'absolute', left: S.lg, right: S.md, bottom: S.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <T v="footnote" color={listen.listening ? C.amber : C.text3}>
+                    {listen.listening ? 'Listening… pause when you’re done' : listen.supported ? 'Tap the mic and talk' : 'Use the keyboard’s mic to dictate'}
+                  </T>
+                  {listen.supported ? (
+                    <Pressable accessibilityRole="button" accessibilityLabel={listen.listening ? 'Stop dictation' : 'Dictate'} onPress={() => (listen.listening ? listen.stop() : listen.start())} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.94 : 1 }] })}>
+                      <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: listen.listening ? C.amber : C.purple }}>
+                        {listen.listening ? <VoiceBars active color="#1A120B" height={16} /> : <Icon name="mic" variant="bold" size={22} color={C.text} />}
+                      </View>
+                    </Pressable>
+                  ) : null}
                 </View>
-              )}
-            </Dictate>
+              </View>
+            </VoiceGlow>
             <View style={{ gap: 6 }}>
               <T v="label">Your act's name (optional)</T>
               <TextInput
@@ -214,17 +224,17 @@ export default function Scout() {
               />
               <T v="caption">If Qloo knows you, your own taste signal leads; reference acts fill in when your data is thin.</T>
             </View>
-            <Row gap={10} wrap>
-              <GlassSegmentedControl value={kind} onValueChange={(v) => setKind(v as 'music' | 'comedy')} accessibilityLabel="Kind of act" style={{ minWidth: 190 }}>
+            <View style={{ gap: S.sm }}>
+              <GlassSegmentedControl value={kind} onValueChange={(v) => setKind(v as 'music' | 'comedy')} accessibilityLabel="Kind of act" style={{ alignSelf: 'stretch' }}>
                 <GlassSegmentedControlItem value="music">Music</GlassSegmentedControlItem>
                 <GlassSegmentedControlItem value="comedy">Comedy</GlassSegmentedControlItem>
               </GlassSegmentedControl>
-              <GlassSegmentedControl value={band} onValueChange={(v) => setBand(v as RoomBand)} accessibilityLabel="Room size" style={{ minWidth: 260 }}>
+              <GlassSegmentedControl value={band} onValueChange={(v) => setBand(v as RoomBand)} accessibilityLabel="Room size" style={{ alignSelf: 'stretch' }}>
                 <GlassSegmentedControlItem value="small">Small rooms</GlassSegmentedControlItem>
-                <GlassSegmentedControlItem value="mid">Mid</GlassSegmentedControlItem>
-                <GlassSegmentedControlItem value="big">Big</GlassSegmentedControlItem>
+                <GlassSegmentedControlItem value="mid">Mid-size</GlassSegmentedControlItem>
+                <GlassSegmentedControlItem value="big">Theaters</GlassSegmentedControlItem>
               </GlassSegmentedControl>
-            </Row>
+            </View>
             <Row gap={8} wrap>
               {Object.entries(PRESETS).map(([k, p]) => (
                 <Chip key={k} onPress={() => (setText(p.text), setKind(p.kind))}>
@@ -318,30 +328,36 @@ export default function Scout() {
 
         {phase === 'run' ? (
           <View style={{ gap: 18 }}>
-            <View style={{ alignItems: 'center', gap: 8 }}>
-              <Image source={IMAGES['gus-loading']} style={{ width: 260, height: 220 }} contentFit="contain" accessibilityLabel="Gus tracing the route on the van's hood" />
-              <Orb state="searching" size={64} color={C.amber} />
+            <View style={{ alignItems: 'center', gap: S.md }}>
+              <Image source={IMAGES['gus-loading']} style={{ width: 300, height: 250 }} contentFit="contain" accessibilityLabel="Gus tracing the route on the van's hood" />
+              <GusWorking label={progress.length && !line ? progress[progress.length - 1] : line ? 'Done. Here’s your crowd.' : 'Reading the taste graph'} step={tools.length ? tools[tools.length - 1] : null} />
             </View>
             <T v="gus" style={{ textAlign: 'center' }} accessibilityLiveRegion="polite">
-              {line ? `“${line}”` : 'Gus is reading the taste graph...'}
+              {line ? `“${line}”` : ''}
             </T>
-            <Card>
+            <FeatureCard tone="stage" style={{ gap: S.sm }}>
               {STEPS.map((s, i) => {
                 const done = progress.includes(s) && (progress.indexOf(s) < progress.length - 1 || !!line);
                 const active = progress.includes(s) && !done;
-                return (
-                  <Row key={s} gap={10}>
+                const row = (
+                  <Row gap={10} style={{ minHeight: 44, paddingHorizontal: S.sm, borderRadius: 14, backgroundColor: active ? 'rgba(255,255,255,0.08)' : 'transparent' }}>
                     <View style={{ width: 22 }}>
                       <Icon name={done ? 'check' : active ? 'radar' : 'clock'} variant={done ? 'bold' : 'linear'} size={18} color={done ? C.good : active ? C.amber : C.text3} />
                     </View>
-                    <T v="body" color={done ? C.text : active ? C.text : C.text3} style={{ flex: 1 }}>
+                    <T v="body" color={done || active ? C.text : C.text3} style={{ flex: 1 }}>
                       {s}
                     </T>
-                    {active ? <Orb state="working" size={20} color={C.amber} /> : null}
                   </Row>
                 );
+                return active ? (
+                  <Beam key={s} variant="heat" radius={14} size="sm">
+                    {row}
+                  </Beam>
+                ) : (
+                  <View key={s}>{row}</View>
+                );
               })}
-            </Card>
+            </FeatureCard>
             {tools.length ? (
               <View style={{ gap: 4 }}>
                 <T v="label">Gus’s tool calls</T>

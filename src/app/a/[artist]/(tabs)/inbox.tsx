@@ -12,7 +12,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { InboxMessage } from '@/lib/types';
 import { api } from '@/ui/api';
 import { useArtist } from '@/ui/artist';
-import { Btn, Chip, Empty, Row } from '@/ui/components/core';
+import { BigStat, Btn, Chip, Empty, FeatureCard, Row } from '@/ui/components/core';
+import { useAgent } from '@/ui/agent/Agent';
+import { Pressable } from 'react-native';
 import { GusSticker, type GusMood } from '@/ui/components/Gus';
 import { PitchSheet, type PitchTarget } from '@/ui/components/PitchSheet';
 import { DemoTag, Prov } from '@/ui/components/Receipts';
@@ -48,6 +50,7 @@ export default function Inbox() {
   const { slug, data: state, reload: reloadState } = useArtist(5000);
   const { data, reload } = useApi<{ messages: InboxMessage[] }>(slug ? `/artist/${slug}/inbox` : null, { poll: 6000 });
   const { data: planRes } = useApi<PlanResponse>(slug ? `/artist/${slug}/plan` : null);
+  const agent = useAgent();
   const [pitch, setPitch] = useState<PitchTarget | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const messages = data?.messages ?? [];
@@ -100,6 +103,37 @@ export default function Inbox() {
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + S.sm, paddingBottom: insets.bottom + TAB_BAR_SPACE + S.xxl, paddingHorizontal: S.gutter, gap: S.lg, maxWidth: 720, width: '100%', alignSelf: 'center' }}>
         <ScreenHeader title="Inbox" subtitle={unread ? `${unread} new from Gus` : messages.length ? 'All caught up' : undefined} slug={slug} />
 
+        {state ? (
+          <FeatureCard tone="stage" style={{ paddingTop: S.lg, overflow: 'visible' }}>
+            <Row gap={S.md} style={{ alignItems: 'flex-end' }}>
+              <View style={{ flex: 1, gap: S.xs }}>
+                <T v="eyebrow" color="#E3B8FF">
+                  Gus is on watch
+                </T>
+                <T v="title2">Watching {state.opened.length} posters</T>
+                <T v="footnote" color="rgba(235,235,245,0.75)">
+                  He pings you when a city crosses 50 signatures at 1.5× what Qloo predicted.
+                </T>
+              </View>
+              <GusSticker mood="reading" size={92} tilt={4} style={{ marginTop: -36, marginRight: -6 }} />
+            </Row>
+            <Row gap={S.xl}>
+              <BigStat label="Signed" value={state.opened.reduce((n, o) => n + (o.proof?.signatures ?? 0), 0)} />
+              <BigStat label="Proven" value={state.opened.filter((o) => o.proof?.crossed).length} color={C.good} />
+            </Row>
+            <Row gap={S.sm} wrap>
+              {['Brief me', 'Roast my route', 'Who is my crowd?'].map((q) => (
+                <Pressable key={q} accessibilityRole="button" accessibilityLabel={`Ask Gus: ${q}`} onPress={() => agent.open(q)} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+                  <Row gap={6} style={{ height: 36, paddingHorizontal: 12, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.14)' }}>
+                    <Icon name="mic" variant="bold" size={14} color="#E3B8FF" />
+                    <T style={{ fontSize: 15, fontWeight: '600', color: C.text }}>{q}</T>
+                  </Row>
+                </Pressable>
+              ))}
+            </Row>
+          </FeatureCard>
+        ) : null}
+
         {data && !messages.length ? (
           <Empty title="Nothing yet" line="I only ping you when a city proves itself. Put a poster up and let the fans talk.">
             <Image source={IMAGES['gus-tumbleweed']} style={{ width: 220, height: 160 }} contentFit="contain" accessibilityIgnoresInvertColors />
@@ -110,11 +144,13 @@ export default function Inbox() {
           const ev = (m.evidence ?? {}) as { city?: string; signatures?: number; ratio?: number; signatureShare?: number; heatShare?: number; demo?: boolean; demoSignatures?: number; model?: string };
           const threshold = m.kind === 'threshold';
           const card = (
-            <View style={{ backgroundColor: threshold ? '#1a1220' : C.card, borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.md, borderWidth: threshold ? 1 : 0, borderColor: 'rgba(180,92,240,0.35)' }}>
+            <FeatureCard tone={threshold ? 'proof' : m.kind === 'drift' ? 'roast' : 'plain'}>
               <Row gap={S.md} style={{ alignItems: 'center' }}>
-                <GusSticker mood={MOOD[m.kind]} size={40} />
+                <GusSticker mood={MOOD[m.kind]} size={48} />
                 <View style={{ flex: 1 }}>
-                  <T v="headline">{KIND_LABEL[m.kind]}</T>
+                  <T v="eyebrow" color={threshold ? C.good : C.text2}>
+                    {KIND_LABEL[m.kind]}
+                  </T>
                   <T v="footnote">
                     Gus · {when(m.createdAt)}
                     {ev.city ? ` · ${cityName(ev.city)}` : ''}
@@ -123,8 +159,8 @@ export default function Inbox() {
                 {!m.read ? <View accessibilityLabel="Unread" style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.blue }} /> : null}
               </Row>
               {threshold ? <Image source={IMAGES['gus-lets-ride']} style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: 16 }} contentFit="cover" accessibilityLabel="Gus waving the van out: let's ride" /> : null}
-              <T v="gus" style={{ fontSize: 19, lineHeight: 25 }}>
-                {m.body}
+              <T v="gus" style={{ fontSize: 20, lineHeight: 26 }}>
+                “{m.body}”
               </T>
               {threshold ? (
                 <Row gap={6} wrap>
@@ -146,10 +182,10 @@ export default function Inbox() {
                   {m.action.label}
                 </Btn>
               ) : null}
-            </View>
+            </FeatureCard>
           );
           return threshold && !m.read ? (
-            <Beam key={m.id} active radius={R.card}>
+            <Beam key={m.id} active variant="proof" radius={R.card}>
               {card}
             </Beam>
           ) : (

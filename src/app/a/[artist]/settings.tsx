@@ -10,6 +10,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { GlassSwitch } from '@/components/glassyui/glass-switch';
+import { useAgent } from '@/ui/agent/Agent';
 import { useArtist } from '@/ui/artist';
 import { Btn, Chip, Group, ListRow, Row, Section } from '@/ui/components/core';
 import { DemoTag } from '@/ui/components/Receipts';
@@ -42,6 +43,7 @@ const ago = (t: number) => {
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { slug, data: state } = useArtist();
+  const agent = useAgent();
   const { data: settings } = useApi<Settings>('/settings');
   const { data: trace } = useApi<{ calls: TraceCall[] }>(slug ? `/artist/${slug}/trace` : null);
   const [withoutQloo, setWithoutQloo] = useState(false);
@@ -109,6 +111,7 @@ export default function SettingsScreen() {
               />
             }
           />
+          <ListRow leading={<RowIcon name="mic" tint={C.flame} />} title="Talk to Gus" subtitle="Ask out loud: brief me, roast my route, pitch Columbus" onPress={() => agent.open()} trailing={<Chevron />} />
           <ListRow leading={<RowIcon name="scout" tint={C.purple} />} title="Scout another act" onPress={() => router.push('/scout')} trailing={<Chevron />} />
           <ListRow leading={<RowIcon name="home" tint="#3a3a3c" />} title="Home" onPress={() => router.replace('/')} trailing={<Chevron />} />
         </Group>

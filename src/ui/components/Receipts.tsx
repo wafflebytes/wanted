@@ -3,8 +3,8 @@
  * call behind it: endpoint, params (never the key), time, cache date and the values used.
  */
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
-import { GlassSheet, GlassSheetContent, GlassSheetTitle } from '@/components/glassyui/glass-sheet';
+import { View } from 'react-native';
+import { Sheet } from './Sheet';
 import type { Provenance, Receipt } from '@/lib/types';
 import { api } from '../api';
 import { C, F } from '../theme';
@@ -38,11 +38,9 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={value}>
       {children}
-      <GlassSheet open={visible} onOpenChange={setVisible}>
-        <GlassSheetContent closeLabel="Close receipt">
-          <GlassSheetTitle>{state?.title ?? 'Receipt'}</GlassSheetTitle>
-          <ScrollView style={{ maxHeight: 520 }} contentContainerStyle={{ gap: 14, paddingTop: 8 }}>
-            <T v="small">The exact Qloo call behind this. Params as sent; the API key is never stored or shown.</T>
+      <Sheet open={visible} onClose={() => setVisible(false)} closeLabel="Close receipt" title={state?.title ?? 'Receipt'} subtitle="The exact Qloo call behind this">
+          <View style={{ gap: 14 }}>
+            <T v="small">Params as sent; the API key is never stored or shown.</T>
             {state?.note ? <T v="small">{state.note}</T> : null}
             {state?.receipts.map((r) => <ReceiptBody key={r.id} r={r} />)}
             {state?.values ? (
@@ -58,9 +56,8 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
                 ))}
               </View>
             ) : null}
-          </ScrollView>
-        </GlassSheetContent>
-      </GlassSheet>
+          </View>
+      </Sheet>
     </Ctx.Provider>
   );
 }
