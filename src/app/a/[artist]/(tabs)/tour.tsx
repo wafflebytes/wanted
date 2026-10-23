@@ -5,7 +5,7 @@
  */
 import Head from 'expo-router/head';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, TextInput, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Sheet } from '@/ui/components/Sheet';
 import { useLocalSearchParams } from 'expo-router';
@@ -24,7 +24,7 @@ import { T } from '@/ui/components/T';
 import { useToast } from '@/ui/components/Toaster';
 import { Beam } from '@/ui/fx/Beam';
 import { haptic } from '@/ui/haptics';
-import { invalidate, useApi } from '@/ui/hooks';
+import { invalidate, useApi, useWindowSize } from '@/ui/hooks';
 import { defaultStart, session } from '@/ui/session';
 import { C, F, R, S } from '@/ui/theme';
 import type { CityData, MapData, PlanResponse } from '@/ui/types';
@@ -50,7 +50,7 @@ const fmtDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString(
 
 export default function Tour() {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width } = useWindowSize();
   const toast = useToast();
   const { slug, data: state } = useArtist();
   const { data: planRes, setData: setPlanRes, loading } = useApi<PlanResponse>(slug ? `/artist/${slug}/plan` : null);

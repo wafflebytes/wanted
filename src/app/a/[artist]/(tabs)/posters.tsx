@@ -6,7 +6,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import Head from 'expo-router/head';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, useWindowDimensions, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, absoluteUrl } from '@/ui/api';
 import { useArtist } from '@/ui/artist';
@@ -19,7 +19,7 @@ import { TAB_BAR_SPACE } from '@/ui/components/TabBar';
 import { T } from '@/ui/components/T';
 import { useToast } from '@/ui/components/Toaster';
 import { haptic } from '@/ui/haptics';
-import { invalidate, useApi } from '@/ui/hooks';
+import { invalidate, useApi, useWindowSize } from '@/ui/hooks';
 import { Icon } from '@/ui/icons/Icon';
 import { shareLink } from '@/ui/share';
 import { C, F, R, S } from '@/ui/theme';
@@ -36,7 +36,7 @@ const fmtAgo = (t: number) => {
 
 export default function Posters() {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width } = useWindowSize();
   const toast = useToast();
   const params = useLocalSearchParams<{ city?: string }>();
   const { slug, data: state, reload: reloadState } = useArtist(5000);

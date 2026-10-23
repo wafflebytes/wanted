@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo } from 'react-native';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Platform, useWindowDimensions } from 'react-native';
 import { api, ApiError } from './api';
 
 type Entry = { data: unknown; at: number };
@@ -70,6 +70,19 @@ export function useApi<T>(path: string | null, opts: { poll?: number } = {}) {
   }, [opts.poll, path, load]);
 
   return { data, error, loading, reload: () => load(true), setData };
+}
+
+/**
+ * Window size that is safe for server-rendered web pages. The server renders at 0x0, and
+ * hydration keeps the server's inline styles even when the client's first render differs, so
+ * sizes computed from the window stay collapsed. Report 0x0 until mounted, then the real size,
+ * so React re-renders and patches the styles.
+ */
+export function useWindowSize() {
+  const dims = useWindowDimensions();
+  const [mounted, setMounted] = useState(Platform.OS !== 'web');
+  useLayoutEffect(() => setMounted(true), []);
+  return mounted ? dims : { ...dims, width: 0, height: 0 };
 }
 
 /** Reduce Motion (PRD 8.6). */

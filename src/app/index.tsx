@@ -8,14 +8,14 @@ import { Image } from 'expo-image';
 import { Link, router } from 'expo-router';
 import Head from 'expo-router/head';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, PanResponder, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, PanResponder, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Btn, Group, ListRow } from '@/ui/components/core';
 import { GusSticker, HearGus, useGusVoice } from '@/ui/components/Gus';
 import { T } from '@/ui/components/T';
 import { Beam } from '@/ui/fx/Beam';
 import { haptic } from '@/ui/haptics';
-import { useReducedMotion } from '@/ui/hooks';
+import { useReducedMotion, useWindowSize } from '@/ui/hooks';
 import { Icon } from '@/ui/icons/Icon';
 import { C, F, IMAGES, R, S } from '@/ui/theme';
 
@@ -47,7 +47,7 @@ const PAGES: Page[] = [
 
 export default function Landing() {
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
+  const { width, height } = useWindowSize();
   const reduced = useReducedMotion();
   const [page, setPage] = useState(0);
   const last = page === PAGES.length;

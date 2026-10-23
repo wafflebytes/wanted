@@ -9,7 +9,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import Head from 'expo-router/head';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, ScrollView, TextInput, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, absoluteUrl } from '@/ui/api';
 import { BigStat, Btn, FeatureCard, Progress, Row } from '@/ui/components/core';
@@ -22,7 +22,7 @@ import { useToast } from '@/ui/components/Toaster';
 import { Beam } from '@/ui/fx/Beam';
 import { Metal } from '@/ui/fx/Metal';
 import { haptic } from '@/ui/haptics';
-import { invalidate, useApi, useReducedMotion } from '@/ui/hooks';
+import { invalidate, useApi, useReducedMotion, useWindowSize } from '@/ui/hooks';
 import { Icon } from '@/ui/icons/Icon';
 import { shareLink } from '@/ui/share';
 import { C, F, IMAGES, R, S } from '@/ui/theme';
@@ -34,7 +34,7 @@ const fmtDay = (t: number) => new Date(t).toLocaleDateString(undefined, { day: '
 
 export default function SignPage() {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width } = useWindowSize();
   const toast = useToast();
   const { artist, city, ref } = useLocalSearchParams<{ artist: string; city: string; ref?: string }>();
   const path = artist && city ? `/w/${artist}/${city}` : null;

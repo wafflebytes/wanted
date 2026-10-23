@@ -6,7 +6,7 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import Head from 'expo-router/head';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassSurface } from '@/components/glassyui/glass-surface';
 import { api } from '@/ui/api';
@@ -24,7 +24,7 @@ import { T } from '@/ui/components/T';
 import { useToast } from '@/ui/components/Toaster';
 import { WithoutQlooPanel } from '@/ui/components/WithoutQloo';
 import { haptic } from '@/ui/haptics';
-import { invalidate, useApi, useReducedMotion } from '@/ui/hooks';
+import { invalidate, useApi, useReducedMotion, useWindowSize } from '@/ui/hooks';
 import { CrowdMapView } from '@/ui/map/CrowdMapView';
 import { session } from '@/ui/session';
 import { C, F, IMAGES, R, S } from '@/ui/theme';
@@ -34,7 +34,7 @@ import { Icon } from '@/ui/icons/Icon';
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
+  const { width, height } = useWindowSize();
   const wide = width >= 900;
   const reduced = useReducedMotion();
   const toast = useToast();
