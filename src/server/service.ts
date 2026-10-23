@@ -434,3 +434,37 @@ export async function pitchFor(artist: ArtistRow, metroId: string, roomId: strin
   const email = await pitchEmail(evidence);
   return { evidence, email, room, receipts: [...city.receipts, ...crowd.receipts] };
 }
+
+// ---------- demo simulation ----------
+
+const SIM_INITIALS = ['J.R.', 'M.K.', 'A.L.', 'T.S.', 'R.B.', 'C.D.', 'N.O.', 'E.V.', 'P.Q.', 'S.W.', 'L.M.', 'K.T.'];
+
+/**
+ * Demo artists only: fans sign a city's poster, labeled demo data everywhere (FR-29), so the
+ * 90-second demo runs on one laptop. Signatures cluster in the predicted neighborhoods.
+ */
+export async function simulateFans(artist: ArtistRow, city: string, n: number) {
+  if (!artist.isDemo) throw new HttpError(403, 'Simulation is only for demo artists.');
+  const { sign } = await import('./claims');
+  const { onSignature } = await import('./watcher');
+  const state = await posterState(artist.slug, city, null);
+  const hoods = state.neighborhoods.slice(0, 8);
+  const count = Math.max(1, Math.min(60, n));
+  let last = null;
+  for (let i = 0; i < count; i++) {
+    const h = hoods[Math.min(hoods.length - 1, Math.floor(Math.random() ** 2 * hoods.length))];
+    last = await sign({
+      artist: artist.id,
+      city,
+      neighborhood: h?.name ?? null,
+      initials: SIM_INITIALS[Math.floor(Math.random() * SIM_INITIALS.length)],
+      contact: null,
+      deviceToken: `demo-sim-${Date.now()}-${i}-${Math.random()}`,
+      ref: null,
+      ip: '0.0.0.0',
+      isDemo: true,
+    });
+  }
+  const watch = await onSignature(artist.id, city);
+  return { count: last?.count ?? state.count, watch };
+}

@@ -1,7 +1,7 @@
 /**
  * Text with Wanted's type scale. Sizes follow the iOS text styles at the default (Large)
  * Dynamic Type size, so 17 pt body, 11 pt floor: largeTitle 34, title1 28, title2 22,
- * title3 20, headline/body 17, callout 16, subhead 15, footnote 13, caption 12. Brand faces
+ * title3 20, subhead 15, headline/body 17, callout 16, subhead 15, footnote 13, caption 12. Brand faces
  * stand in for SF: Archivo for UI, Instrument Serif for Gus, Chivo Mono for numbers.
  */
 import { Text, type TextProps, type TextStyle } from 'react-native';
@@ -16,7 +16,11 @@ type Variant =
   | 'headline'
   | 'body'
   | 'callout'
+  | 'subhead'
   | 'small'
+  | 'hero'
+  | 'heroSmall'
+  | 'eyebrow'
   | 'footnote'
   | 'caption'
   | 'mono'
@@ -35,6 +39,12 @@ const V: Record<Variant, TextStyle> = {
   headline: { fontFamily: F.head, fontSize: 17, lineHeight: 22, letterSpacing: -0.2, color: C.text },
   body: { fontFamily: F.body, fontSize: 17, lineHeight: 22, letterSpacing: -0.2, color: C.text },
   callout: { fontFamily: F.body, fontSize: 16, lineHeight: 21, letterSpacing: -0.15, color: C.text },
+  subhead: { fontFamily: F.body, fontSize: 15, lineHeight: 20, letterSpacing: -0.1, color: C.text },
+  /** Flighty-style big numbers: a stat that is the point of the card. */
+  hero: { fontFamily: F.bold, fontSize: 44, lineHeight: 48, letterSpacing: -1.4, color: C.text, fontVariant: ['tabular-nums'] },
+  heroSmall: { fontFamily: F.bold, fontSize: 28, lineHeight: 32, letterSpacing: -0.8, color: C.text, fontVariant: ['tabular-nums'] },
+  /** Small caps over a card or stat, in the rounded face (Flighty's FLIGHTS / DISTANCE). */
+  eyebrow: { fontFamily: F.rounded ?? F.head, fontWeight: '600', fontSize: 12, lineHeight: 16, letterSpacing: 0.6, color: C.text2, textTransform: 'uppercase' },
   small: { fontFamily: F.body, fontSize: 15, lineHeight: 20, letterSpacing: -0.1, color: C.text2 },
   footnote: { fontFamily: F.body, fontSize: 13, lineHeight: 18, color: C.text2 },
   caption: { fontFamily: F.body, fontSize: 12, lineHeight: 16, color: C.text3 },

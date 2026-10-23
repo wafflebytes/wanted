@@ -75,6 +75,12 @@ import { variants as i_sort } from 'mx-icons/components/sort';
 import { variants as i_mail } from 'mx-icons/components/sms';
 import { variants as i_danger } from 'mx-icons/components/danger';
 import { variants as i_idea } from 'mx-icons/components/lamp-charge';
+import { variants as i_flash } from 'mx-icons/components/flash';
+import { variants as i_activity } from 'mx-icons/components/activity';
+import { variants as i_sound } from 'mx-icons/components/sound';
+import { variants as i_people } from 'mx-icons/components/profile-2user';
+import { variants as i_arrowUp } from 'mx-icons/components/arrow-up';
+import { variants as i_routeSquare } from 'mx-icons/components/route-square';
 
 type V = { variant: string; Component: ComponentType<{ size?: number | string; color?: string }> }[];
 const pick = (v: V) => {
@@ -158,4 +164,10 @@ export const MX = {
   mail: pick(i_mail),
   danger: pick(i_danger),
   idea: pick(i_idea),
+  flash: pick(i_flash),
+  activity: pick(i_activity),
+  sound: pick(i_sound),
+  people: pick(i_people),
+  arrowUp: pick(i_arrowUp),
+  routeSquare: pick(i_routeSquare),
 } as const;

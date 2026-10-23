@@ -7,9 +7,11 @@ import { Image } from 'expo-image';
 import { Linking, Pressable, View } from 'react-native';
 import type { DayKey } from '@/lib/types';
 import { haptic } from '../haptics';
-import { C, F } from '../theme';
+import { C, F, S } from '../theme';
 import type { CityData, CityRoom } from '../types';
-import { Btn, Card, Chip, Row, Stat, WhyBars } from './core';
+import { BigStat, Btn, Card, CardLink, Chip, FeatureCard, Progress, Row, WhyBars } from './core';
+import { Beam } from '../fx/Beam';
+import { SheetButton } from './Sheet';
 import { GusLine } from './Gus';
 import { DemoTag, Prov } from './Receipts';
 import { T } from './T';
@@ -59,46 +61,68 @@ export function CityPanel({
   const roomReceipts = d.receipts.filter((r) => /room|venue|place/i.test(r.purpose));
   const rooms = focusRoom ? [...d.rooms].sort((a, b) => (a.id === focusRoom ? -1 : b.id === focusRoom ? 1 : 0)) : d.rooms;
   return (
-    <View style={{ gap: 14 }}>
-      <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <View style={{ gap: 16 }}>
+      <Row style={{ justifyContent: 'space-between', alignItems: 'center', minHeight: 48 }}>
         <View style={{ flex: 1, gap: 2 }}>
           <Row gap={5}>
-            {s?.sleeper ? <Icon name="star" variant="bold" size={12} color={C.gold} /> : null}
-            <T v="label" color={s?.sleeper ? C.gold : undefined}>
+            {s?.sleeper ? <Icon name="star" variant="bold" size={13} color={C.gold} /> : null}
+            <T v="eyebrow" color={s?.sleeper ? C.gold : undefined}>
               {s?.sleeper ? 'Sleeper city' : s?.kind === 'college' ? 'College town' : 'City'}
+              {s?.rank ? ` · #${s.rank} for you` : ''}
             </T>
           </Row>
-          <T v="title" accessibilityRole="header">
-            {d.metro.name}, {d.metro.state}
+          <T v="largeTitle" accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit>
+            {d.metro.name}
           </T>
         </View>
-        <Btn size="sm" onPress={onBack} accessibilityLabel="Back to the whole country" icon={<Icon name="back" size={15} color={C.text} />}>
-          US
-        </Btn>
+        <SheetButton icon="back" label="Back to the whole country" onPress={onBack} />
       </Row>
 
+      <GusLine line={cityGusLine(d)} mood={d.thin ? 'unimpressed' : d.proof?.crossed ? 'proud' : 'reading'} model="gus-lite" compact />
+
       {s && !d.thin ? (
-        <Row gap={18} wrap>
-          <Stat label="Wanted Score" value={s.score?.toFixed(0) ?? '—'} color={C.amber} sub={s.rank ? `#${s.rank} of ${194}` : undefined} />
-          <Stat label="Heat rank" value={s.heatRank ? `#${s.heatRank}` : '—'} />
-          <Stat label="Lift rank" value={s.liftRank ? `#${s.liftRank}` : '—'} color={s.sleeper ? C.gold : C.text} />
-          <Prov kind="qloo" receipts={heatReceipts} title={`Heat in ${d.metro.name}`} values={{ heat: s.heat ?? 0, lift: s.lift ?? 0, 'heat percentile': s.heatPct ?? 0, 'lift percentile': s.liftPct ?? 0, cells: s.cells }} />
-        </Row>
+        <FeatureCard tone="heat">
+          <Row style={{ justifyContent: 'space-between' }}>
+            <T v="eyebrow" color="rgba(255,226,190,0.85)">
+              Qloo says · {d.metro.name}, {d.metro.state}
+            </T>
+            <Prov kind="qloo" receipts={heatReceipts} title={`Heat in ${d.metro.name}`} values={{ heat: s.heat ?? 0, lift: s.lift ?? 0, 'heat percentile': s.heatPct ?? 0, 'lift percentile': s.liftPct ?? 0, cells: s.cells }} />
+          </Row>
+          <Row gap={S.xl} style={{ alignItems: 'flex-start' }}>
+            <BigStat label="Wanted" value={s.score?.toFixed(0) ?? '—'} color={C.amber} size="lg" />
+            <BigStat label="Heat" value={s.heatRank ? `#${s.heatRank}` : '—'} />
+            <BigStat label="Lift" value={s.liftRank ? `#${s.liftRank}` : '—'} color={s.sleeper ? C.gold : C.text} />
+          </Row>
+          <WhyBars heatPct={s.heatPct} liftPct={s.liftPct} />
+        </FeatureCard>
       ) : null}
 
-      <GusLine line={cityGusLine(d)} mood={d.thin ? 'unimpressed' : 'idle'} model="gus-lite" compact />
+      {d.proof ? (
+        <Beam variant="proof" active={d.proof.crossed} radius={26}>
+          <FeatureCard tone={d.proof.crossed ? 'proof' : 'stage'}>
+            <Row style={{ justifyContent: 'space-between' }}>
+              <T v="eyebrow" color={d.proof.crossed ? C.good : '#E3B8FF'}>
+                {d.proof.crossed ? 'Proven · Fans say' : 'Fans say'}
+              </T>
+              {isDemo ? <DemoTag /> : null}
+            </Row>
+            <Row gap={S.xl} style={{ alignItems: 'flex-start' }}>
+              <BigStat label="Signatures" value={d.proof.signatures} size="lg" />
+              <BigStat label="Proof ratio" value={d.proof.ratio !== null ? `${d.proof.ratio.toFixed(1)}×` : '—'} color={d.proof.ratio && d.proof.ratio >= 1.5 ? C.good : C.text} sub="signed ÷ predicted" />
+            </Row>
+            <Progress value={d.proof.signatures / 50} color={d.proof.crossed ? C.good : C.purpleHi} height={8} />
+            <T v="footnote" color="rgba(235,235,245,0.75)">
+              {d.proof.crossed ? 'Past 50 signatures at 1.5× the prediction. Gus pings you with a pitch.' : `${Math.max(0, 50 - d.proof.signatures)} more signatures and a 1.5× ratio, and Gus calls it.`}
+            </T>
+            <CardLink label="See the poster" onPress={onPoster} />
+          </FeatureCard>
+        </Beam>
+      ) : null}
 
       {d.thin ? (
         <Card>
           <T v="head">Data thin here</T>
           <T v="small">Qloo has {d.cellCount} street-level cells for this Sound in {d.metro.name}. Too few to rank neighborhoods or rooms, so Wanted shows nothing rather than guess.</T>
-        </Card>
-      ) : null}
-
-      {s && !d.thin ? (
-        <Card>
-          <T v="label">Why this city</T>
-          <WhyBars heatPct={s.heatPct} liftPct={s.liftPct} />
         </Card>
       ) : null}
 
@@ -129,25 +153,8 @@ export function CityPanel({
         </Card>
       ) : null}
 
-      {d.proof ? (
-        <Card>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <T v="label">Proof</T>
-            <Row gap={6}>
-              <Prov kind="fans" />
-              {isDemo ? <DemoTag /> : null}
-            </Row>
-          </Row>
-          <Row gap={18} wrap>
-            <Stat label="Signatures" value={d.proof.signatures} color={C.fans} />
-            <Stat label="Proof ratio" value={d.proof.ratio !== null ? `${d.proof.ratio.toFixed(1)}x` : '—'} color={d.proof.ratio && d.proof.ratio >= 1.5 ? C.good : C.text} sub="share of signatures ÷ share of heat" />
-          </Row>
-          <Btn size="sm" onPress={onPoster}>
-            See the poster
-          </Btn>
-        </Card>
-      ) : !d.thin ? (
-        <Btn tone="scout" full busy={posting} onPress={onPost} accessibilityLabel={`Post a WANTED poster for ${d.metro.name}`} icon={<Icon name="posters" variant="bold" size={18} color={C.text} />}>
+      {!d.proof && !d.thin ? (
+        <Btn tone="scout" size="lg" full busy={posting} onPress={onPost} accessibilityLabel={`Post a WANTED poster for ${d.metro.name}`} icon={<Icon name="posters" variant="bold" size={18} color={C.text} />}>
           Post WANTED poster
         </Btn>
       ) : null}

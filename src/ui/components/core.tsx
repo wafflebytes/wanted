@@ -5,6 +5,7 @@ import { GlassSurface } from '@/components/glassyui/glass-surface';
 import { haptic } from '../haptics';
 import { C, F, HIT, R, S } from '../theme';
 import { T } from './T';
+import { Icon } from '../icons/Icon';
 
 type Tone = 'scout' | 'action' | 'glass' | 'ghost' | 'danger' | 'gold';
 
@@ -348,5 +349,66 @@ export function Segmented<K extends string>({ value, options, onChange, label }:
         );
       })}
     </View>
+  );
+}
+
+const FEATURE: Record<'stage' | 'proof' | 'roast' | 'heat' | 'plain', { bg: string; image: string }> = {
+  stage: { bg: C.stageDeep, image: `linear-gradient(155deg, #4B1C86 0%, ${C.stageDeep} 55%, #16072B 100%)` },
+  proof: { bg: C.proofDeep, image: 'linear-gradient(155deg, #17663B 0%, #0D3B22 60%, #082414 100%)' },
+  roast: { bg: C.roastDeep, image: 'linear-gradient(155deg, #8E1B14 0%, #4A0F0C 60%, #2A0806 100%)' },
+  heat: { bg: '#3A1A06', image: 'linear-gradient(155deg, #B5440F 0%, #5A220A 60%, #2A1004 100%)' },
+  plain: { bg: C.card, image: 'none' },
+};
+
+/**
+ * A Flighty-style feature card: a deep gradient that says what kind of news it is (stage
+ * purple for your numbers, green for proof, red for roasts, heat for Qloo). Content, never glass.
+ */
+export function FeatureCard({ tone = 'stage', children, style, onPress, accessibilityLabel }: { tone?: keyof typeof FEATURE; children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; accessibilityLabel?: string }) {
+  const f = FEATURE[tone];
+  const body = (
+    <View style={[{ backgroundColor: f.bg, experimental_backgroundImage: f.image, borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.md, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.12)', overflow: 'hidden' } as ViewStyle, style]}>{children}</View>
+  );
+  if (!onPress) return body;
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={() => (haptic.tick(), onPress())} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
+      {body}
+    </Pressable>
+  );
+}
+
+/** Flighty's stat: a small-caps eyebrow, a big number, an optional line under it. */
+export function BigStat({ label, value, sub, color = C.text, size = 'md', style }: { label: string; value: ReactNode; sub?: string; color?: string; size?: 'md' | 'lg'; style?: StyleProp<ViewStyle> }) {
+  return (
+    <View style={[{ gap: 2, minWidth: 72 }, style]} accessible accessibilityLabel={`${label}: ${typeof value === 'string' || typeof value === 'number' ? value : ''}${sub ? `, ${sub}` : ''}`}>
+      <T v="eyebrow" color="rgba(235,235,245,0.72)">
+        {label}
+      </T>
+      <T v={size === 'lg' ? 'hero' : 'heroSmall'} color={color}>
+        {value}
+      </T>
+      {sub ? <T v="footnote" color="rgba(235,235,245,0.72)">{sub}</T> : null}
+    </View>
+  );
+}
+
+/** A slim progress track. */
+export function Progress({ value, color = C.purpleHi, track = 'rgba(255,255,255,0.12)', height = 6 }: { value: number; color?: string; track?: string; height?: number }) {
+  return (
+    <View style={{ height, borderRadius: height / 2, backgroundColor: track, overflow: 'hidden' }} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(Math.max(0, Math.min(1, value)) * 100) }}>
+      <View style={{ width: `${Math.round(Math.max(0.02, Math.min(1, value)) * 100)}%`, height: '100%', borderRadius: height / 2, backgroundColor: color }} />
+    </View>
+  );
+}
+
+/** A full-width row inside a feature card that leads somewhere (Flighty's "All Flight Stats ›"). */
+export function CardLink({ label, onPress, tint = 'rgba(255,255,255,0.12)' }: { label: string; onPress: () => void; tint?: string }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={() => (haptic.tick(), onPress())} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: HIT, borderRadius: 14, paddingHorizontal: S.md, backgroundColor: tint }}>
+        <T style={{ fontFamily: F.rounded ?? F.head, fontWeight: '600', fontSize: 16, color: C.text }}>{label}</T>
+        <Icon name="chevron" size={16} color={C.text2} />
+      </View>
+    </Pressable>
   );
 }

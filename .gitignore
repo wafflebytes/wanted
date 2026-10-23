@@ -39,3 +39,6 @@ ios/Pods/
 *.tsbuildinfo
 __pycache__/
 .venv/
+
+# UI overhaul screenshots (published separately)
+.shots/

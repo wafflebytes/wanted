@@ -40,6 +40,12 @@ export const C = {
   qloo: '#FFB000',
   fans: '#B45CF0',
   gus: '#7FD1FF',
+  /** Glass over the map and in sheets (dark overlay material). */
+  glass: 'rgba(30,30,34,0.72)',
+  /** Flighty-style feature cards: deep stage purple, proof green, roast red. */
+  stageDeep: '#2A0E4A',
+  proofDeep: '#0D3B22',
+  roastDeep: '#4A0F0C',
 } as const;
 
 export const R = { sm: 12, md: 20, card: 26, lg: 32, pill: 999 } as const;
@@ -129,6 +135,27 @@ export const IMAGES = {
   'gus-losing-it': require('../../assets/images/gus-losing-it.webp'),
   'gus-reading': require('../../assets/images/gus-reading.webp'),
   'gus-wave': require('../../assets/images/gus-wave.webp'),
+  // Die-cut stickers cut from the reference sheet (scripts/build-stickers.py): Gus stands free.
+  'sticker-full': require('../../assets/images/stickers/gus-full.webp'),
+  'sticker-full-3q': require('../../assets/images/stickers/gus-full-3q.webp'),
+  'sticker-reading': require('../../assets/images/stickers/gus-reading.webp'),
+  'sticker-thinking': require('../../assets/images/stickers/gus-thinking.webp'),
+  'sticker-proud': require('../../assets/images/stickers/gus-proud.webp'),
+  'sticker-unimpressed': require('../../assets/images/stickers/gus-unimpressed.webp'),
+  'sticker-losing-it': require('../../assets/images/stickers/gus-losing-it.webp'),
+  'sticker-wave': require('../../assets/images/stickers/gus-wave.webp'),
+} as const;
+
+/** Sticker aspect ratios (width / height), so a sticker sized by height keeps its die-cut shape. */
+export const STICKER_RATIO = {
+  'sticker-full': 252 / 703,
+  'sticker-full-3q': 227 / 703,
+  'sticker-reading': 301 / 276,
+  'sticker-thinking': 285 / 282,
+  'sticker-proud': 390 / 298,
+  'sticker-unimpressed': 253 / 305,
+  'sticker-losing-it': 323 / 324,
+  'sticker-wave': 303 / 300,
 } as const;
 
 export type ImageKey = keyof typeof IMAGES;

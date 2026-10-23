@@ -1,15 +1,21 @@
 /**
  * A resizable bottom drawer for the map (HIG sheets: detents, a grabber people can drag or
- * tap to cycle, content stays scrollable). It's nonmodal: the map above stays live.
+ * tap to cycle, content stays scrollable). It's nonmodal: the map above stays live. Same glass
+ * and anatomy as Sheet: flush on the bottom edge, running on behind it, so only its top
+ * corners ever show (the Apple Maps / Flighty sheet).
  *
  * Detents are heights in points, smallest first. Drag starts on the grabber and header
  * region; the list scrolls on its own. Reduce Motion swaps the spring for a short timing.
  */
 import { type ReactNode, useEffect, useMemo, useRef } from 'react';
 import { Animated, PanResponder, Pressable, ScrollView, View, type StyleProp, type ViewStyle } from 'react-native';
+import { GlassSurface } from '@/components/glassyui/glass-surface';
 import { haptic } from '../haptics';
 import { useReducedMotion } from '../hooks';
-import { C, S } from '../theme';
+import { S } from '../theme';
+import { SHEET_RADIUS } from './Sheet';
+
+const OVERHANG = 200;
 
 export function Drawer({
   detents,
@@ -89,50 +95,30 @@ export function Drawer({
   };
 
   return (
-    <Animated.View
-      style={[
-        {
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: Animated.add(h, bottomInset),
-          backgroundColor: 'rgba(18,18,20,0.97)',
-          borderTopLeftRadius: 30,
-          borderTopRightRadius: 30,
-          borderCurve: 'continuous',
-          borderTopWidth: 1,
-          borderColor: C.line,
-          overflow: 'hidden',
-          shadowColor: '#000',
-          shadowOpacity: 0.5,
-          shadowRadius: 20,
-          shadowOffset: { width: 0, height: -4 },
-        },
-        style,
-      ]}
-    >
-      <View {...pan.panHandlers}>
-        <Pressable
-          accessibilityRole="adjustable"
-          accessibilityLabel={label}
-          accessibilityValue={{ text: index === 0 ? 'collapsed' : index === detents.length - 1 ? 'expanded' : 'half height' }}
-          accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-          onAccessibilityAction={(e) => {
-            if (e.nativeEvent.actionName === 'increment') onIndexChange(Math.min(detents.length - 1, index + 1));
-            else onIndexChange(Math.max(0, index - 1));
-          }}
-          onPress={cycle}
-          hitSlop={{ top: 6, bottom: 6 }}
-          style={{ alignItems: 'center', paddingTop: S.sm, paddingBottom: S.xs, minHeight: 22 }}
-        >
-          <View style={{ width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(235,235,245,0.3)' }} />
-        </Pressable>
-        {header ? <View style={{ paddingHorizontal: S.gutter, paddingBottom: S.sm }}>{header}</View> : null}
-      </View>
-      <ScrollView ref={scroll} scrollEnabled={index > 0} contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: bottomInset + S.xxl, gap: S.xl }} showsVerticalScrollIndicator={false}>
-        {children}
-      </ScrollView>
+    <Animated.View style={[{ position: 'absolute', left: 0, right: 0, bottom: -OVERHANG, height: Animated.add(h, bottomInset + OVERHANG) }, style]}>
+      <GlassSurface preset="overlay" elevation="raised" style={{ flex: 1, borderRadius: SHEET_RADIUS, overflow: 'hidden' }}>
+        <View {...pan.panHandlers}>
+          <Pressable
+            accessibilityRole="adjustable"
+            accessibilityLabel={label}
+            accessibilityValue={{ text: index === 0 ? 'collapsed' : index === detents.length - 1 ? 'expanded' : 'half height' }}
+            accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+            onAccessibilityAction={(e) => {
+              if (e.nativeEvent.actionName === 'increment') onIndexChange(Math.min(detents.length - 1, index + 1));
+              else onIndexChange(Math.max(0, index - 1));
+            }}
+            onPress={cycle}
+            hitSlop={{ top: 6, bottom: 6 }}
+            style={{ alignItems: 'center', justifyContent: 'center', height: 20 }}
+          >
+            <View style={{ width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(235,235,245,0.32)' }} />
+          </Pressable>
+          {header ? <View style={{ paddingHorizontal: S.xl, paddingBottom: S.md }}>{header}</View> : null}
+        </View>
+        <ScrollView ref={scroll} scrollEnabled={index > 0} contentContainerStyle={{ paddingHorizontal: S.xl, paddingBottom: bottomInset + OVERHANG + S.xxl, gap: S.xl }} showsVerticalScrollIndicator={false}>
+          {children}
+        </ScrollView>
+      </GlassSurface>
     </Animated.View>
   );
 }

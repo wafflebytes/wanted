@@ -79,6 +79,12 @@ export const ICON_NAMES = {
   mail: 'sms',
   danger: 'danger',
   idea: 'lamp-charge',
+  flash: 'flash',
+  activity: 'activity',
+  sound: 'sound',
+  people: 'profile-2user',
+  arrowUp: 'arrow-up',
+  routeSquare: 'route-square',
 } as const;
 
 export type IconName = keyof typeof ICON_NAMES;
