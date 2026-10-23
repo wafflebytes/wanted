@@ -13,6 +13,7 @@ Entry for the **Qloo Agentic Hackathon: "Agents, but with taste"** (qloo.devpost
 - **Sections 6 to 11:** what Claude Code builds.
 - **Sections 12 to 15:** submission, scope, plan, risks.
 - **Section 16:** The Gauntlet, the eval system. Every change is measured against it; nothing ships if a gate fails.
+- **Picking up iOS work?** Start at **8.7**: the native demo build's current state, constraints (no paid Apple account), and the next steps in order.
 - **MUST** = non-negotiable. Everything else is a default the builder can improve.
 - Never invent Qloo numbers or fan counts for the demo. Seeded demo claims are labeled "demo data".
 - Public text (Devpost description, README, Discord posts) is drafted, then passed through the `humanizer` skill before posting.
@@ -584,6 +585,41 @@ Use at most one "alive" effect per screen. They signal importance, so if everyth
 - Reduce Motion support.
 - Color is never the only signal.
 - Dynamic Type on native; rem-based type on web.
+
+### 8.7 iOS native demo build (MUST for the demo; handoff note, 23 Oct 2026)
+
+**Goal:** the live demo runs on an iPhone and looks **as native as possible**: system Liquid Glass, system sheets, SwiftUI controls, Apple Maps. The web app stays the judges' and fans' surface and keeps shipping on every push.
+
+**One codebase, two targets (MUST).** There is no separate Swift app. iOS-only code lives in `*.ios.tsx` files or `Platform.OS === 'ios'` branches. Web stays the default file, or `*.web.tsx`. Never change a shared file in a way that changes web; check the web build after every iOS change.
+
+**Constraint: no paid Apple Developer account.** No TestFlight, no EAS internal distribution, no `eas go`. Two ways onto the iPhone:
+- **A. Expo Go (default, needs no Mac).** The App Store Expo Go lists SDK 57 support (57.0.9, Sep 2026). Confirm on the device before relying on it. The phone app and the Expo CLI must be logged in to the same Expo account. Run with `npx expo start --tunnel` and scan the QR code. **Rule:** everything native must be a module that ships inside Expo Go.
+- **B. Free Apple ID + a Mac with Xcode (polish, optional).** `npx expo run:ios --device --configuration Release` installs a real app with its own icon and splash and no Expo Go chrome. The signing expires after 7 days, so reinstall the day before the demo. This route also allows modules that aren't in Expo Go, such as `expo-maps`.
+
+**State as of commit `43fc233` (nothing has been run on iOS yet):**
+
+| Area | Today on iOS | Target for the demo |
+|---|---|---|
+| Tab bar | `NativeTabs` (`expo-router/unstable-native-tabs` on SDK 57), system Liquid Glass, custom template icons, badge, minimize on scroll | Keep. Consider `NativeTabs.BottomAccessory` for the Gus bar. Avoid `FlatList` in tab screens, because it breaks minimize and scroll-to-top |
+| Glass surfaces | Glassy UI `GlassSurface` uses `GlassView` (`expo-glass-effect`) on iOS 26, with blur below that | Keep. Never fade a `GlassView` with opacity |
+| Sheets (receipt, constraints, city, pitch) | Custom JS `Sheet.tsx` | Native form sheets: an Expo Router `Stack.Screen` with `presentation: 'formSheet'`, `sheetAllowedDetents`, `sheetGrabberVisible`. Or `@expo/ui` `BottomSheet` with `presentationDetents` |
+| Buttons, menus, segmented controls, toggles | Glassy UI in an iOS style, drawn by React Native | `@expo/ui/swift-ui` (in Expo Go): `Host` wrapping `Button` with `buttonStyle('glass' / 'glassProminent')`, `Menu`/`ContextMenu`, `Picker`, `Toggle`; `glassEffect()` with `GlassEffectContainer` + `glassEffectId` for morphing (Scout button into chips). Layout inside `Host` uses `VStack`/`HStack`, not flexbox |
+| Crowd Map | maplibre + deck.gl in an Expo DOM component (WebView) | Native Apple Maps. Route A: `react-native-maps` (in Expo Go) with `Polygon` hexes from `h3-js` plus `Marker` pins. Route B only: `expo-maps` `AppleMaps.View` (polygons, annotations, iOS 17+, tap callbacks iOS 18+). Keep the DOM map on web |
+| Talking to Gus | The keyboard's dictation button only; `listen.ts` and `Dictate.tsx` are stubs | Fine for the demo. Optional later: native speech-to-text |
+| Gradients and shadows | 33 uses of `experimental_backgroundImage` / `boxShadow` | Check each on a device and replace any that don't render |
+| Icons | MX Icons as template images | SF Symbols (`expo-symbols`, `sf=` on tab icons) where an MX icon looks out of place |
+| API origin | `src/ui/api.ts` uses the Metro host (the laptop dev server, with its local SQLite and `.env`) | Add `EXPO_PUBLIC_API_ORIGIN`, set to `https://wanted-qloo.vercel.app` for the demo, so the phone shows the same seeded Turso data as the web |
+
+**Order of work:**
+1. Add `EXPO_PUBLIC_API_ORIGIN`, run in Expo Go on the phone, and fix every crash and layout break. Web must stay green.
+2. Native form sheets for the receipt, constraints, city and pitch sheets.
+3. `@expo/ui` SwiftUI glass controls: the Scout button and chip morph, map control pill, segmented controls, menus, the floating Gus button.
+4. Native Apple Maps for the Crowd Map (`react-native-maps` on route A).
+5. Polish: SF Symbols, haptics review, Dynamic Type, Reduce Transparency, dark-mode check.
+
+**Docs to re-read before each step** (these APIs move between SDKs): Expo UI SwiftUI (`docs.expo.dev/versions/latest/sdk/ui/`) and its modifiers page; Native Tabs (`docs.expo.dev/router/advanced/native-tabs/`); Expo Router modals and form sheets (`docs.expo.dev/router/advanced/modals/`); `expo-glass-effect`; `expo-maps` / `react-native-maps`; Expo Go SDK status (`expo.dev/go`).
+
+**Web deploy (for reference).** Vercel project `wanted`, production branch `ui-overhaul-iphone16`, production URL `https://wanted-qloo.vercel.app`, deployed automatically on every push. Data is in Turso (seeded with `--panel` and `--demo`). Server-only modules loaded with `nodeRequire` must also be listed in `api/index.js` so Vercel ships them. Window-sized layouts must use `useWindowSize` (`src/ui/hooks.ts`), not `useWindowDimensions`, or they collapse on the first server-rendered load.
 
 ---
 
