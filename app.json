@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "Wanted",
+    "slug": "wanted",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "wanted",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "icon": "./assets/images/icon.png",
+      "supportsTablet": true,
+      "bundleIdentifier": "fm.wanted.app"
+    },
+    "android": {
+      "package": "fm.wanted.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#FF6A1A",
+        "foregroundImage": "./assets/images/icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "server",
+      "favicon": "./assets/images/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "http://localhost:8081"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#000000",
+          "image": "./assets/images/splash.png",
+          "imageWidth": 200
+        }
+      ],
+      "expo-audio",
+      "expo-sharing",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "backgroundColor": "#000000"
+  }
+}
