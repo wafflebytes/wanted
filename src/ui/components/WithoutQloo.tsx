@@ -94,16 +94,16 @@ export function WithoutQlooPanel({ slug, focusCity, regions, wide }: { slug: str
       </Row>
       <T v="caption">Same inputs, no taste data. Majority answer of 3 samples at temperature 0.</T>
       <T v="label">Cities</T>
-      {r.cities.slice(0, 8).map((c) => (
-        <Claim key={c.name} name={c.name} m={c.mark} />
+      {r.cities.slice(0, 8).map((c, i) => (
+        <Claim key={`${i}-${c.name}`} name={c.name} m={c.mark} />
       ))}
       <T v="label">Neighborhoods in {r.inputs.focusCity}</T>
-      {r.neighborhoods.map((n) => (
-        <Claim key={n.name} name={n.name} m={n.mark} />
+      {r.neighborhoods.map((n, i) => (
+        <Claim key={`${i}-${n.name}`} name={n.name} m={n.mark} />
       ))}
       <T v="label">Rooms for a {r.inputs.focusDay} show</T>
-      {r.rooms.map((x) => (
-        <Claim key={x.name} name={x.name} m={x.mark} />
+      {r.rooms.map((x, i) => (
+        <Claim key={`${i}-${x.name}`} name={x.name} m={x.mark} />
       ))}
     </Card>
   );
@@ -118,7 +118,7 @@ export function WithoutQlooPanel({ slug, focusCity, regions, wide }: { slug: str
       <T v="caption">Ranked from Qloo’s taste graph, heat plus lift over a 20-act baseline.</T>
       <T v="label">Top cities</T>
       {r.wanted.top15.slice(0, 8).map((c, i) => (
-        <Row key={c.name} gap={8}>
+        <Row key={`${i}-${c.name}`} gap={8}>
           <T style={{ fontFamily: F.monoBold, color: C.amber, width: 22 }}>{i + 1}</T>
           <T v="body" style={{ flex: 1, fontSize: 14 }}>
             {c.name}, {c.state}
@@ -136,8 +136,8 @@ export function WithoutQlooPanel({ slug, focusCity, regions, wide }: { slug: str
         </Row>
       ))}
       <T v="label">Rooms</T>
-      {r.wanted.rooms.map((x) => (
-        <View key={x.name}>
+      {r.wanted.rooms.map((x, i) => (
+        <View key={`${i}-${x.name}`}>
           <T v="body" style={{ fontSize: 14 }}>
             {x.name}
           </T>

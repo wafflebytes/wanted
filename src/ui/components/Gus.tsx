@@ -7,7 +7,7 @@
  */
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Animated, Easing, Platform, Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Beam } from '../fx/Beam';
 import { haptic } from '../haptics';
 import { useReducedMotion } from '../hooks';
@@ -79,10 +79,7 @@ export function GusSticker({ mood = 'idle', size = 64, tilt = -3, float, style }
           width,
           height: size,
           transform: [{ scale: pop }, { rotate: `${tilt}deg` }, { translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) }],
-          shadowColor: '#000',
-          shadowOpacity: 0.55,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 6 },
+          ...STICKER_SHADOW,
         },
         style,
       ]}
@@ -91,6 +88,12 @@ export function GusSticker({ mood = 'idle', size = 64, tilt = -3, float, style }
     </Animated.View>
   );
 }
+
+// A box shadow on web would draw the sticker's rectangle; drop-shadow follows the die-cut edge.
+const STICKER_SHADOW: object =
+  Platform.OS === 'web'
+    ? { filter: 'drop-shadow(0px 6px 10px rgba(0,0,0,0.5))' }
+    : { shadowColor: '#000', shadowOpacity: 0.55, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } };
 
 /** Four bars that dance while Gus talks (or listens). */
 export function VoiceBars({ active, color = C.text, height = 14 }: { active: boolean; color?: string; height?: number }) {

@@ -189,8 +189,9 @@ export default function SignPage() {
       </ScrollView>
 
       {d && !me && !d.played ? (
-        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: S.gutter, paddingTop: S.md, paddingBottom: Math.max(insets.bottom, S.lg), experimental_backgroundImage: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, #000 40%)' } as object}>
-          <View style={{ maxWidth: 520, width: '100%', alignSelf: 'center' }}>
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: S.gutter, paddingTop: S.xl, paddingBottom: Math.max(insets.bottom, S.lg), experimental_backgroundImage: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.92) 45%, #000 70%)' } as object}>
+          {/* Opaque backing so the dimmed (disabled) button never shows the page through it. */}
+          <View style={{ maxWidth: 520, width: '100%', alignSelf: 'center', backgroundColor: '#000', borderRadius: 999 }}>
             <Beam variant="heat" active={!!hood} radius={999}>
               <Btn tone="scout" size="lg" full busy={busy} disabled={!hood} onPress={sign} icon={<Icon name="signature" variant="bold" size={20} color={C.text} />}>
                 {hood ? `Sign the poster · ${hood}` : 'Pick your neighborhood to sign'}

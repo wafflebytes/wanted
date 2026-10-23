@@ -227,8 +227,8 @@ export default function MapScreen() {
         </Row>
         <CardLink label="Ask Gus where to go" onPress={() => agent.open('Where am I most wanted?')} />
       </FeatureCard>
-      {map.notices.map((n) => (
-        <Card key={n} style={{ padding: S.md }}>
+      {map.notices.map((n, i) => (
+        <Card key={`${i}-${n}`} style={{ padding: S.md }}>
           <T v="footnote">{n}</T>
         </Card>
       ))}
@@ -354,8 +354,9 @@ export default function MapScreen() {
         </View>
       ) : null}
 
-      {/* Map controls (Flighty's vertical glass pill): Without Qloo, and back to the whole country. */}
-      <View style={{ position: 'absolute', top: insets.top + S.sm, right: S.gutter }} pointerEvents="box-none">
+      {/* Map controls (Flighty's vertical glass pill): Without Qloo, and back to the whole country.
+          Hidden while the sheet is at full height, as in Apple Maps. */}
+      <View style={{ position: 'absolute', top: insets.top + S.sm, right: S.gutter, opacity: detent === detents.length - 1 ? 0 : 1 }} pointerEvents={detent === detents.length - 1 ? 'none' : 'box-none'}>
         <GlassSurface preset="prominent" elevation="raised" style={{ borderRadius: 26, overflow: 'hidden' }}>
           <Pressable
             onPress={() => toggleDark(!dark)}
