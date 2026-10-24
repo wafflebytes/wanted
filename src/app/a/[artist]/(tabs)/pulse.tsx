@@ -25,7 +25,7 @@ import type { Deal, DealLimits, InboxMessage } from '@/lib/types';
 import type { Pulse } from '@/server/pulse';
 import { api } from '@/ui/api';
 import { useArtist } from '@/ui/artist';
-import { Btn, Empty, Group, Row, Section, SkewBar } from '@/ui/components/core';
+import { Btn, Empty, Group, ListRow, Row, Section, SkewBar } from '@/ui/components/core';
 import type { GusMood } from '@/ui/components/Gus';
 import { PitchSheet, type PitchTarget } from '@/ui/components/PitchSheet';
 import { ScreenHeader } from '@/ui/components/ScreenHeader';
@@ -137,6 +137,10 @@ export default function PulseScreen() {
       if (d) dealStore.show(d);
       return;
     }
+    if (m.action.kind === 'bounty' && m.action.city) {
+      router.push(`/a/${slug}/posters?city=${m.action.city}`);
+      return;
+    }
     if (m.action.kind === 'pitch' && m.action.city) {
       setPitch({ city: m.action.city, cityName: cityName(m.action.city), roomId: m.action.roomId ?? null, date: null });
       return;
@@ -224,6 +228,18 @@ export default function PulseScreen() {
                 </Group>
               </Section>
             ) : null}
+
+            <View style={{ paddingHorizontal: S.gutter }}>
+              <Group>
+                <ListRow
+                  leading={<Icon name="clipboard" size={20} color={C.gus} />}
+                  title="Gus’s Logbook"
+                  subtitle="Everything he’s done for you, and what he can do without asking"
+                  onPress={() => (haptic.tap(), router.push(`/a/${slug}/logbook`))}
+                  trailing={<Icon name="chevron" size={16} color={C.text3} />}
+                />
+              </Group>
+            </View>
 
             {pulse.signatures.latest.length ? (
               <Section

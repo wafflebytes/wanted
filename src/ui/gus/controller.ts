@@ -10,10 +10,11 @@ import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { api, apiOrigin } from '../api';
+import { streamNdjson } from '../api';
+import { deals } from '../deals/store';
 import { haptic } from '../haptics';
 import { sayLine, stopVoice, type VoiceMood } from '../voice';
-import { gus, type GusAction, type GusAnswer } from './store';
+import { gus, type GusAction, type GusAnswer, type GusStep } from './store';
 
 const OPTIONS = { ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true };
 const SPEECH_DB = -38;
@@ -44,6 +45,11 @@ export function useGusController(slug: string) {
       }
       if (a.type === 'tab') {
         router.navigate(`/a/${slug}${TAB_PATH[a.tab]}` as never);
+        return;
+      }
+      if (a.type === 'deal') {
+        // Gus goes and asks the room; the deal sheet opens on the conversation.
+        deals.ask(slug, a.id, a.roomId).catch(() => {});
         return;
       }
       router.navigate(`/a/${slug}` as never);
@@ -79,19 +85,37 @@ export function useGusController(slug: string) {
       haptic.warn();
     };
 
+    /** Streams one ask: what he heard, each lookup as it runs, then the answer. */
+    const stream = async (body: FormData | { text: string; screen: string }, id: number) => {
+      let answer: GusAnswer | null = null;
+      let failed: string | null = null;
+      await streamNdjson<{ type: string; text?: string; step?: GusStep; answer?: GusAnswer; error?: string }>(`/artist/${slug}/gus?stream=1`, body, (e) => {
+        if (id !== run.current) return;
+        if (e.type === 'heard') gus.set({ heard: e.text ?? '' });
+        else if (e.type === 'step' && e.step) {
+          const step = e.step;
+          const steps = gus.get().steps;
+          const i = steps.findIndex((x) => x.id === step.id);
+          gus.set({ steps: i < 0 ? [...steps, step] : steps.map((x, j) => (j === i ? step : x)) });
+          if (step.status === 'done') haptic.tick();
+        } else if (e.type === 'answer' && e.answer) answer = e.answer;
+        else if (e.type === 'error') failed = e.error ?? 'Gus lost the thread.';
+      });
+      if (failed) throw new Error(failed);
+      if (!answer) throw new Error('Gus lost the thread.');
+      land(answer, id);
+    };
+
     const send = async (uri: string | null) => {
       const id = ++run.current;
-      gus.set({ phase: 'thinking', level: 0 });
+      gus.set({ phase: 'thinking', level: 0, heard: null, steps: [] });
       try {
         if (!uri) throw new Error('Gus didn’t hear anything.');
         const form = new FormData();
         if (Platform.OS === 'web') form.append('audio', await (await fetch(uri)).blob(), 'ask.webm');
         else form.append('audio', { uri, name: 'ask.m4a', type: 'audio/m4a' } as unknown as Blob);
         form.append('screen', gus.get().screen);
-        const res = await fetch(`${apiOrigin()}/api/artist/${slug}/gus`, { method: 'POST', body: form });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error ?? 'Gus lost the thread.');
-        land(data as GusAnswer, id);
+        await stream(form, id);
       } catch (e) {
         if (id === run.current) fail(e instanceof Error ? e.message : 'Gus lost the thread.');
       } finally {
@@ -165,10 +189,9 @@ export function useGusController(slug: string) {
 
     const ask = async (text: string) => {
       const id = ++run.current;
-      gus.set({ phase: 'thinking', error: null, answer: null });
+      gus.set({ phase: 'thinking', error: null, answer: null, heard: text, steps: [] });
       try {
-        const a = await api.post<GusAnswer>(`/artist/${slug}/gus`, { text, screen: gus.get().screen });
-        land(a, id);
+        await stream({ text, screen: gus.get().screen }, id);
       } catch (e) {
         if (id === run.current) fail(e instanceof Error ? e.message : 'Gus lost the thread.');
       }

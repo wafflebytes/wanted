@@ -56,14 +56,16 @@ export const api = {
 };
 
 /**
- * Reads an NDJSON stream (Scout's progress theater). Falls back to reading the whole body
+ * Reads an NDJSON stream (Scout's progress theater, Gus's steps). Falls back to reading the whole body
  * when the platform's fetch has no streaming reader (older React Native).
  */
 export async function streamNdjson<E>(path: string, body: unknown, onEvent: (e: E) => void, signal?: AbortSignal) {
+  // FormData (an audio ask) goes as multipart; anything else as JSON.
+  const form = typeof FormData !== 'undefined' && body instanceof FormData;
   const res = await fetch(`${apiOrigin()}/api${path}`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
+    headers: form ? undefined : { 'content-type': 'application/json' },
+    body: form ? (body as FormData) : JSON.stringify(body),
     signal,
   });
   if (!res.ok) {

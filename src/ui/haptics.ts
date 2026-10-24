@@ -3,11 +3,12 @@ import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 
 function vibrate(pattern: number | number[]) {
-  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-    try {
-      navigator.vibrate(pattern);
-    } catch {}
-  }
+  if (typeof navigator === 'undefined' || !('vibrate' in navigator)) return;
+  // Browsers refuse (and log) a vibration before the first tap on the page.
+  if ((navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation?.hasBeenActive === false) return;
+  try {
+    navigator.vibrate(pattern);
+  } catch {}
 }
 
 export const haptic = {

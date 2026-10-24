@@ -11,6 +11,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, absoluteUrl } from '@/ui/api';
 import { useArtist } from '@/ui/artist';
 import { Btn, Chip, Empty, Group, ListRow, Row, Section } from '@/ui/components/core';
+import { BountyCard } from '@/ui/components/BountyCard';
+import { deals } from '@/ui/deals/store';
 import { PitchSheet, type PitchTarget } from '@/ui/components/PitchSheet';
 import { Poster, POSTER_RATIO } from '@/ui/components/Poster';
 import { Prov } from '@/ui/components/Receipts';
@@ -23,6 +25,7 @@ import { invalidate, useApi } from '@/ui/hooks';
 import { Icon } from '@/ui/icons/Icon';
 import { shareLink } from '@/ui/share';
 import { C, F, R, S } from '@/ui/theme';
+import type { Deal } from '@/lib/types';
 import type { PosterState } from '@/ui/types';
 
 const fmtAgo = (t: number) => {
@@ -33,6 +36,14 @@ const fmtAgo = (t: number) => {
   if (h < 24) return `${h} h ago`;
   return `${Math.round(h / 24)} d ago`;
 };
+
+const nightOf = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const dealLine = (d: Deal) =>
+  d.status === 'held' && d.terms
+    ? `${nightOf(d.terms.date)}. You keep ${d.terms.split}% of the door.`
+    : d.status === 'waiting' && d.terms
+      ? `${d.roomName} offered ${nightOf(d.terms.date)}. Waiting on your yes.`
+      : `Gus is asking ${d.roomName} for a date.`;
 
 export default function Posters() {
   const insets = useSafeAreaInsets();
@@ -51,6 +62,9 @@ export default function Posters() {
 
   const { data: poster, reload } = useApi<PosterState>(slug && city ? `/w/${slug}/${city}` : null, { poll: 4000 });
   const o = opened.find((x) => x.city === city) ?? null;
+  // Once Gus is working on a room here, the card shows that deal instead of offering a new pitch.
+  const { data: dealList } = useApi<{ deals: Deal[] }>(slug ? `/artist/${slug}/deals` : null, { poll: 6000 });
+  const live = dealList?.deals.find((d) => d.city === city && (d.status === 'held' || d.status === 'waiting' || d.status === 'talking')) ?? null;
   const [busy, setBusy] = useState<string | null>(null);
   const [stampKey, setStampKey] = useState<number | undefined>(undefined);
   const [pitch, setPitch] = useState<PitchTarget | null>(null);
@@ -90,6 +104,21 @@ export default function Posters() {
       reloadState();
     } catch (e) {
       toast({ title: "Couldn't mark it played", body: e instanceof Error ? e.message : undefined });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const draw = async () => {
+    if (!slug || !city) return;
+    setBusy('draw');
+    try {
+      await api.post(`/artist/${slug}/posters`, { city, action: 'draw' });
+      haptic.success();
+      invalidate(`/artist/${slug}/inbox`);
+      reload();
+    } catch (e) {
+      toast({ title: "Couldn't pick the winner", body: e instanceof Error ? e.message : undefined });
     } finally {
       setBusy(null);
     }
@@ -190,21 +219,27 @@ export default function Posters() {
                 </View>
 
                 {o.proof?.crossed ? (
-                  <Pressable onPress={() => (haptic.tap(), setPitch({ city: o.city, cityName: o.name, roomId: null, date: null }))} accessibilityRole="button" style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
+                  <Pressable
+                    onPress={() => (haptic.tap(), live ? deals.show(live) : setPitch({ city: o.city, cityName: o.name, roomId: null, date: null }))}
+                    accessibilityRole="button"
+                    style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+                  >
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md, backgroundColor: 'rgba(52,199,89,0.12)', borderRadius: R.card, borderCurve: 'continuous', padding: S.lg }}>
                       <View style={{ flex: 1, gap: 2 }}>
-                        <T v="headline">{o.name} proved it</T>
+                        <T v="headline">{live?.status === 'held' ? `${live.roomName} is held` : `${o.name} proved it`}</T>
                         <T v="footnote" color={C.text2}>
-                          Enough people signed. Gus will write to a room for you.
+                          {live ? dealLine(live) : 'Enough people signed. Gus will write to a room for you.'}
                         </T>
                       </View>
                       <T v="callout" color={C.good} style={{ fontWeight: '600' }}>
-                        Pitch a room
+                        {live ? 'See the deal' : 'Pitch a room'}
                       </T>
                       <Icon name="chevron" size={14} color={C.good} />
                     </View>
                   </Pressable>
                 ) : null}
+
+                {poster?.bounty && (!poster.played || poster.bounty.drawn) ? <BountyCard bounty={poster.bounty} artistFirst={poster.artist.name.split(' ')[0]} side="artist" onDraw={draw} drawing={busy === 'draw'} /> : null}
 
                 {hoods.length ? (
                   <Section title="Where they signed" trailing={<Prov kind="fans" />}>

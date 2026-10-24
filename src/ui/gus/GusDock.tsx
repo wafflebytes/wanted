@@ -26,7 +26,7 @@ import { C, F, S } from '../theme';
 import { stopVoice } from '../voice';
 import { Roll } from '../fx/Roll';
 import { enterSheet, exitSheet, enterSide, enterUp, fadeIn, fadeOut, timing } from '../motion';
-import { gus, useGus } from './store';
+import { gus, useGus, type GusStep } from './store';
 import { useArtist } from '../artist';
 
 const HOLD_MS = 200;
@@ -173,9 +173,9 @@ function Halo({ size, color = C.purpleHi }: { size: number; color?: string }) {
 
 /** What you'd plausibly ask on each screen. Three at most: suggestions, not a menu. */
 const SUGGEST: Record<string, string[]> = {
-  map: ['Where should I play first?', 'What’s my sleeper city?', 'Why is my top city on top?'],
+  map: ['Which Columbus rooms are open on a Tuesday?', 'Who should open for me?', 'What’s my sleeper city?'],
   tour: ['Is this route any good?', 'Find me a place to stay on the first night', 'Which date is weakest?'],
-  pulse: ['Who’s signing my posters?', 'Write to the rooms in my top city', 'What are people saying?'],
+  pulse: ['Which city proved it?', 'Who is my crowd, really?', 'Write to the rooms in my top city'],
   posters: ['Where should my next poster go?', 'How do I get more signatures?'],
 };
 const suggestFor = (screen: string) => SUGGEST[screen] ?? SUGGEST.map;
@@ -270,7 +270,7 @@ export function GusOverlay({ dockBottom }: { dockBottom: number }) {
   );
 }
 
-function CardBtn({ label, onPress, primary, icon }: { label: string; onPress: () => void; primary?: boolean; icon?: 'forward' | 'link' }) {
+function CardBtn({ label, onPress, primary, icon }: { label: string; onPress: () => void; primary?: boolean; icon?: 'forward' | 'link' | 'calendar' }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ flex: primary ? 1 : undefined, opacity: pressed ? 0.75 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
       <View
@@ -353,6 +353,40 @@ function yesLabel(line: string | null) {
   return 'Yes, do it';
 }
 
+/**
+ * What Gus looked up, one row per tool call, live while he works. The dot says whose data
+ * it is (Qloo amber, fans purple), the same provenance colors as everywhere else.
+ */
+function StepList({ steps }: { steps: GusStep[] }) {
+  return (
+    <View accessibilityLabel={`Gus is checking ${steps.length} things`} style={{ gap: 8, paddingRight: 36 }}>
+      {steps.slice(-5).map((st) => (
+        <Animated.View key={st.id} entering={fadeIn(160)} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+          <View style={{ width: 18, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+            {st.status === 'running' ? (
+              <Orb size={20} color={C.text} />
+            ) : st.status === 'failed' ? (
+              <Icon name="warn" size={15} color={C.warn} />
+            ) : (
+              <Icon name="check" size={15} color={C.text3} />
+            )}
+          </View>
+          <View style={{ flex: 1 }}>
+            <T v="callout" color={st.status === 'running' ? C.text : C.text2} numberOfLines={1}>
+              {st.label}
+            </T>
+            {st.found ? (
+              <T v="caption" color={C.text3} numberOfLines={1}>
+                {st.found}
+              </T>
+            ) : null}
+          </View>
+        </Animated.View>
+      ))}
+    </View>
+  );
+}
+
 const QUIPS = ['Hmm. Let me look.', 'Checking the map…', 'Asking around…', 'Give me a sec, I’m on it.'];
 
 /**
@@ -368,6 +402,8 @@ function GusDialog({ bottom }: { bottom: number }) {
   const answer = useGus((s) => s.answer);
   const error = useGus((s) => s.error);
   const speaking = useGus((s) => s.speaking);
+  const heard = useGus((s) => s.heard);
+  const steps = useGus((s) => s.steps);
   const [text, setText] = useState('');
   const [quip] = useState(() => QUIPS[Math.floor(Math.random() * QUIPS.length)]);
   const kb = useSharedValue(0);
@@ -437,12 +473,23 @@ function GusDialog({ bottom }: { bottom: number }) {
           ) : null}
 
           {phase === 'thinking' ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44, paddingRight: 36 }}>
-              <Orb size={20} color={C.text} />
-              <T v="callout" color={C.text2} style={{ flex: 1 }}>
-                Close this if you like. I’ll keep working and come back with it.
-              </T>
-            </View>
+            <>
+              {heard ? (
+                <T v="footnote" color={C.text3} numberOfLines={2} style={{ paddingRight: 36 }}>
+                  You: {/^Yes\. /.test(heard) ? 'Yes, do it' : heard}
+                </T>
+              ) : null}
+              {steps.length ? (
+                <StepList steps={steps} />
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44, paddingRight: 36 }}>
+                  <Orb size={20} color={C.text} />
+                  <T v="callout" color={C.text2} style={{ flex: 1 }}>
+                    Close this if you like. I’ll keep working and come back with it.
+                  </T>
+                </View>
+              )}
+            </>
           ) : phase === 'answer' ? (
             <>
               {answer?.heard ? (
@@ -452,7 +499,7 @@ function GusDialog({ bottom }: { bottom: number }) {
                 </T>
               ) : null}
               <View style={{ flexDirection: 'row', gap: S.sm, alignItems: 'center' }}>
-                {answer?.action ? <CardBtn primary label={answer.action.label} icon={answer.action.type === 'link' ? 'link' : 'forward'} onPress={() => gus.act(answer.action!)} /> : null}
+                {answer?.action ? <CardBtn primary label={answer.action.label} icon={answer.action.type === 'link' ? 'link' : answer.action.type === 'deal' ? 'calendar' : 'forward'} onPress={() => gus.act(answer.action!)} /> : null}
                 <CardBtn label={answer?.action ? 'Not now' : 'Thanks, Gus'} onPress={() => gus.dismiss()} />
                 {answer ? (
                   <Pressable

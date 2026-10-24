@@ -8,6 +8,11 @@ export function sha256(text: string): string {
   return crypto().createHash('sha256').update(text).digest('hex');
 }
 
+/** A fresh random secret, hex (the Bounty's sealed draw seed). */
+export function secretHex(bytes = 32): string {
+  return crypto().randomBytes(bytes).toString('hex');
+}
+
 export function id(prefix = ''): string {
   return prefix + crypto().randomBytes(9).toString('base64url');
 }

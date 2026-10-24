@@ -16,8 +16,10 @@
 import type { DayKey, Deal, DealLetter, DealLimits, DealPayment, DealTerms, RoomBand } from '../lib/types';
 import { addDays, dayOf } from '../lib/tour';
 import type { ArtistRow } from './artists';
+import { drawBounty } from './bounty';
 import { isOpenOn } from './city';
 import { id } from './crypto';
+import { log } from './logbook';
 import { all, kvGet, kvSet, one, run } from './db';
 import { env } from './env';
 import { HttpError } from './http';
@@ -72,19 +74,26 @@ async function save(artistId: string, d: Deal) {
 }
 
 /**
- * The room's side. Opens at 65% of the door and a quarter of the night's fee to hold it; with
- * proved demand it'll go as far as 80% and a tenth. Weekends cost more. Deterministic, so the
- * same city and room always negotiate the same way.
+ * The room's side. Opens around 65% of the door and a quarter of the night's fee to hold it;
+ * with proved demand it'll go as far as 80% and a tenth. Weekends cost more. Each room bargains
+ * from its own position: a room in the act's hottest neighborhood, or one Qloo rates highly, is
+ * busier and gives less ground. Deterministic, so the same room always negotiates the same way.
  */
-function housePolicy(band: RoomBand, day: DayKey, signatures: number) {
+function housePolicy(band: RoomBand, day: DayKey, signatures: number, room: { id: string; neighborhoodRank: number | null; affinity: number | null }) {
   const r = ROOM[band];
   const fee = r.fee * (day === 'friday' || day === 'saturday' ? 1.3 : 1);
   // A quarter of the room signing up front is as strong as proof gets.
   const demand = Math.min(1, signatures / (r.capacity * 0.25));
+  // How in-demand the room itself is (0 quiet, 1 busy): its neighborhood rank and Qloo affinity,
+  // plus a small fixed per-room lean so two similar rooms don't answer identically.
+  const hood = room.neighborhoodRank ? Math.max(0, 1 - (room.neighborhoodRank - 1) / 8) : 0.4;
+  const lean = (parseInt(room.id.replace(/[^0-9a-f]/gi, '').slice(0, 6) || '0', 16) % 100) / 100;
+  const busy = Math.min(1, 0.45 * hood + 0.35 * (room.affinity ?? 0.5) + 0.2 * lean);
+  const openSplit = Math.round(68 - 6 * busy);
   return {
     capacity: r.capacity,
-    open: { split: 65, deposit: tens(fee * 0.25) },
-    floor: { split: Math.round(65 + 15 * demand), deposit: tens(fee * (0.25 - 0.15 * demand)) },
+    open: { split: openSplit, deposit: tens(fee * (0.2 + 0.1 * busy)) },
+    floor: { split: Math.round(openSplit + (17 - 7 * busy) * demand), deposit: tens(fee * (0.2 + 0.1 * busy) * (1 - 0.55 * demand)) },
   };
 }
 
@@ -98,7 +107,7 @@ function openNight(room: Parameters<typeof isOpenOn>[0], from: string): string {
 }
 
 /** A Friday three or more weeks out: enough time to sell tickets. */
-function defaultDate(): string {
+export function defaultDate(): string {
   let d = addDays(today(), 21);
   while (dayOf(d) !== 'friday') d = addDays(d, 1);
   return d;
@@ -117,6 +126,8 @@ type Talk = {
   first: string;
   asked: string;
   date: string;
+  /** Asked as one of several rooms at once: the result goes to Gus, not straight to the artist. */
+  quiet?: boolean;
 };
 type Stored = Deal & { talk?: Talk };
 
@@ -125,7 +136,7 @@ const letter = (from: DealLetter['from'], text: string, terms: DealLetter['terms
 const pub = ({ talk: _t, ...d }: Stored): Deal => d;
 
 /** Gus looks things up, then sends his opening letter. The room answers on the next turn. */
-export async function startDeal(artist: ArtistRow, metroId: string, roomId: string | null): Promise<Deal> {
+export async function startDeal(artist: ArtistRow, metroId: string, roomId: string | null, opts: { quiet?: boolean } = {}): Promise<Deal> {
   const metro = metroById(metroId);
   if (!metro) throw new HttpError(404, 'Unknown city.');
   const open = (await dealsFor(artist.id)).find((d) => d.city === metroId && (d.status === 'talking' || d.status === 'waiting') && (!roomId || d.roomId === roomId));
@@ -143,7 +154,7 @@ export async function startDeal(artist: ArtistRow, metroId: string, roomId: stri
   const asked = plan?.stops.find((s) => s.metroId === metroId)?.date ?? defaultDate();
   const date = openNight(room, asked);
   const band = room.sizeGuess ?? artist.roomBand ?? 'small';
-  const house = housePolicy(band, dayOf(date), signatures);
+  const house = housePolicy(band, dayOf(date), signatures, room);
   const first = artist.name.split(' ')[0];
   // Gus opens high but inside the artist's limits.
   const gus = { split: Math.max(limits.minSplit, 85), deposit: Math.min(limits.maxDeposit, tens(house.floor.deposit * 0.5)) };
@@ -170,7 +181,7 @@ export async function startDeal(artist: ArtistRow, metroId: string, roomId: stri
     payment: null,
     createdAt: now,
     updatedAt: now,
-    talk: { turn: 0, gus, offer: house.open, open: house.open, floor: house.floor, capacity: house.capacity, limits, signatures, first, asked, date },
+    talk: { turn: 0, gus, offer: house.open, open: house.open, floor: house.floor, capacity: house.capacity, limits, signatures, first, asked, date, quiet: opts.quiet },
   };
   await save(artist.id, deal);
   return pub(deal);
@@ -206,7 +217,7 @@ export async function advanceDeal(artist: ArtistRow, dealId: string, seen: numbe
     }
   } else {
     const fits = t.offer.split >= t.limits.minSplit && t.offer.deposit <= t.limits.maxDeposit;
-    deal.thread.push(tool('check_limits', fits ? `${t.offer.split}% and $${t.offer.deposit} is inside your limits. Pushing for better` : `${t.offer.deposit > t.limits.maxDeposit ? `$${t.offer.deposit} is over your $${t.limits.maxDeposit}` : `${t.offer.split}% is under your ${t.limits.minSplit}%`}. Countering`));
+    deal.thread.push(tool('check_limits', fits ? `${t.offer.split}% and $${t.offer.deposit} works for you. Pushing for better` : `${t.offer.deposit > t.limits.maxDeposit ? `$${t.offer.deposit} is more than your $${t.limits.maxDeposit}` : `${t.offer.split}% is less than your ${t.limits.minSplit}%`}. Countering`));
     t.gus = {
       split: Math.max(t.limits.minSplit, Math.round((t.gus.split + t.offer.split) / 2 + 1)),
       deposit: Math.min(t.limits.maxDeposit, tens((t.gus.deposit + t.offer.deposit) / 2 - 10)),
@@ -223,10 +234,13 @@ async function finish(artist: ArtistRow, deal: Stored, t: Talk): Promise<Deal> {
   const terms: DealTerms = { date: t.date, day: dayOf(t.date), split: t.offer.split, deposit: t.offer.deposit, capacity: t.capacity };
   const withinLimits = terms.split >= t.limits.minSplit && terms.deposit <= t.limits.maxDeposit;
   deal.thread.push(letter('house', `${withinLimits ? 'Deal' : 'Best we can do'}: ${terms.split}% of the door and $${terms.deposit} to hold ${nice(t.date)}. The hold lasts 48 hours.`, { split: terms.split, deposit: terms.deposit }));
-  deal.thread.push(tool('check_limits', withinLimits ? `Inside your limits ($${t.limits.maxDeposit} down, ${t.limits.minSplit}% of the door). Asking you` : 'Outside your limits. Asking you'));
+  deal.thread.push(tool('check_limits', withinLimits ? 'Fits what you said you’d take. Checking with you' : 'More than you said you’d go for. Checking with you'));
   Object.assign(deal, { terms, withinLimits, status: 'waiting', updatedAt: Date.now() });
+  const quiet = t.quiet;
   delete deal.talk;
   await save(artist.id, deal);
+  // One of several rooms Gus asked at once: he compares them and asks the artist once.
+  if (quiet) return pub(deal);
   await postInbox(artist.id, {
     kind: 'deal',
     body: withinLimits
@@ -282,14 +296,72 @@ export async function decideDeal(artist: ArtistRow, dealId: string, yes: boolean
         payment: paid,
         thread: [
           ...deal.thread,
-          tool('mint_pass', `One-time pass: $${paid.amount}, ${deal.roomName} only, 48 hours`),
-          tool('pay', paid.rail === 'stripe-test' ? `Stripe test payment ${paid.ref} succeeded` : `Paid on the test ledger (${paid.ref})`),
+          tool('mint_pass', `Set aside exactly $${paid.amount}, for ${deal.roomName} only`),
+          tool('pay', 'Deposit paid (test mode, no real money)'),
           letter('gus', `${artist.name.split(' ')[0]} says yes. Deposit's sent. See you ${nice(deal.terms.date)}.`, null),
         ],
       }
     : { ...deal, status: 'passed', thread: [...deal.thread, letter('gus', `We'll pass for now. Thanks for holding it.`, null)] };
   next.updatedAt = Date.now();
+  await log(artist.id, {
+    kind: 'payment',
+    city: deal.city,
+    title: paid ? `You said yes. Paid the $${paid.amount} deposit to ${deal.roomName}` : `You passed on ${deal.roomName}`,
+    detail: paid ? `${nice(deal.terms.date)} is yours. Test mode, no real money moved.` : null,
+    source: 'artist',
+    level: 3,
+    ref: { dealId: deal.id },
+  });
+  if (paid) {
+    // The show is real now: Gus draws the city's Bounty and puts the winner on the list.
+    try {
+      const b = await drawBounty(artist, deal.city, 'gus');
+      const w = b.drawn?.winner;
+      if (w) {
+        next.thread.push(tool('draw_bounty', `Picked your Bounty winner: #${w.number}${w.neighborhood ? ` from ${w.neighborhood}` : ''}`));
+        next.thread.push(letter('gus', `One more thing: please add a +1 at soundcheck for our Bounty winner (signature #${w.number}, ${w.initials}). They'll meet ${artist.name.split(' ')[0]} before doors.`, null));
+      }
+    } catch (e) {
+      console.warn('[bounty] draw after hold failed', String(e));
+    }
+  }
   await save(artist.id, next);
   await run("update gus_inbox set read = 1 where artist_id = ? and kind = 'deal' and evidence like ?", [artist.id, `%${dealId}%`]);
   return next;
+}
+
+/** When a hold's deposit offer runs out. */
+export const holdExpiresAt = (d: Pick<Deal, 'createdAt'>) => d.createdAt + HOLD_MS;
+
+/** Plays the agents' turns on the server until they land (no screen needed). */
+export async function runToEnd(artist: ArtistRow, dealId: string): Promise<Deal> {
+  let deal = (await dealsFor(artist.id)).find((d) => d.id === dealId);
+  for (let i = 0; deal && deal.status === 'talking' && i < 12; i++) deal = await advanceDeal(artist, dealId, deal.thread.length);
+  if (!deal) throw new HttpError(404, 'No such deal.');
+  return deal;
+}
+
+/** A room Gus asked but didn't pick: a polite no, and never another room's terms. */
+export async function passDeal(artist: ArtistRow, dealId: string): Promise<void> {
+  const row = await one<{ body: string }>('select body from deals where artist_id = ? and id = ?', [artist.id, dealId]);
+  if (!row) return;
+  const deal = JSON.parse(row.body) as Stored;
+  if (deal.status !== 'waiting' && deal.status !== 'talking') return;
+  delete deal.talk;
+  deal.status = 'passed';
+  deal.thread.push(letter('gus', 'Thanks for the quick answer. We went with another room this time, and we’d love to come back.', null));
+  deal.updatedAt = Date.now();
+  await save(artist.id, deal);
+}
+
+/** Demo only: moves a waiting hold's clock so it runs out in `hoursLeft` (the video's "expires tonight" beat). */
+export async function ageHold(artist: ArtistRow, hoursLeft: number): Promise<Deal | null> {
+  if (!artist.isDemo) throw new HttpError(403, 'Only for demo artists.');
+  const deal = (await dealsFor(artist.id)).find((d) => d.status === 'waiting');
+  if (!deal) return null;
+  const row = await one<{ body: string }>('select body from deals where artist_id = ? and id = ?', [artist.id, deal.id]);
+  const stored = JSON.parse(row!.body) as Stored;
+  stored.createdAt = Date.now() + hoursLeft * 3_600_000 - HOLD_MS;
+  await save(artist.id, stored);
+  return pub(stored);
 }

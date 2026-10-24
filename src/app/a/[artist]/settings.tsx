@@ -94,6 +94,7 @@ export default function SettingsScreen() {
 
         <Group>
           <ListRow leading={<RowIcon name="scout" tint={C.purple} />} title="Add an act" subtitle="Paste a link. About ten seconds." onPress={() => router.push('/welcome?start=link')} trailing={<Chevron />} />
+          <ListRow leading={<RowIcon name="clipboard" tint="#1f6f8b" />} title="Gus’s Logbook" subtitle="Everything he’s done for you, and what he can do without asking" onPress={() => router.push(`/a/${slug}/logbook`)} trailing={<Chevron />} />
           <ListRow leading={<RowIcon name="home" tint="#3a3a3c" />} title="Back to start" onPress={() => router.replace('/')} trailing={<Chevron />} />
         </Group>
 

@@ -268,3 +268,48 @@ export type Deal = {
 };
 /** What Gus may agree to without asking twice. */
 export type DealLimits = { maxDeposit: number; minSplit: number };
+
+/**
+ * Everything Gus may do without asking (PRD 9.3d). Money always needs a yes; this sets how far
+ * he goes before he asks, and how loudly he's allowed to ask.
+ */
+export type Mandate = DealLimits & {
+  /** When a city proves demand, Gus asks rooms for a hold on his own. */
+  autoAsk: boolean;
+  /** How many rooms he asks at once (1 to 3). */
+  roomsAtOnce: number;
+  /** Local hours when he never calls (start inclusive, end exclusive, 24h clock). */
+  quietStart: number;
+  quietEnd: number;
+  /** Calls a week, at most. 0 turns calls off. */
+  callsPerWeek: number;
+  /** He calls when a paid hold would expire within this many hours. */
+  callBeforeExpiryHours: number;
+};
+
+/** The escalation ladder (PRD 9.3e): 0 log, 1 notify, 2 ask, 3 review, 4 call. */
+export type EscalationLevel = 0 | 1 | 2 | 3 | 4;
+
+/** One line in Gus's Logbook: something he did on his own, why, and from whose data. */
+export type LogEntry = {
+  id: string;
+  kind: 'lookup' | 'decision' | 'letter' | 'escalation' | 'payment' | 'bounty';
+  city: string | null;
+  title: string;
+  detail: string | null;
+  source: 'qloo' | 'fans' | 'gus' | 'room' | 'artist';
+  level: EscalationLevel;
+  ref: { dealId?: string; callId?: string } | null;
+  createdAt: number;
+};
+
+/** Gus ringing the artist: one decision, said out loud, with the same choice as the review card. */
+export type GusCall = {
+  id: string;
+  dealId: string;
+  city: string;
+  script: string;
+  status: 'ringing' | 'answered' | 'declined' | 'missed' | 'done';
+  outcome: 'yes' | 'no' | null;
+  createdAt: number;
+};

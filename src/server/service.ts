@@ -7,11 +7,12 @@ import { applyFix, plan as planRoute, rescore, resequence, swapCandidates, tryFi
 import type { Region } from '../lib/regions';
 import type { CityProof, DayKey, Locality, Receipt, Roast, RoastFix, RoomBand, TourConstraints, TourPlan, TourStop } from '../lib/types';
 import { getArtist, openCity, openedCities, type ArtistRow } from './artists';
+import { bountyView, ensureBounty } from './bounty';
 import { cityDetail, shapeRooms, warmNeighborhoods, type RoomView } from './city';
 import { cityCount, claimByDevice, proofFor, recentSignatures, wearLevel } from './claims';
 import { config } from './config';
 import { crowdCard } from './crowd';
-import { id } from './crypto';
+import { deviceHash, id } from './crypto';
 import { one, run } from './db';
 import { pitchEmail, routeLines, type PitchEvidence } from './gus/agent';
 import { HttpError } from './http';
@@ -182,6 +183,8 @@ export async function openPoster(artist: ArtistRow, metroId: string) {
   const loc = await cityNeighborhoods(artist.sound.entities, metro.query, metro.name, `artist:${artist.id}`).catch(() => null);
   const top = loc?.data.neighborhoods.slice(0, 3).map((n) => n.name) ?? [];
   await openCity(artist, metroId, m?.heat ?? null, top);
+  // Seal the Bounty's draw secret the day the poster goes up.
+  await ensureBounty(artist, metroId);
   return { city: metroId, topNeighborhoods: top, posterPath: `/w/${artist.slug}/${metroId}` };
 }
 
@@ -212,6 +215,7 @@ export async function posterState(slug: string, metroId: string, deviceToken: st
     mine,
     played: opened.playedAt ? { at: opened.playedAt, venue: opened.playedVenue } : null,
     rank: score?.rank ?? null,
+    bounty: await bountyView(artist, metroId, deviceToken ? deviceHash(deviceToken) : null),
     hexes: (city?.hexes ?? []).slice(0, 400).map((h) => {
       const [lat, lon] = cellToLatLng(h.h3);
       return { h3: h.h3, heat: h.heat, lat, lon };

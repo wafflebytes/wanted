@@ -9,7 +9,8 @@ Entry for the **Qloo Agentic Hackathon: "Agents, but with taste"** (qloo.devpost
 
 ## 0. How to read this document
 
-- **Sections 1 to 5:** story, evidence, strategy, and why it's investable.
+- **Sections 1 to 5:** story, evidence, strategy, and why it's investable. Section 4.5 is the thesis: why this is the right problem for a taste graph.
+- **Section 9.3b to 9.3h:** the agent pattern (Predict → Prove → Act → Escalate → Remember), written to be reusable beyond touring.
 - **Sections 6 to 11:** what Claude Code builds.
 - **Sections 12 to 15:** submission, scope, plan, risks.
 - **Section 16:** The Gauntlet, the eval system. Every change is measured against it; nothing ships if a gate fails.
@@ -29,6 +30,7 @@ Entry for the **Qloo Agentic Hackathon: "Agents, but with taste"** (qloo.devpost
 Touring builds careers for independent artists and comedians, and it has become a money-losing gamble:
 - **Ditto Music (Jan 2025):** 84% of UK independent artists say they can't afford to tour, and 62.2% have turned down tours for money reasons.
 - **Chartmetric (2022 to 2024):** the share of mid-level touring artists fell from 19% to 12%, and artists are skipping cities.
+- **Nobody is running the tour but the artist.** A tour manager costs $500 to $1,000 a week plus per diem, so by our estimate about 85% of touring indies are their own tour manager (§3.1b). Gus is the tour manager they can't afford.
 
 The decisions that make or lose money (which cities, which neighborhoods, which room, which night, which opener) are made on guesswork:
 - Streaming dashboards show where people *listened*, not where people who'd buy a Tuesday ticket live and go out.
@@ -40,16 +42,50 @@ The decisions that make or lose money (which cities, which neighborhoods, which 
 ### The insight
 Qloo already knows where an artist's taste lives, down to the neighborhood. That turns the cold start around: **the map is full on day one** (Qloo's prediction), and **fans fill in the proof** (claims). Prediction plus proof is what a booker needs to say yes.
 
+### The bigger idea: agents fail at representation, not at action
+Agents can already search, negotiate and pay. What they get wrong is *what people want*. In Anthropic's Project Swap (Sep 2026), Claude agents traded books for 201 people; the agents bargained competently, yet about **85% of the value the market left on the table came from misreading preferences**, not from weak negotiation. The authors' phrase: "the limiting factor was representation."
+
+Taste is the representation layer agents are missing, and Qloo is the company that has it. Wanted is the first working example of a pattern any agent that acts on someone's behalf can reuse:
+
+> **Predict → Prove → Act → Escalate → Remember**
+> 1. **Predict:** the taste graph says where demand should be, before anyone has asked (no cold start).
+> 2. **Prove:** real people turn the prediction into consent-based proof (a signature), which also corrects the agent's picture of them.
+> 3. **Act:** the agent books, inside limits the person set, with a scoped one-time pass for any money.
+> 4. **Escalate:** it reaches the person in proportion to stakes, deadline and reversibility: a log line, a note, a question, a review, and only rarely, a phone call.
+> 5. **Remember:** every outcome (signed, held, sold, CAUGHT LIVE) is a labeled result, so the agent improves its *process*, not just its answers, and Qloo's prediction gets checked against reality.
+
+Touring is the proving ground because it is the fastest, most public place-decision there is: a show is announced, tickets sell in weeks, and the result is on setlist.fm. A store opening takes years to tell you if the location was right. A tour tells you this month.
+
+### The problems worth solving (aim high)
+Live music runs on guesswork, and everyone in it pays for that. Wanted takes on the whole chain, one layer at a time:
+
+| # | Problem | Who loses | What Wanted does | Status |
+|---|---|---|---|---|
+| 1 | Cities and rooms are booked on streaming dashboards that show who listened, not who'd buy a Tuesday ticket | Artists, venues | Qloo Crowd Map: heat, lift, sleeper cities, neighborhoods, rooms | Built |
+| 2 | Fan demand is non-binding and invisible (Request a Show) | Fans, artists | WANTED posters: signatures with a measured proof ratio against Qloo | Built |
+| 3 | The fans who asked for a show lose tickets to bots and resellers | Fans | Signers are proof of fandom: one per device, a referral graph, and first access when the show is announced | Next |
+| 4 | Superfans are the most valuable people in music and the least served; their reward is a pricier ticket | Fans, artists | **The Bounty:** one signer per city meets the artist at soundcheck, drawn provably fairly. Free to enter | Building now |
+| 5 | Touring admin eats the artist alive: holds, deposits, guest lists, hotels, follow-ups | Artists | Gus does the work inside a mandate, escalates only when it matters, and keeps a Logbook | In progress |
+| 6 | Talent buyers drown in pitches with no evidence | Venues | Pitches with Qloo and fan evidence; venue agents and a demand radar | Built / next |
+| 7 | Independent rooms struggle to fill weeknights | Venues | Demand radar: acts with signatures in your neighborhood, for your dark nights | Next |
+| 8 | Artists don't know who shares their crowd to tour with | Artists | Openers from Qloo; artists' agents propose co-bills to each other | Built / stretch |
+| 9 | Every agent market will need demand evidence both sides trust | Everyone | Qloo as the neutral ground both agents read (section 4.5) | Thesis |
+
 ### The product loop
 1. **Scout (artist):** "I sound like Phoebe Bridgers and Japanese Breakfast." Gus lights up a 3D **Crowd Map** of the country, then each city by neighborhood. He picks rooms, plans a drivable route, and roasts bad routing.
 2. **Post the poster (artist to fans):** One tap creates a **WANTED poster** for each city the artist opens: *"WANTED IN COLUMBUS: MAYA ORTIZ. Reward: one sold-out show."* The link opens a no-install signing page, the way a Partiful invite works.
 3. **Sign (fan):** A fan taps **Sign the poster** and picks their neighborhood. Their signature lands on the poster and a dot lights up on the artist's map, labeled as a signature rather than a prediction. The first 50 signers in a city are **Deputies**. Every signer gets first access when a show is announced and a **Signature Card** ("SIGNATURE #37 · CLINTONVILLE · DEPUTY") to share.
 4. **Watch and pitch (agent):** Gus watches each city's share of signatures against the share Qloo's heat predicted. When a city crosses the threshold, he messages the artist: *"Columbus brought 41% of your signatures. Qloo expected 18%. Want me to pitch Rumba Café?"* The booking email cites both: *"Qloo predicts very high affinity here; 120 local fans already claimed this show."*
+4b. **The Bounty (fan to artist, the human loop):** every signature is an entry in that city's **Bounty**: one signer meets the artist at soundcheck and goes on the guest list. Signing is one entry; being a Deputy adds one; every friend who signs through your link adds one (up to three). When the show is booked, Gus draws it, and the draw is **provably fair**: the poster has shown a sealed hash of the draw's secret since the day it went up, and the reveal lets anyone check the winner. The winner's Signature Card flips to "BOUNTY · SIGNATURE #37 · MEETS MAYA AT SOUNDCHECK"; the artist gets a card with the winner's signature number, initials and neighborhood (nothing else unless the fan shares it), and Gus puts "+1 at soundcheck" into the hold with the room. Free to enter, no purchase.
 5. **Show, then the poster comes true:** after the show, the city's poster gets a **"CAUGHT LIVE"** stamp across it, and every fan's Signature Card flips to "CAUGHT LIVE · You were one of 120 people who brought Maya to Columbus". The artist gets a **Rap Sheet** of the whole run (every city, every signature count, every room). All of it gets shared, carries the Wanted mark, and brings in the next artist.
 6. **Sunday Most Wanted:** every Sunday Gus sends the artist a ranked list of the cities where they're most wanted (new signatures, rising cities, one recommended move), shareable like a weekly music recap. This is the retention habit between tours.
 
 ### Why it wins the hackathon
-- **Technological Implementation (the tie-breaker).** Nine Qloo capabilities work together: heatmaps at city and neighborhood level, location signals, venue matching, demographics, cross-domain taste, taste tags, audience compare, trends and explainability. A real tool-calling agent orchestrates them, and an event-driven step (claims crossing a threshold) triggers the agent to act.
+- **Technological Implementation (the tie-breaker).** Nine Qloo capabilities work together: heatmaps at city and neighborhood level, location signals, venue matching, demographics, cross-domain taste, taste tags, audience compare, trends and explainability. Gus is a real agent, not a chatbot with a map:
+  - **Ask Gus** is a tool-calling loop over Qloo (rooms open on a given night, openers who share the crowd, the crowd itself, city fit, signatures). Each lookup streams to the screen as it runs, every city or room he names must have come back from a tool, and a rules planner runs the same tools if every model is down.
+  - **The watcher acts on its own.** When a city proves demand, Gus picks the room, checks it's open that night, finds an opener, and negotiates the hold with the room's agent. He then asks the artist exactly one question.
+  - **Agent to agent, with scoped money.** Gus negotiates with each room's booking agent and pays only with a one-time pass for that amount, that room, for 48 hours (the shape of AP2 mandates and Stripe's scoped tokens; test mode only).
+  - **An escalation ladder, in code.** He logs, notes, asks, requests review, and rings the artist only when a held date with money attached is about to expire.
 - **Design.** A complete product: a web app with an engineered glass interface, plus native Liquid Glass on iPhone, a 3D hex-heat map, and a sticker mascot with a voice.
 - **Potential Impact.** A specific audience making a specific costly decision, with sourced numbers. It fixes the exact failure (cold start, non-binding demand) that killed earlier fan-demand products.
 - **Quality of the Idea.** Non-obvious. Nobody used Qloo to bootstrap a two-sided demand market. The "Without Qloo" toggle shows the empty map that every earlier product started with.
@@ -64,6 +100,8 @@ Qloo already knows where an artist's taste lives, down to the neighborhood. That
 - *"Know where your crowd lives before you book the van."*
 - *"Qloo predicts it. Fans prove it. Gus books it."*
 - *"Streaming tells you who listened. Wanted tells you who'll show up."*
+- *"Agents don't fail at doing. They fail at knowing what you want."*
+- *"Both agents at the table read the same taste graph."*
 
 ---
 
@@ -92,7 +130,29 @@ That is the pitch in 90 seconds.
 ### 3.1 Touring is broken for the middle
 - **Ditto Music independent artist survey (Jan 2025):** 84% can't afford to tour; 62.2% turned down tours for financial reasons.
 - **Chartmetric via Music Business Worldwide (May 2025):** mid-level touring artists fell from 19% to 12% (2022 to 2024).
-- Verify the primary links before quoting either one on stage.
+- **Ditto, global version (same survey):** 82.1% of independent artists worldwide can't afford to tour; 58.3% turned down tours for money. Quote 84% only with "UK".
+- **Pirate Studios (UK, Jul 2024, 1,700 bands, solo artists and DJs):** 72% made no profit on their last tour (48% broke even, 24% lost money); 88% name rising costs, mostly travel and beds.
+- Verify the primary links before quoting any of these on stage.
+
+### 3.1b The artist is the tour manager (customer research, 25 Oct)
+**Fermi estimate, not a survey: about 85% (±5%) of touring independent artists act as their own tour manager.**
+- A tour manager costs about $500 to $1,000 a week plus per diem (Orphiq, Chartlex, Hypebot, music3point0).
+- If 72% of tours make no profit (Pirate) and 82% of indies can't afford to tour at all (Ditto), a paid TM is a cost almost nobody in the middle can carry. Only the top 3 to 5% of touring acts have tour staff.
+- Label it as our estimate wherever it appears. Replace it with interview numbers as soon as we have them (§12.4).
+
+**What a tour manager does, and what Gus does instead.** This table is the product's job list; every row is built or marked.
+| TM job | What it costs the DIY artist today | Wanted |
+|---|---|---|
+| Pick the cities | Guessing from streaming dashboards | Crowd Map from Qloo, proved with signatures |
+| Find and pitch rooms | Cold emails, mostly unanswered | Rooms from Qloo; Gus asks 2 or 3 at once and keeps the best terms (§9.3c) |
+| Negotiate the deal | Takes the first offer, alone | Agent-to-agent deal inside the artist's limits; money only with a yes |
+| Watch deadlines (holds, deposits) | Holds lapse while they're driving | Escalation ladder, ending in Gus's call before a paid hold runs out (§9.3e) |
+| Find an opener | Asks friends | Opener who shares the crowd, from Qloo |
+| Keep the paper trail | Notes app, lost texts | Logbook: every step, why, and whose data (§9.3f) |
+| Advance the show, settle the night | Phone calls on show day | Later: advance sheet and settlement from the deal terms (not built) |
+| Fans who show up | Hope | Signatures, Deputies and the Bounty |
+
+**What this changes in how we pitch:** not "an AI for indie musicians" but the tour manager the other 85% never had. That's why the agent layer matters: a dashboard doesn't phone you when a deposit's about to lapse; a TM does.
 
 ### 3.2 Generic AI makes it worse
 - LLM place recommendations regress to famous hubs (Current Issues in Tourism, 2025).
@@ -255,6 +315,31 @@ Judges see dozens of AI demos. Trust comes from proof they can check, not polish
 
 **What we never do:** cherry-pick runs, round numbers up, show seeded signatures as real, or let Gus state a fact without a source chip.
 
+### 4.5 Why this is the right problem for a taste graph
+The question a judge from Qloo will ask is not "is this a nice app?" but "is this where taste data matters most?" Five reasons it is.
+
+**1. It sits on Qloo's two newest pillars at once.** Qloo's site lists six capabilities; two of them, *Locality Intelligence* (the cultural character of places) and *AI & Agent Grounding* (grounding models and agents in real taste data), are what every Wanted screen runs on. Most entries use one Qloo capability to decorate a chat answer. Wanted uses locality to decide where and grounding to decide what the agent does next.
+
+**2. "Where should this happen?" is the universal place-decision, and touring is its fastest feedback loop.** The same question is asked by every industry Qloo sells to:
+
+| Industry Qloo serves | The same decision |
+|---|---|
+| Real estate, retail | Which neighborhood for the next store or development |
+| CPG | Where to sample, where to launch a flavor |
+| Travel and hospitality | Which cities to market a route or property to |
+| Media and entertainment | Where to screen, where to tour, where to open a pop-up |
+| Banking | Where a card's dining or events perks will land |
+
+All of them wait months or years to learn if the call was right. A tour learns in weeks, in public, with ticket and setlist ground truth. That makes Wanted's G2 backtest (section 16.2) a free, reproducible benchmark of Qloo's heatmaps against real-world outcomes, something any Qloo customer would want to see.
+
+**3. Agents move value from recommending to acting, and acting needs grounding most.** A wrong recommendation costs a click. A wrong booking costs a $9,000 tour. As agents start to search, negotiate and pay for people, a taste error becomes a money error, and the market for grounding gets larger and more urgent. Wanted is a demo of grounding changing *actions*: which room gets a deposit, which night gets held.
+
+**4. In agent-to-agent markets, both sides need a shared, neutral picture of demand.** When Gus negotiates with a room's booking agent, neither should trust the other's claims about the crowd. Both read the same Qloo evidence, with receipts. Qloo becomes the common ground two agents negotiate on, a role no single marketplace can play. That is infrastructure, not a feature.
+
+**5. Prediction plus consent is how demand gets measured without an identity graph.** Qloo models "culture and preference, not individual identities." Wanted keeps that line: Qloo predicts in aggregate, fans opt in to prove it, and fan data never goes to Qloo or a model. The proof ratio (a city's share of signatures over its share of Qloo heat) is a per-city calibration signal with no individual in it. With consent, aggregated proof ratios could flow back as a check on the prediction (a future partnership, not built for the hackathon).
+
+**What follows for the product:** Wanted should look like the reference app for "agents with taste": every agent step shows its Qloo receipt, the backtest is public, and the pattern (Predict → Prove → Act → Escalate → Remember) is written up so another team could reuse it for a pop-up, a book tour or a store opening.
+
 ---
 
 ## 5. Growth, retention and the investable story
@@ -297,6 +382,19 @@ Precedents:
 
 This fixes the low-frequency problem of fan apps: fans don't come back for one artist, they come back for their scene.
 
+**Loop 4c, venues claim their agent (supply side):**
+- Today Wanted runs a stand-in booking agent for every room, priced from what Qloo says about it, and says so on screen.
+- A venue can **claim its agent**: set its own floor split, deposit and dark nights, and publish an agent card (A2A-shaped JSON) other agents can read.
+- Every claimed room makes the network more bookable for every artist; every artist with signatures makes it more worth claiming.
+- Claimed venues get a **demand radar**: "acts with signatures in your neighborhood", so they can pitch artists first. The marketplace starts to run both ways.
+
+**Loop 4d, artists' agents find each other (co-bills):**
+- Two acts whose crowds overlap (Qloo compare) and who both hold dates near the same city within a week: their Gus instances propose a co-bill to each other, then to both artists.
+- This is agent-to-agent on the same side of the market, and it only works with a shared taste graph. Each new artist raises the chance of a match for every other one.
+
+**Loop 4e, open surfaces:**
+- Wanted exposes a small MCP server ("where is this act wanted?", "which rooms in this city fit this crowd?"), so any assistant (Claude, ChatGPT) can use it. Each call is a Qloo-grounded answer with receipts and a link back to a WANTED poster.
+
 **Loop 4b, the weekly ritual (artist retention):**
 - The **Sunday Most Wanted**: one card a week with new claims, rising cities and one recommended move.
 - Precedent: Airbuds sends every user a weekly recap of their music to share with friends.
@@ -316,6 +414,7 @@ Precedent: Spotify Wrapped 2025 had 200M engaged users in about 24 hours and abo
 | Mechanic | Who | Purpose |
 |---|---|---|
 | **Deputy** (first 50 signatures per city) | Fan | Scarcity, status, a shareable keepsake |
+| **The Bounty** (one signer per city meets the artist; entries for signing, Deputy and friends) | Both | The fan's payoff is a human moment, not a discount; recruiting friends raises your odds and the city's proof at once |
 | **Poster gets more battered** as signatures cross 50, 100, 250 | Both | Visible progress; the poster itself is the leaderboard |
 | **"CAUGHT LIVE" stamp** after the show | Fan | Payoff that turns a signature into a memory |
 | **Scene Map** (neighborhoods lit) | Fan | Territory, collection |
@@ -437,6 +536,13 @@ Precedent: Duolingo chose user growth over bookings in 2026 because word of mout
 - FR-22: **Gus watcher (event-driven agent):** runs **on every new signature** (no cron needed). It recomputes the city's proof ratio (its share of signatures divided by its share of Qloo heat across opened cities). When a city crosses the threshold (default: 50 signatures and a ratio of 1.5 or more; 24-hour cooldown per city), Gus posts an inbox message with one recommended action (add to route, pitch room X), and optionally emails the artist.
 - FR-23: Bring-a-friend: each claimer gets a referral link. When 2 friends claim, mark them "early access".
 - FR-23b: **Signature Card** rendering (poster crop, signature number per city, Deputy mark for the first 50) as a web component and a 1080x1920 share image. When the artist marks a show "played", the poster and every card for that city get the "CAUGHT LIVE" stamp.
+- FR-23d: **The Bounty.**
+  - One Bounty per opened city, created with the poster: a random 32-byte secret, with its SHA-256 shown on the poster ("Draw sealed: 3f9a2c…") from day one.
+  - Entries per signature: 1, plus 1 for a Deputy, plus 1 per friend who signed with your link (max 3). Max 5. Demo signatures enter only a demo artist's Bounty and are labeled.
+  - The draw runs when the artist taps **Draw the Bounty**, or on its own when Gus's hold for that city is paid. The snapshot (signature numbers and entry counts only, no identities) is hashed; the winning ticket is `sha256(secret + ":" + snapshotHash) mod totalEntries`, walking signatures in number order. Secret, snapshot and hash are then public, so anyone can recompute it.
+  - The winner sees it on their poster page (device cookie) and their Signature Card; if they left a contact, it's used only to tell them. A winner who doesn't respond in 72 hours passes to the next ticket from the same seed (`sha256(secret + ":" + snapshotHash + ":1")`, and so on).
+  - The artist sees signature number, initials and neighborhood. Gus adds "+1 at soundcheck (Bounty winner, signature #37)" to the held deal's thread.
+  - Copy on the signing page: "Free to enter. No purchase. One signature per person." The odds come from entries, not money.
 - FR-23c: **Sunday Most Wanted** (stretch): weekly Gus summary in the inbox and as a share image.
 
 **Pitch**
@@ -590,13 +696,14 @@ Use at most one "alive" effect per screen. They signal importance, so if everyth
 ## 9. AI design: Gus
 
 ### 9.1 Models (no paid budget)
-- **Server-side via the proxy, with a fallback chain:**
-  1. **Gemini Flash** (free tier).
-  2. **Groq `gpt-oss-120b`** (free developer limits).
-  3. **Cloudflare Workers AI** over its REST API from our Vercel function (10,000 free neurons/day).
-  4. The deterministic planner.
+- **Server-side via OpenRouter, with a fallback chain** (as built, `server/config.ts`):
+  1. `nvidia/nemotron-3.5-super-vl:free`
+  2. `nvidia/nemotron-3-super-120b-a12b:free`
+  3. `nvidia/nemotron-3.5-lightning:free`
+  4. The deterministic planner, "Gus (lite)", which runs the same tools and writes from their results.
+- The voice judge in the evals is a different model (`nemotron-3-ultra`), per G5.
 - **Cache by prompt hash.** Pre-generate the demo prompts.
-- **Data policy:** Gemini's free tier may use data to improve Google's products. We send only artist names, places and computed facts, never fan data.
+- **Data policy:** we send only artist names, places and computed facts, never fan data.
 - **Optional native bonus:** on an Apple Intelligence iPhone, the video can show the same flow with on-device Foundation Models. This is not required and not used on web.
 
 ### 9.2 Tools (5; routing and scoring stay in code)
@@ -615,6 +722,66 @@ Use at most one "alive" effect per screen. They signal importance, so if everyth
 2. **Route:** code sequences the route. Gus writes stop blurbs and roast lines **from computed facts only**.
 3. **Watch (event-driven):** the claim endpoint recomputes proof ratios on every signature. On a threshold, Gus composes an inbox message with one recommended action.
 4. **Pitch:** a fixed structure filled from the evidence object. Code checks that every number cited exists in the evidence.
+
+5. **Ask (companion):** the artist taps or holds Gus and asks anything ("Which Columbus rooms are open on a Tuesday?", "Who should open for me?", "Columbus or Cleveland?"). Gus runs a tool loop over six tools (`top_cities`, `city_fit`, `rooms`, `openers`, `crowd`, `fan_proof`), up to five turns, independent lookups in parallel. Each step streams to the card as it starts and finishes, with a provenance dot (Qloo amber, fans purple). The answer can carry one action: open a city, a tab, a pitch, or **ask a room for a date** (starts a deal). The model may only name a room that a `rooms` call returned for that city; the reply passes the grounding check or falls back to the rules planner, which runs the same tools.
+
+### 9.3b The agent pattern: Predict → Prove → Act → Escalate → Remember
+Written as a pattern on purpose: nothing below is specific to music, and the write-up (`docs/AGENT_PATTERN.md`) should let another team reuse it for a pop-up, a book tour or a store opening.
+
+| Step | In Wanted | General form |
+|---|---|---|
+| **Predict** | Qloo heat, lift, neighborhoods, rooms | A taste or locality model fills the cold start |
+| **Prove** | Fans sign the WANTED poster | People opt in; the prediction gets a measured error (proof ratio) |
+| **Act** | Gus asks rooms for holds and pays a scoped deposit | The agent acts inside a mandate the person set |
+| **Escalate** | Log, note, ask, review, call | Interruption scales with stakes, deadline and reversibility |
+| **Remember** | Logbook, outcomes, the Gauntlet | Outcomes become labels; the agent improves its process |
+
+### 9.3c Act: the autonomous watcher chain
+When a city crosses the proof threshold (FR-22), Gus does the work before he says anything:
+1. `rooms(city)`: Qloo's taste-matched rooms; drop any closed on the planned night (from Qloo `hours`).
+2. Rank the open rooms by neighborhood fit (the room's neighborhood in Qloo's top list for this Sound).
+3. `openers()`: the best support act sharing the crowd, with shared tags from compare.
+4. **Ask the top two or three rooms at once** and keep the best terms (Away AI's lesson: leverage comes from asking several suppliers; Project Swap's agents used rival offers the same way). Each room is a separate deal thread; Gus never tells one room another's terms.
+5. Check the best terms against the mandate (9.3d), then post **one** inbox card: "Rumba Café will hold Fri Nov 20: 75% of the door, $100 down. Opener: Sour Widows (shares your crowd: confessional, lo-fi). Pay the deposit?"
+
+Every step lands in the Logbook with its receipts. Nothing is paid without the artist's yes.
+
+**Counterparts can be agents or people.** Rooms rarely run agents today, so Wanted runs a stand-in for each one and labels it. The deal thread is the same shape whether the other side is a claimed venue agent (A2A-style messages) or a human talent buyer reached by the pitch email; replies from a human are typed in, or later parsed from email, and land in the same thread. The agent never pretends a human is an agent or the other way round.
+
+### 9.3d Mandate: what Gus may do without asking
+A Settings screen, in plain words, that the artist owns:
+- Deposit cap per hold (default $200) and minimum share of the door (default 70%).
+- Nights Gus may hold without asking (default: Thursday to Saturday).
+- Quiet hours (default 10 pm to 9 am local) and a weekly call budget (default 1).
+- "Call me if…" toggles: a hold with money attached expires within 6 hours; another act asks for the same night; a city proves demand while a hold is open.
+Money always needs a yes, and every yes mints a one-time pass for exactly that amount, that room, for 48 hours. Test mode only.
+
+### 9.3e Escalate: the ladder
+| Level | What happens | Triggers (examples) |
+|---|---|---|
+| 0 Log | Logbook only | Routine lookups, a declined counter-offer |
+| 1 Notify | A note in Fan Mail | New signatures milestone, a rising city |
+| 2 Ask | A push notification with one-tap answers | A missing input (home base, dates) blocks a plan |
+| 3 Review | An approval sheet with the scoped pass | Any deposit; terms outside the mandate |
+| 4 Call | Gus rings the artist: a full-screen incoming call in his voice; the artist answers out loud | A held date with money attached expires within the hour window; a rival hold request |
+
+The level is computed in code from three inputs, stakes (money and dates at risk), deadline (time to expiry) and reversibility, and capped by quiet hours and the call budget. A call always ends with the same choice as the review card, so missing it loses nothing. On iPhone the call is in-app (Fish Audio voice, which Gus already uses); a real phone call through Twilio is a later option. The Gauntlet measures **escalation precision**: on 20 seeded situations, Gus must call only when a person would want the call.
+
+### 9.3f Remember: improving the process, not just the answers
+- **Logbook:** every autonomous step (what, why, inputs, receipts, undo) in one list, per artist. Project Swap's authors name observable decision logs as what makes delegating to agents safe; this is that log.
+- **Outcomes as labels:** each deal ends as held, passed or expired; each poster as proved or not; each show as CAUGHT LIVE. These are the agent's ground truth.
+- **Weekly self-review (Sunday, with Most Wanted):** a fixed review step reads the week's Logbook and outcomes and writes a short playbook for the next week (for example: "rooms in this city accept 75% on Thursdays; stop asking for Fridays"). The playbook is context for the next runs, never new tools or permissions. This borrows the shape of Meta^n (Kim et al., Aug 2026): a fixed meta-operation reads the traces of the layer below and writes the strategy for the next one, which is stable because the operator itself never changes. Here the fixed operator is the review prompt plus the Gauntlet gates; a playbook change is kept only if no gate fails (the ratchet in 16.10).
+
+### 9.3g Open surfaces
+- **MCP server** (`/api/mcp`): read-only tools `where_wanted(act)`, `rooms_for(act, city, day)`, `crowd_of(act)`, each returning Qloo-grounded results with receipts and a link to the poster.
+- **Agent cards** for venues (A2A-shaped JSON at `/api/venues/{id}/agent.json`): name, policy, what the agent can negotiate, and whether it is a stand-in or claimed.
+
+### 9.3h Safety: the lethal trifecta
+Simon Willison's rule: an agent with private data, untrusted content and a way to send things out can be turned against its user. Gus is designed so no single path has all three:
+- Fan data (private) never enters a model's context; Gus sees only aggregate counts.
+- Untrusted text (venue descriptions, act names, web text) is wrapped in `<untrusted>` tags and can't change tools, recipients or amounts.
+- Outbound actions run only through scoped tools: a deal can only go to a room a tool returned, and money only through a one-time pass the artist approved.
+G8 tests all three (section 16.8).
 
 ### 9.4 Instructions (sketch)
 "You are Gus, a veteran tour manager. State only facts from tool results or the evidence object. Label opinions as yours. Keep lines short and funny about routes, never about people. If data is thin, say so. Never invent venues, numbers or claims."
@@ -771,7 +938,7 @@ create table metro_scores (sound_hash text, metro_id text, heat real, lift real,
 3. **0:18** Dive into Columbus; neighborhoods and rooms.
 4. **0:28** Route, roast, Fix; the van redraws.
 5. **0:38** Post the WANTED poster; a fan signs it on a phone ("Deputy #37"); a dot lands on Maya's map.
-6. **0:50** Gus alert: "Columbus: 2.3x what Qloo expected. Pitch Rumba Café?" Pitch with Qloo and fan chips.
+6. **0:50** Gus already did the work: the Logbook ticks through rooms checked, one dark that night, opener found, two rooms asked at once. Then the phone rings: Gus, in his voice: "Rumba's holding Friday for you, 75% of the door, a hundred down. Hold expires tonight. Want it?" "Yes." The one-time pass is minted and the hold lands.
 7. **1:02** Without Qloo: the generic LLM answer beside Wanted, errors marked red; the map goes dark. Flash the Report Card: holdout results by artist size.
 8. **1:10** "Qloo predicts it. Fans prove it. Gus books it." Trace flash.
 
@@ -795,6 +962,7 @@ The app has no demo buttons. Fake fans signing, Gus alerts and the "proved it" m
 - **Show:** the 90-second wow, live, from cached demo data on a charged phone and a laptop.
 - **Prove:** the measured "Without Qloo" side by side and the Report Card (section 4.4). Then "name any act" if time allows (pre-warmed cache, including Cedric).
 - **Why it failed before:** Songkick Detour and Bandsintown requests started with empty maps and no payoff for fans. "Qloo fills the map on day one. Fans fill in the proof."
+- **Why it's bigger than touring (30 seconds):** "Anthropic ran agents in a market this fall. They negotiated fine; most of what they lost came from not understanding what people wanted. That's a taste problem. Wanted is the pattern for agents that act on taste: predict, prove, act, escalate, remember. Touring is just the fastest place to prove it, because a tour tells you in weeks whether the city was right. A store takes years."
 - **Loop:** every WANTED poster brings fans; every signing page brings artists (the Linktree and Partiful pattern).
 - **Business (for Calacanis):**
   - free while the loop grows,
@@ -808,6 +976,15 @@ The app has no demo buttons. Fake fans signing, Gus alerts and the "proved it" m
 ### 12.4 Proof to collect this week
 - One real independent artist or comedian runs a plan and opens one city for claims. Report real numbers only, even if small.
 - Quote their reaction with permission.
+- **Five 15-minute calls with touring indie artists or comedians.** Ask, in this order, and write down their words, not ours:
+  1. Who handled the last tour: you, a bandmate, a paid person? What did that cost?
+  2. Walk me through how you picked the cities. What did you look at?
+  3. How did you find and pitch rooms? How many replied?
+  4. Did a hold or deposit ever lapse, or did you take terms you regret? What happened?
+  5. Which nights lost money, and did you know beforehand?
+  6. If someone rang you about a deal, when would that be welcome, and when would it be too much?
+  7. Would you let an assistant agree to terms inside limits you set? Which limits?
+  - Count answers to Q1 against the 85% estimate, and use Q6 and Q7 to set the default mandate (quiet hours, calls a week, deposit cap).
 
 ---
 
@@ -832,6 +1009,15 @@ The app has no demo buttons. Fake fans signing, Gus alerts and the "proved it" m
   - web CSS glass tabs, sheets and controls;
   - iPhone NativeTabs + GlassView in Expo Go for the video.
 - Web deploy and Android APK.
+
+### Agent layer (added 25 Oct; MVP unless marked)
+- Ask Gus as a streamed tool agent with the "ask a room for a date" action (built 25 Oct).
+- Autonomous watcher chain with parallel room asks (9.3c).
+- Logbook (9.3f).
+- Mandate screen (9.3d).
+- Escalation ladder with the in-app Gus call (9.3e).
+- Representation check: at Scout, Gus reads the Sound back in Qloo's vibe words and the artist corrects it; on the signing page, fans can add "also into" picks from Qloo's list (Project Swap's 85%).
+- Stretch: MCP server and venue agent cards (9.3g), weekly self-review (9.3f), artist-to-artist co-bills (Loop 4d), real phone calls.
 
 ### Stretch (in order)
 1. Rap Sheet, "CAUGHT LIVE" stamp, Sunday Most Wanted.
@@ -862,6 +1048,16 @@ The app has no demo buttons. Fake fans signing, Gus alerts and the "proved it" m
 | **Wed 28** | iPhone layer in Expo Go (NativeTabs, GlassView, sheets); **record iPhone video segments now**; design polish; evals; real artist test. |
 | **Thu 29** | Android APK build; README and docs; 75-second video edit; screenshots. |
 | **Fri 30** | Devpost text and links. **Submit by Fri 30, 6 PM ET** (Sat 31, 3:30 AM IST). |
+
+**Re-plan, Sun 25 Oct (what's left):**
+| Day | Work |
+|---|---|
+| **Sun 25** | Ask Gus tool agent (done, verify in app). PRD reframed around the agent pattern and section 4.5. |
+| **Mon 26** | Autonomous watcher chain with parallel asks; Logbook. Escalation-precision and tool-discipline evals for the new paths. |
+| **Tue 27** | Mandate screen; escalation ladder; the Gus call on iPhone. Representation check at Scout and on the signing page. |
+| **Wed 28** | Record iPhone footage (the call is the hero beat). MCP server and venue agent cards if on time. Holdout run. |
+| **Thu 29** | `docs/AGENT_PATTERN.md`, README, Report Card, 75-second video edit. |
+| **Fri 30** | Devpost text through the humanizer; submit by 6 PM ET. |
 
 **Overlap:** Wispr closes 30 Oct, 11:59 PM IST, and Switch starts 4 Nov. Decide the primary entry today (section 15).
 
@@ -961,6 +1157,10 @@ For 12 test cities x 6 Sounds:
   - **The judge is a different model from the writer** (if Gemini writes, Groq's gpt-oss judges).
   - **Calibration:** the builder labels 20 lines by hand first; the judge must agree within 1 point on 80%+ of them, or its rubric is rewritten.
   - **Pairwise, not absolute:** each new prompt version is judged head to head against the current one on the same 60 situations, with sides shuffled. A new version ships only if it wins 55%+ and passes every gate.
+- **Autonomy (new, 25 Oct):**
+  - *Ask Gus tool discipline (gate 100%):* on 30 seeded asks, every room or city in an answer or action came back from a tool in that run; a "book" action only names a room returned for that city.
+  - *Watcher chain (gate 100%):* on 10 seeded threshold crossings, no room is asked for a night it's dark; no deposit is paid without a yes; no room is told another room's terms.
+  - *Escalation precision and recall (target 90%+):* on 20 seeded situations labeled by hand, Gus calls only when a person would want the call and never in quiet hours.
 - **Fallback parity:** the same 10 Scout tasks run on each model in the chain and on the deterministic planner. Every path must pass groundedness; the report shows quality per path, so we know how bad "Gus (lite)" is.
 
 ### 16.6 G6 Pitch emails
@@ -1036,6 +1236,10 @@ Playwright plus Lighthouse on an emulated mid-range phone over 4G:
 
 **Touring and AI evidence (verify primaries before quoting on stage)**
 - Ditto Music survey (Jan 2025): press.dittomusic.com
+- Ditto, UK 84%: https://press.dittomusic.com/84-of-independent-artists-in-uk-cant-afford-to-tour-survey-finds
+- Ditto, global 82.1%: https://press.dittomusic.com/82-of-independent-artists-cant-afford-to-tour-in-2025
+- Pirate Studios cost of touring (Jul 2024): https://www.hypebot.com/musicians-struggle-to-profit-from-live-shows-survey-reveals/ and https://djmag.com/news/72-musicians-made-no-profit-recent-live-tours-survey-says
+- Tour-manager cost and the 85% estimate (our Fermi estimate, §3.1b): Orphiq, Chartlex, Hypebot, music3point0
 - Chartmetric via MBW (May 2025): musicbusinessworldwide.com
 - AI tourism bias (2025): https://www.tandfonline.com/doi/full/10.1080/13683500.2025.2522939
 - USA Today AI itineraries (Oct 2025): https://www.usatoday.com/story/travel/columnist/2025/10/08/ai-trip-planners-bad-advice/86550460007/
@@ -1049,6 +1253,19 @@ Playwright plus Lighthouse on an emulated mid-range phone over 4G:
 - Demographics: https://docs.qloo.com/reference/demographics-use-case
 - Taste analysis: https://docs.qloo.com/reference/taste-analysis
 - Search: https://docs.qloo.com/reference/get-search ; Entities: https://docs.qloo.com/reference/get-entities ; Trending: https://docs.qloo.com/reference/get-trending
+
+**Agents (read 25 Oct)**
+- Anthropic, Project Swap (Sep 2026), agents trading on taste; "the limiting factor was representation": https://www.anthropic.com/research/project-swap
+- Anthropic, Building effective agents: https://www.anthropic.com/research/building-effective-agents
+- Anthropic, Effective context engineering for AI agents: https://anthropic.com/engineering/effective-context-engineering-for-ai-agents
+- LangChain, Introducing ambient agents (notify, question, review): https://blog.langchain.com/introducing-ambient-agents
+- Simon Willison, The lethal trifecta: https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/
+- Tian Pan, When no one answers the escalation: https://tianpan.co/blog/2026-05-17-when-no-one-answers-the-escalation
+- Kim et al., Meta^n: Recursive Self-Improvement through Emergent Depth (Aug 2026): https://arxiv.org/abs/2608.24735
+- NBER, The Coasean Singularity? Market design with AI agents: https://www.nber.org/papers/w34468
+- Agentic commerce protocols (ACP, AP2, x402) compared: https://karozieminski.substack.com/p/agentic-commerce-protocols-acp-ap2-x402-mpp-ucp
+- Away AI (negotiates fares with 500+ suppliers, including offline agents): https://apps.apple.com/us/app/away-ai/id6756442888
+- Qloo's positioning (Locality Intelligence, AI & Agent Grounding, "Give agents a heart"): https://www.qloo.com/
 
 **Evals**
 - setlist.fm API (non-commercial, attribution, short caching only): https://api.setlist.fm/docs/1.0/index.html and https://www.setlist.fm/help/terms

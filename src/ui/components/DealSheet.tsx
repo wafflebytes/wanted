@@ -345,10 +345,6 @@ function ToolRow({ l }: { l: DealLetter }) {
         />
       </View>
       <T v="footnote" color={C.text2} style={{ flex: 1 }} numberOfLines={2}>
-        <T v="monoSmall" color={C.text3}>
-          {l.tool}
-          {"  "}
-        </T>
         {l.text}
       </T>
     </View>

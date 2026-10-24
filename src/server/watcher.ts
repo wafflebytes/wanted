@@ -11,13 +11,15 @@ import { proofFor } from './claims';
 import { config } from './config';
 import { id } from './crypto';
 import { all, one, run } from './db';
+import { autoBook } from './autobook';
 import { thresholdMessage } from './gus/agent';
+import { log } from './logbook';
 import { rooms as qlooRooms } from './qloo/api';
 import { metroById } from './score';
 
 export type WatchOutcome = { fired: boolean; reason: string; message?: InboxMessage };
 
-export async function onSignature(artistId: string, city: string, opts: { includeDemo?: boolean; now?: number } = {}): Promise<WatchOutcome> {
+export async function onSignature(artistId: string, city: string, opts: { includeDemo?: boolean; now?: number; awaitChain?: boolean } = {}): Promise<WatchOutcome> {
   const artist = await getArtist(artistId);
   if (!artist) return { fired: false, reason: 'no artist' };
   const includeDemo = opts.includeDemo ?? artist.isDemo;
@@ -91,6 +93,17 @@ export async function onSignature(artistId: string, city: string, opts: { includ
     now,
   ]);
   await run('update watcher_state set last_fired_at = ? where artist_id = ? and city = ?', [now, artist.id, city]);
+  await log(artist.id, {
+    kind: 'decision',
+    city,
+    title: `${metro.name} filled its poster: ${proof.signatures} people signed`,
+    detail: `That’s more than we’d expect for a city this size, so it’s worth booking.${artist.isDemo ? ' (Demo data.)' : ''}`,
+    source: 'fans',
+    level: 1,
+  });
+  // Then Gus goes to work on his own (9.3c); the fan's request doesn't wait for it.
+  const chain = autoBook(artist, city).catch((e) => console.error('[autobook]', String(e)));
+  if (opts.awaitChain) await chain;
   return { fired: true, reason: 'crossed', message };
 }
 

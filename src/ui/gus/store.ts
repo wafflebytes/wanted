@@ -9,9 +9,13 @@ export type GusAction =
   | { type: 'tab'; tab: 'map' | 'tour' | 'pulse' | 'posters'; label: string }
   | { type: 'city'; id: string; name: string; label: string }
   | { type: 'pitch'; id: string; name: string; label: string }
+  | { type: 'deal'; id: string; name: string; roomId: string; label: string }
   | { type: 'link'; url: string; label: string };
 
-export type GusAnswer = { heard: string; reply: string; mood: 'idle' | 'proud' | 'unimpressed' | 'thinking'; action: GusAction | null; model: string };
+/** One thing Gus looked up while working on an ask. Mirrors the server's GusStep. */
+export type GusStep = { id: string; tool: string; label: string; source: 'qloo' | 'fans' | 'wanted'; status: 'running' | 'done' | 'failed'; found: string | null; ms: number };
+
+export type GusAnswer = { heard: string; reply: string; mood: 'idle' | 'proud' | 'unimpressed' | 'thinking'; action: GusAction | null; model: string; steps?: GusStep[] };
 
 export type GusPhase = 'idle' | 'listening' | 'thinking' | 'answer' | 'card';
 
@@ -22,6 +26,9 @@ type State = {
   /** True while a finger is on Gus. */
   holding: boolean;
   answer: GusAnswer | null;
+  /** What he heard and what he's looking up, live, while he works. */
+  heard: string | null;
+  steps: GusStep[];
   error: string | null;
   /** What Gus says about the current screen when nobody's asking. */
   line: string | null;
@@ -32,7 +39,7 @@ type State = {
   minimized: boolean;
 };
 
-let state: State = { phase: 'idle', level: 0, holding: false, answer: null, error: null, line: null, mood: 'idle', screen: 'map', speaking: false, minimized: false };
+let state: State = { phase: 'idle', level: 0, holding: false, answer: null, heard: null, steps: [], error: null, line: null, mood: 'idle', screen: 'map', speaking: false, minimized: false };
 const subs = new Set<() => void>();
 
 function set(patch: Partial<State>) {
