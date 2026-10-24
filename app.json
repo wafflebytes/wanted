@@ -10,7 +10,8 @@
     "ios": {
       "icon": "./assets/images/icon.png",
       "supportsTablet": true,
-      "bundleIdentifier": "fm.wanted.app"
+      "bundleIdentifier": "fm.wanted.app",
+      "appleTeamId": "L893X3WZYR"
     },
     "android": {
       "package": "fm.wanted.app",
@@ -37,12 +38,13 @@
         {
           "backgroundColor": "#000000",
           "image": "./assets/images/splash.png",
-          "imageWidth": 200
+          "imageWidth": 360
         }
       ],
       "expo-audio",
       "expo-sharing",
-      "expo-font"
+      "expo-font",
+      "./plugins/withSceneLifecycle"
     ],
     "experiments": {
       "typedRoutes": true,

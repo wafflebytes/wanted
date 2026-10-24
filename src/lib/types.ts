@@ -173,7 +173,11 @@ export type Roast = {
   /** Tour Score change if the Fix is applied, simulated before it's offered. */
   gain?: number;
   severity: 1 | 2 | 3;
+  /** The card in plain words: a headline, what changes (from → to), one short reason, the button. */
+  card?: RoastCard;
 };
+
+export type RoastCard = { title: string; from: string | null; to: string | null; note: string; action: string };
 
 export type RoastFix =
   | { kind: 'swap-city'; stopIndex: number; metroId: string }
@@ -222,10 +226,45 @@ export type CityProof = {
 
 export type InboxMessage = {
   id: string;
-  kind: 'threshold' | 'sunday' | 'info' | 'drift' | 'welcome';
+  kind: 'threshold' | 'sunday' | 'info' | 'drift' | 'welcome' | 'deal';
   body: string;
-  action: { label: string; kind: string; city?: string; roomId?: string } | null;
+  action: { label: string; kind: string; city?: string; roomId?: string; dealId?: string } | null;
   evidence: Record<string, unknown> | null;
   createdAt: number;
   read: boolean;
 };
+
+/**
+ * A date hold Gus worked out with a room's booking agent (agent to agent). Rooms don't run
+ * agents yet, so Wanted runs a stand-in for each one; money only ever moves in test mode.
+ */
+export type DealTerms = { date: string; day: DayKey; /** The artist's share of the door, in percent. */ split: number; deposit: number; capacity: number | null };
+/** One step of the conversation: a letter between the agents, or a tool Gus ran, with what it found. */
+export type DealLetter = { from: 'gus' | 'house'; kind: 'letter' | 'tool'; text: string; tool?: string; terms: Pick<DealTerms, 'split' | 'deposit'> | null };
+export type DealPayment = {
+  /** Stripe test mode when a test key is set, else Wanted's own sandbox ledger. Never live. */
+  rail: 'stripe-test' | 'sandbox';
+  ref: string;
+  amount: number;
+  at: number;
+  /** The one-time pass Gus paid with: this amount, this room, until this time. */
+  pass: { amount: number; payee: string; expiresAt: number };
+};
+export type Deal = {
+  id: string;
+  city: string;
+  cityName: string;
+  roomId: string;
+  roomName: string;
+  neighborhood: string | null;
+  /** talking: the agents are still trading letters. waiting: they agreed; the artist's call. held: deposit paid. */
+  status: 'talking' | 'waiting' | 'held' | 'declined' | 'passed';
+  terms: DealTerms | null;
+  thread: DealLetter[];
+  withinLimits: boolean;
+  payment: DealPayment | null;
+  createdAt: number;
+  updatedAt: number;
+};
+/** What Gus may agree to without asking twice. */
+export type DealLimits = { maxDeposit: number; minSplit: number };

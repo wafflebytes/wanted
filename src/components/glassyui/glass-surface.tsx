@@ -84,7 +84,13 @@ export const GlassSurface = forwardRef<View, GlassSurfaceProps>(
             colorScheme={preferences.theme}
             glassEffectStyle={preset === 'subtle' ? 'clear' : 'regular'}
             tintColor={
-              tint ?? (preferences.mode === 'tinted' ? colors.glassFill.tinted : undefined)
+              // Sheets and dialogs sit over busy content: tint them dark so text stays legible.
+              tint ??
+              (preset === 'overlay' && preferences.theme === 'dark'
+                ? 'rgba(22,22,24,0.86)'
+                : preferences.mode === 'tinted'
+                  ? colors.glassFill.tinted
+                  : undefined)
             }
           />
         ) : null}

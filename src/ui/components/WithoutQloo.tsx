@@ -9,7 +9,7 @@ import { View } from 'react-native';
 import type { Region } from '@/lib/regions';
 import { api } from '../api';
 import { C, F } from '../theme';
-import { Card, Chip, Row } from './core';
+import { Card, Row } from './core';
 import { GusLine } from './Gus';
 import { Prov } from './Receipts';
 import { T } from './T';
@@ -90,7 +90,7 @@ export function WithoutQlooPanel({ slug, focusCity, regions, wide }: { slug: str
         <T v="label" color="#ff8a80">
           Generic LLM
         </T>
-        <Chip mono>{r.llm.model.split('/').pop()?.replace(':free', '')}</Chip>
+        <T v="caption">{r.llm.model.split('/').pop()?.replace(':free', '')}</T>
       </Row>
       <T v="caption">Same inputs, no taste data. Majority answer of 3 samples at temperature 0.</T>
       <T v="label">Cities</T>
@@ -148,17 +148,18 @@ export function WithoutQlooPanel({ slug, focusCity, regions, wide }: { slug: str
   );
   return (
     <View style={{ gap: 12 }}>
-      <Row gap={8} wrap>
-        <Chip mono color={C.text}>
-          {r.overlapTop15}/{r.cities.length} cities in Wanted’s top 15
-        </Chip>
-        <Chip mono color={C.gold} bg="rgba(245,197,66,0.12)">
-          missed {r.missedSleepers.length} sleeper cities
-        </Chip>
-        <Chip mono color={wrongRooms ? '#ff8a80' : C.text2} bg={wrongRooms ? 'rgba(255,69,58,0.14)' : undefined}>
-          {wrongRooms}/{r.rooms.length} rooms contradicted by Qloo
-        </Chip>
-      </Row>
+      {/* The verdict as a sentence, not three badges. */}
+      <T v="callout" color={C.text2}>
+        <T v="callout" color={C.text}>{r.overlapTop15} of its {r.cities.length}</T> cities made Wanted’s top 15. It missed{' '}
+        <T v="callout" color={C.gold}>{r.missedSleepers.length === 1 ? '1 sleeper city' : `${r.missedSleepers.length} sleeper cities`}</T>
+        {wrongRooms ? (
+          <>
+            , and Qloo contradicts <T v="callout" color="#ff8a80">{wrongRooms} of its {r.rooms.length}</T> rooms.
+          </>
+        ) : (
+          '.'
+        )}
+      </T>
       {r.missedSleepers.length ? <T v="small">Missed: {r.missedSleepers.slice(0, 6).map((s) => s.name).join(', ')}.</T> : null}
       <View style={{ flexDirection: wide ? 'row' : 'column', gap: 12 }}>
         {llmCol}

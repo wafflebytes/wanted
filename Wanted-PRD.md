@@ -775,6 +775,21 @@ create table metro_scores (sound_hash text, metro_id text, heat real, lift real,
 7. **1:02** Without Qloo: the generic LLM answer beside Wanted, errors marked red; the map goes dark. Flash the Report Card: holdout results by artist size.
 8. **1:10** "Qloo predicts it. Fans prove it. Gus books it." Trace flash.
 
+### 12.2b Demo script and recordings (TO DO before the video)
+The app has no demo buttons. Fake fans signing, Gus alerts and the "proved it" moment are staged by script and recorded, never pressed on screen.
+
+- [ ] **Staging script** (`scripts/demo-stage.ts`): reset Maya's demo state, then step through beats on a key press. The steps are: signatures landing in Columbus in waves of 1, 10 and 40 through `/api/artist/[id]/simulate`, which is demo-only and labels everything as demo data; Columbus crossing the threshold; and Gus's note arriving.
+- [ ] **Simulator recordings.** Use `xcrun simctl io booted recordVideo` on an iPhone 17 Pro simulator, with one clip per beat in 12.2:
+  1. the splash into the map's first light;
+  2. Scout, and the halftone US lighting up;
+  3. the dive into Columbus, with the map style switched to Satellite once;
+  4. Tour: a Gus note, then "Switch rooms", and the van redraws;
+  5. the poster, and a fan signing on the web page in a second window;
+  6. "Columbus proved it", then "Pitch a room", then "Open in Mail";
+  7. Without Qloo, and the map going dark.
+- [ ] **Phone recordings** (Chaitanya to send): a real hand signing the poster on a phone, and a screen recording of the iPhone build with Liquid Glass on device.
+- [ ] Cut to 75 seconds. Every demo number on screen carries its "demo data" label.
+
 ### 12.3 Live pitch (Nov 5, 3 minutes, if a finalist)
 - **Open:** "Every comic and every band has played the Tuesday show to eleven people. That's a routing problem, not a talent problem."
 - **Show:** the 90-second wow, live, from cached demo data on a charged phone and a laptop.

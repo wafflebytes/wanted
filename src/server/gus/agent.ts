@@ -134,7 +134,7 @@ export async function scoutAgent(input: {
 
   const runCountry = async () => {
     if (!result) {
-      emit({ type: 'progress', text: 'Asking Qloo where your people are' });
+      emit({ type: 'progress', text: 'Finding where your people are' });
       result = await scout(input.self, input.refs, input.kind, input.scope);
       emit({ type: 'progress', text: 'Comparing with 20 other acts' });
       emit({ type: 'progress', text: 'Finding sleeper cities' });
@@ -365,7 +365,7 @@ export async function routeLines(input: {
 ${JSON.stringify(facts)}
 
 Write:
-- "planLine": one line on the whole route, under 22 words: your verdict as the tour manager, not a list of dates.
+- "planLine": one line on the whole route, under 22 words: your verdict as the tour manager, with an opinion. Never recite the dates, the stop count or the Tour Score; the app shows those. Good: "Strong Northeast swing. Fix the Tuesday in Burlington and I'll stop grumbling." Bad: "Ten stops across the Northeast, December 10th to 19th, tour score 51."
 - "blurbs": one line per stop in order, under 16 words: what to know about that night (the drive in, the night of the week, the room's neighborhood). The app already shows the date, city and room name, so don't just restate them.
 - "roasts": for each roast id, one funny line under 18 words about the route problem in "why" (a roast of the routing, never of people).
 Reply with only JSON: {"planLine": "...", "blurbs": ["..."], "roasts": [{"id": "...", "line": "..."}]}`,
@@ -402,8 +402,10 @@ Reply with only JSON: {"planLine": "...", "blurbs": ["..."], "roasts": [{"id": "
     parsed.roasts = (parsed.roasts ?? []).map((r) => ({ ...r, line: digitize(r.line ?? '') }));
     const fallback = lite();
     const ok = (t: string | undefined, max: number) => !!t && wordCount(t) <= max && checkGrounded(t, evidence, METRO_NAMES).ok;
+    // A verdict, not a readout: lines that recite the score or the calendar fall back.
+    const recites = /tour score|\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(parsed.planLine);
     return {
-      planLine: ok(parsed.planLine, 26) ? parsed.planLine : fallback.planLine,
+      planLine: ok(parsed.planLine, 26) && !recites ? parsed.planLine : fallback.planLine,
       blurbs: input.stops.map((s, i) => (ok(parsed.blurbs?.[i], 20) ? parsed.blurbs[i] : fallback.blurbs[i])),
       roasts: input.roasts.map((r, i) => {
         const l = parsed.roasts?.find((x) => x.id === r.id)?.line;
@@ -533,21 +535,21 @@ export function litePitch(ev: PitchEvidence): { subject: string; body: string } 
   parts.push(
     `I'm writing on behalf of ${ev.artist.name}, ${ev.artist.kind === 'comedy' ? 'a stand-up comedian' : 'an independent act'} in the lane of ${ev.artist.soundsLike.join(' and ')}, about a ${ev.roomBand} headline show at ${ev.room.name} on ${when}.`,
   );
-  const q: string[] = [];
-  if (ev.qloo.cityRank) q.push(`${ev.city.name} ranks #${ev.qloo.cityRank} of ${ev.qloo.citiesScored} US cities on our Wanted Score for this taste`);
-  if (hoods) q.push(`its strongest neighborhoods are ${hoods}${ev.qloo.roomInTopNeighborhood ? ', which is your side of town' : ''}`);
-  if (ev.qloo.vibe.length) q.push(`the crowd reads as ${ev.qloo.vibe.slice(0, 3).join(', ').toLowerCase()}`);
-  parts.push(`Qloo says: ${q.join('; ')}.`);
+  // Fans first: a booker trusts people who asked over any model. Then the taste data, in plain words.
   if (ev.fans.signatures > 0) {
     const fh = ev.fans.neighborhoods.slice(0, 2).map((n) => `${n.count} in ${n.name}`).join(' and ');
-    const ratio =
-      ev.fans.proofRatio && ev.fans.signatureShare !== null && ev.fans.heatShare !== null
-        ? ` That is ${pct(ev.fans.signatureShare)}% of all signatures across the cities we opened, against the ${pct(ev.fans.heatShare)}% Qloo predicted.`
+    const beat =
+      ev.fans.proofRatio && ev.fans.proofRatio >= 1.2 && ev.fans.signatureShare !== null && ev.fans.heatShare !== null
+        ? ` That is ${pct(ev.fans.signatureShare)}% of all signatures across the cities we opened, more than the ${pct(ev.fans.heatShare)}% the listening data predicted.`
         : '';
-    parts.push(
-      `Fans say: ${ev.fans.signatures} local fans have signed ${ev.artist.name}'s WANTED poster for ${ev.city.name}${fh ? `, including ${fh}` : ''}.${ratio}${ev.fans.isDemoData ? ' (Demo data.)' : ''}`,
-    );
+    parts.push(`${ev.fans.signatures} people in ${ev.city.name} have signed a poster asking ${ev.artist.name} to play${fh ? `, including ${fh}` : ''}.${beat}${ev.fans.isDemoData ? ' (Demo data.)' : ''}`);
   }
+  const q: string[] = [];
+  // A rank only helps when it's a strong one.
+  if (ev.qloo.cityRank && ev.qloo.cityRank <= 25) q.push(`${ev.city.name} is #${ev.qloo.cityRank} of ${ev.qloo.citiesScored} US cities for this sound`);
+  if (hoods) q.push(`its strongest neighborhoods are ${hoods}${ev.qloo.roomInTopNeighborhood ? ', which is your side of town' : ''}`);
+  if (ev.qloo.vibe.length) q.push(`the crowd reads as ${ev.qloo.vibe.slice(0, 3).join(', ').toLowerCase()}`);
+  if (q.length) parts.push(`Taste data from Qloo backs it up: ${q.join('; ')}.`);
   if (ev.opener) parts.push(`For support, ${ev.opener.name} shares this crowd (${ev.opener.shared.slice(0, 2).join(', ').toLowerCase() || 'overlapping taste'}).`);
   parts.push(`Every signer gets first access when tickets go up, so the announcement lands with people who already asked for it.`);
   parts.push(`Happy to send the full evidence sheet and work around your calendar. Thanks for reading.`);
@@ -578,8 +580,8 @@ ${JSON.stringify({ ...ev, artist: { ...ev.artist, name: untrusted(ev.artist.name
 
 Write a booking email to the talent buyer at the room. Structure:
 1. Greeting and the ask (artist, room, date, ${ev.roomBand} room headline).
-2. A paragraph starting "Qloo says:" with the taste-graph evidence.
-3. ${ev.fans.signatures > 0 ? 'A paragraph starting "Fans say:" with the signature evidence.' + (ev.fans.isDemoData ? ' Add "(Demo data.)" at its end.' : '') : 'No fan paragraph (there are no signatures yet).'}
+2. ${ev.fans.signatures > 0 ? 'The fans, in plain words: how many people in the city signed a poster asking for the artist, and where.' + (ev.fans.isDemoData ? ' Add "(Demo data.)" at its end.' : '') : 'No fan paragraph (there are no signatures yet).'}
+3. The taste evidence, in plain words, naming Qloo once as the source ("Taste data from Qloo..."). Only mention the city rank if it is in the top 25. No labels like "Qloo says:" or "Fans say:".
 4. The suggested opener if there is one.
 5. A short close.
 120 to 180 words. Warm, specific, no hype. Never mention capacity, ticket forecasts or guarantees. Reply with only JSON: {"subject": "...", "body": "..."}`,

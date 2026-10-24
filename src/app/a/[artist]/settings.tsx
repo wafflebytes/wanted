@@ -6,12 +6,12 @@
 import { router } from 'expo-router';
 import Head from 'expo-router/head';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { GlassSwitch } from '@/components/glassyui/glass-switch';
 import { useArtist } from '@/ui/artist';
-import { Btn, Chip, Group, ListRow, Row, Section } from '@/ui/components/core';
+import { Btn, Group, ListRow, Row, Section } from '@/ui/components/core';
 import { DemoTag } from '@/ui/components/Receipts';
 import { T } from '@/ui/components/T';
 import { haptic } from '@/ui/haptics';
@@ -63,7 +63,7 @@ export default function SettingsScreen() {
       <Head>
         <title>Settings · Wanted</title>
       </Head>
-      <View style={{ paddingTop: insets.top + S.sm, paddingHorizontal: S.gutter, paddingBottom: S.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <View style={{ paddingTop: Platform.OS === 'ios' ? S.xs : insets.top + S.sm, paddingHorizontal: S.gutter, paddingBottom: S.xs, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View style={{ width: 64 }} />
         <T v="headline" accessibilityRole="header">
           Settings
@@ -72,7 +72,7 @@ export default function SettingsScreen() {
           <T style={{ fontFamily: F.rounded ?? F.head, fontWeight: '600', fontSize: 17, color: C.purpleHi }}>Done</T>
         </Pressable>
       </View>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: insets.bottom + S.xxxl, gap: S.xl, maxWidth: 640, width: '100%', alignSelf: 'center' }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: S.gutter, paddingTop: S.sm, paddingBottom: insets.bottom + S.xxxl, gap: S.xxl, maxWidth: 640, width: '100%', alignSelf: 'center' }}>
         {a ? (
           <View style={{ alignItems: 'center', gap: S.sm, paddingVertical: S.md }}>
             {a.isDemo ? (
@@ -93,31 +93,36 @@ export default function SettingsScreen() {
         ) : null}
 
         <Group>
-          <ListRow
-            leading={<RowIcon name="moon" tint={C.flame} />}
-            title="Without Qloo"
-            subtitle="Compare with a generic LLM and turn the taste data off on the map."
-            trailing={
-              <GlassSwitch
-                checked={withoutQloo}
-                onCheckedChange={(on) => {
-                  haptic.thump();
-                  setWithoutQloo(on);
-                  session.setWithoutQloo(on);
-                }}
-                accessibilityLabel="Without Qloo"
-              />
-            }
-          />
-          <ListRow leading={<RowIcon name="scout" tint={C.purple} />} title="Scout another act" onPress={() => router.push('/scout')} trailing={<Chevron />} />
-          <ListRow leading={<RowIcon name="home" tint="#3a3a3c" />} title="Home" onPress={() => router.replace('/')} trailing={<Chevron />} />
+          <ListRow leading={<RowIcon name="scout" tint={C.purple} />} title="Add an act" subtitle="Paste a link. About ten seconds." onPress={() => router.push('/welcome?start=link')} trailing={<Chevron />} />
+          <ListRow leading={<RowIcon name="home" tint="#3a3a3c" />} title="Back to start" onPress={() => router.replace('/')} trailing={<Chevron />} />
         </Group>
+
+        <Section title="Data">
+          <Group>
+            <ListRow
+              leading={<RowIcon name="moon" tint={C.flame} />}
+              title="Without Qloo"
+              subtitle="Compare with a generic LLM and turn the taste data off on the map."
+              trailing={
+                <GlassSwitch
+                  checked={withoutQloo}
+                  onCheckedChange={(on) => {
+                    haptic.thump();
+                    setWithoutQloo(on);
+                    session.setWithoutQloo(on);
+                  }}
+                  accessibilityLabel="Without Qloo"
+                />
+              }
+            />
+          </Group>
+        </Section>
 
         <Section title="Qloo this month">
           <View style={{ backgroundColor: C.card, borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.md }}>
             <Row style={{ justifyContent: 'space-between' }}>
               <T v="body">{month ? `${used.toLocaleString()} of ${month.limit.toLocaleString()} calls` : '—'}</T>
-              {settings?.offline ? <Chip color={C.warn}>Offline: cached only</Chip> : null}
+              {settings?.offline ? <T v="footnote" color={C.warn}>Offline, cached only</T> : null}
             </Row>
             <View style={{ height: 8, borderRadius: 4, backgroundColor: C.fill2 }}>
               <View style={{ height: '100%', width: `${month ? Math.min(100, (used / month.limit) * 100) : 0}%`, borderRadius: 4, backgroundColor: C.amber }} />
@@ -167,11 +172,9 @@ export default function SettingsScreen() {
 
         {settings?.baselinePanel.length ? (
           <Section title={`Baseline panel · ${settings.baselinePanel.length} acts`}>
-            <Row gap={6} wrap>
-              {settings.baselinePanel.map((b) => (
-                <Chip key={b.name}>{b.name}</Chip>
-              ))}
-            </Row>
+            <T v="callout" color={C.text2}>
+              {settings.baselinePanel.map((b) => b.name).join(', ')}
+            </T>
             <T v="caption">Lift compares your heat in a city with these acts’ average there. A sleeper city loves you more than it loves everyone.</T>
           </Section>
         ) : null}

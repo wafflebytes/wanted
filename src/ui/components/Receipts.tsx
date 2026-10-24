@@ -3,7 +3,7 @@
  * call behind it: endpoint, params (never the key), time, cache date and the values used.
  */
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { GlassSheet, GlassSheetContent, GlassSheetTitle } from '@/components/glassyui/glass-sheet';
 import type { Provenance, Receipt } from '@/lib/types';
 import { api } from '../api';
@@ -102,38 +102,38 @@ export function useReceipts() {
   return c;
 }
 
-const PROV: Record<Provenance, { label: string; color: string; bg: string }> = {
-  qloo: { label: 'Qloo says', color: C.qloo, bg: 'rgba(255,176,0,0.12)' },
-  fans: { label: 'Fans say', color: C.fans, bg: 'rgba(180,92,240,0.14)' },
-  gus: { label: 'Gus thinks', color: C.gus, bg: 'rgba(127,209,255,0.12)' },
+/** Where a claim comes from, said plainly. Qloo stays quiet but probe-able: its label opens the receipt. */
+const PROV: Record<Provenance, { label: string; color: string }> = {
+  qloo: { label: 'Qloo taste data', color: C.qloo },
+  fans: { label: 'Fan signatures', color: C.fans },
+  gus: { label: 'Gus’s read', color: C.gus },
 };
 
-/** A provenance label. With receipts, tapping it opens them. */
+/** A provenance note: small grey words, not a pill. With receipts, tapping it opens them. */
 export function Prov({ kind, receipts, values, title, suffix }: { kind: Provenance; receipts?: Receipt[] | null; values?: Record<string, unknown> | null; title?: string; suffix?: string }) {
   const { open } = useReceipts();
   const p = PROV[kind];
   const can = kind === 'qloo' && !!receipts?.length;
+  const text = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: can ? 28 : undefined }}>
+      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: p.color }} />
+      <T v="caption" numberOfLines={1}>
+        {p.label}
+        {suffix ? ` · ${suffix}` : ''}
+      </T>
+      {can ? <Icon name="receipt" size={12} color={C.text3} /> : null}
+    </View>
+  );
+  if (!can) return text;
   return (
-    <Chip
-      color={p.color}
-      bg={p.bg}
-      mono
-      icon={can ? <Icon name="receipt" size={12} color={p.color} /> : undefined}
-      accessibilityLabel={can ? `${p.label}. Open the receipt.` : p.label}
-      onPress={can ? () => open({ receipts: receipts!, values, title }) : undefined}
-    >
-      {p.label}
-      {suffix ? ` · ${suffix}` : ''}
-    </Chip>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${p.label}. Open the receipt.`} hitSlop={8} onPress={() => open({ receipts: receipts!, values, title })} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+      {text}
+    </Pressable>
   );
 }
 
 export function DemoTag() {
-  return (
-    <Chip mono color={C.cream} bg="rgba(244,233,211,0.10)">
-      demo data
-    </Chip>
-  );
+  return <T v="caption">Demo data</T>;
 }
 
 export const monoNum = (n: number | null | undefined, d = 0) => (n === null || n === undefined ? '—' : n.toFixed(d));

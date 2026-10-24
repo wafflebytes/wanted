@@ -4,7 +4,7 @@
  * loads while Gus's first line is on screen.
  */
 import { type ComponentType, useEffect, useState } from 'react';
-import type { CrowdMapProps } from './CrowdMap.dom';
+import type { CrowdMapProps } from './types';
 
 export function CrowdMapView(props: CrowdMapProps) {
   const [Map, setMap] = useState<ComponentType<CrowdMapProps> | null>(null);

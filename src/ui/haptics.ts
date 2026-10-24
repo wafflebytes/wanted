@@ -31,4 +31,42 @@ export const haptic = {
     if (Platform.OS === 'web') return vibrate([30, 50, 30]);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
   },
+  /**
+   * A long, quiet purr while Gus works: a swell of soft taps (soft, light, medium, light, soft),
+   * a breath of rest, and again, until `stop` is called. It reads as "thinking", not "alert".
+   */
+  think: {
+    start() {
+      if (running) return;
+      running = true;
+      if (Platform.OS === 'web') {
+        const swell = [8, 40, 10, 40, 14, 40, 18, 40, 14, 40, 10, 40, 8, 520];
+        const loop = () => {
+          if (!running) return;
+          vibrate(swell);
+          timer = setTimeout(loop, swell.reduce((a, b) => a + b, 0));
+        };
+        return loop();
+      }
+      const S = Haptics.ImpactFeedbackStyle;
+      const swell = [S.Soft, S.Soft, S.Light, S.Light, S.Medium, S.Medium, S.Light, S.Light, S.Soft, S.Soft];
+      let i = 0;
+      const step = () => {
+        if (!running) return;
+        Haptics.impactAsync(swell[i]).catch(() => {});
+        i = (i + 1) % swell.length;
+        timer = setTimeout(step, i === 0 ? 700 : 58);
+      };
+      step();
+    },
+    stop() {
+      running = false;
+      if (timer) clearTimeout(timer);
+      timer = null;
+      if (Platform.OS === 'web') vibrate(0);
+    },
+  },
 };
+
+let running = false;
+let timer: ReturnType<typeof setTimeout> | null = null;

@@ -64,6 +64,15 @@ export const SCHEMA = [
     read integer not null default 0
   )`,
   `create index if not exists inbox_artist on gus_inbox(artist_id, created_at)`,
+  `create table if not exists deals (
+    id text primary key,
+    artist_id text not null,
+    city text not null,
+    body text not null,
+    created_at integer not null,
+    updated_at integer not null
+  )`,
+  `create index if not exists deals_artist on deals(artist_id, created_at)`,
   `create table if not exists watcher_state (
     artist_id text not null,
     city text not null,

@@ -1,22 +1,30 @@
 /**
- * The Crowd Map (PRD 2 scenes 1, 2 and 6; FR-4 to FR-7, FR-21, FR-30). The country lights up
- * hex by hex; tap a city and the camera dives in. Fan signatures land as dots with a thump.
- * The Without Qloo toggle puts a generic LLM's answer beside Wanted's and turns the map dark.
+ * The Map answers one question: where am I wanted, and what do I do about it? The country
+ * lights up hex by hex; the drawer leads with your one next move, then the cities in plain
+ * words. How the ranking works (and the Without Qloo comparison) sits one tap deeper for
+ * anyone who wants to check the math. Gus's take rides in the accessory, not in the drawer.
  */
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import Head from 'expo-router/head';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassSheet, GlassSheetContent, GlassSheetTitle } from '@/components/glassyui/glass-sheet';
 import { GlassSurface } from '@/components/glassyui/glass-surface';
 import { api } from '@/ui/api';
 import { useArtist } from '@/ui/artist';
-import { CityPanel } from '@/ui/components/CityPanel';
+import { PitchSheet, type PitchTarget } from '@/ui/components/PitchSheet';
+import { CITY_HERO, CitySheet, cityHeroHeight } from '@/ui/map/CitySheet';
+import { nextMove, NextMoveHead, SectionLabel, TheFive } from '@/ui/map/MapBoard';
+import { PosterTile } from '@/ui/map/PosterTile';
 import { Btn, Card, Chip, Empty, Group, ListRow, Row, Section, WhyBars } from '@/ui/components/core';
 import { Drawer } from '@/ui/components/Drawer';
 import { TAB_BAR_SPACE } from '@/ui/components/TabBar';
 import { GusLine } from '@/ui/components/Gus';
+import { gus } from '@/ui/gus/store';
+import { ActsMenuNative, LayersMenuNative } from '@/ui/components/NativeMenus';
+import { ActsMenu } from '@/ui/components/ActsSheet';
+import { GusPerch } from '@/ui/gus/GusDock';
 import { DemoTag, Prov } from '@/ui/components/Receipts';
 import { T } from '@/ui/components/T';
 import { useToast } from '@/ui/components/Toaster';
@@ -24,8 +32,9 @@ import { WithoutQlooPanel } from '@/ui/components/WithoutQloo';
 import { haptic } from '@/ui/haptics';
 import { invalidate, useApi, useReducedMotion } from '@/ui/hooks';
 import { CrowdMapView } from '@/ui/map/CrowdMapView';
+import { BASEMAPS, type Basemap } from '@/ui/map/types';
 import { session } from '@/ui/session';
-import { C, F, IMAGES, R, S } from '@/ui/theme';
+import { C, F, gradient, IMAGES, R, S } from '@/ui/theme';
 import { Image } from 'expo-image';
 import type { CityData, MapData, MapMetroRow, PlanResponse } from '@/ui/types';
 import { Icon } from '@/ui/icons/Icon';
@@ -43,8 +52,13 @@ export default function MapScreen() {
   const [focusRoom, setFocusRoom] = useState<string | null>(null);
   const [why, setWhy] = useState<MapMetroRow | null>(null);
   const [dark, setDark] = useState(false);
+  const [basemap, setBasemap] = useState<Basemap>('dark');
+  const [layersOpen, setLayersOpen] = useState(false);
   const [posting, setPosting] = useState(false);
   const [pulse, setPulse] = useState(0);
+  const [q, setQ] = useState('');
+  const [actsOpen, setActsOpen] = useState(false);
+  const [pitch, setPitch] = useState<PitchTarget | null>(null);
   const city = useApi<CityData>(slug && cityId ? `/artist/${slug}/city/${cityId}` : null);
   const cityWait = useApi<CityData>(slug && cityId && city.data?.neighborhoodsPending ? `/artist/${slug}/city/${cityId}?wait=1` : null);
   const cityData = cityWait.data && !cityWait.data.neighborhoodsPending ? cityWait.data : city.data;
@@ -85,6 +99,13 @@ export default function MapScreen() {
 
   const ranked = useMemo(() => (map ? [...map.metros].filter((m) => m.rank !== null).sort((a, b) => a.rank! - b.rank!) : []), [map]);
   const sleepers = useMemo(() => (map ? map.metros.filter((m) => m.sleeper).sort((a, b) => (a.liftRank ?? 999) - (b.liftRank ?? 999)) : []), [map]);
+  const matches = useMemo(() => {
+    const k = q.trim().toLowerCase();
+    if (!k) return [];
+    // Names that start with the query first (Apple Maps style), then any other match, each by rank.
+    const hit = ranked.filter((m) => `${m.name} ${m.state}`.toLowerCase().includes(k));
+    return [...hit.filter((m) => m.name.toLowerCase().startsWith(k)), ...hit.filter((m) => !m.name.toLowerCase().startsWith(k))].slice(0, 25);
+  }, [q, ranked]);
   const proofBy = useMemo(() => Object.fromEntries((map?.proof ?? []).map((p) => [p.city, p])), [map]);
   const gusLine = useMemo(() => {
     if (memo?.line) return { line: memo.line, model: memo.model };
@@ -92,6 +113,15 @@ export default function MapScreen() {
     const s = sleepers[0];
     return { line: `Your crowd's thickest in ${ranked[0].name}.${s ? ` Everyone plays the big cities. Your sleeper is ${s.name}.` : ''}`, model: 'gus-lite' };
   }, [memo, ranked, sleepers]);
+
+  // Gus's standing line for this screen lives in the accessory.
+  useFocusEffect(
+    useCallback(() => {
+      gus.set({ screen: 'map' });
+      if (dark) gus.say('This is every fan-demand app on day one. Empty.', 'unimpressed');
+      else if (gusLine) gus.say(gusLine.line, 'proud');
+    }, [gusLine, dark]),
+  );
 
   const post = async () => {
     if (!cityId || !slug) return;
@@ -122,9 +152,10 @@ export default function MapScreen() {
   const signatures = state?.opened.reduce((n, o) => n + (o.proof?.signatures ?? 0), 0) ?? 0;
 
   // Drawer detents: a peek that shows Gus, about half the screen, and nearly full height.
-  const bottomInset = TAB_BAR_SPACE + Math.max(insets.bottom - 6, 8);
+  // Clear the tab bar (the system one on iOS, the glass capsule elsewhere).
+  const bottomInset = Platform.OS === 'ios' ? insets.bottom + 56 : TAB_BAR_SPACE + Math.max(insets.bottom - 6, 8);
   const headerH = insets.top + 64;
-  const detents = useMemo(() => [158, Math.round((height - bottomInset) * 0.5), Math.max(300, height - bottomInset - headerH - 8)], [height, bottomInset, headerH]);
+  const detents = useMemo(() => [cityId ? 300 : 262, Math.round((height - bottomInset) * 0.5), Math.max(300, height - bottomInset - headerH - 8)], [height, bottomInset, headerH, cityId]);
   const [detent, setDetent] = useState(0);
   const sheetH = detents[Math.min(detent, 1)];
 
@@ -135,28 +166,37 @@ export default function MapScreen() {
     setDetent((d) => Math.max(d, 1));
   };
 
-  const head = dark ? (
-    <GusLine line="This is every fan-demand app on day one. Empty." mood="unimpressed" model="gus-lite" />
-  ) : cityId ? null : map ? (
-    gusLine ? <GusLine line={gusLine.line} model={gusLine.model} mood="proud" /> : null
-  ) : mapErr ? null : (
-    <GusLine line={null} thinking="Gus is reading the taste graph…" orb="searching" />
-  );
+  const gusHead = map || mapErr || dark || cityId ? null : <GusLine line={null} thinking="Reading the taste graph…" orb="searching" />;
+  const [howOpen, setHowOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  // The peek is one headline and one button; search and the full list sit further up the sheet.
+  const move = map && !dark && !cityId ? nextMove(state, ranked, sleepers, dive, (c) => router.push(`/a/${slug}/posters?city=${c}`)) : null;
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  const head = move ? (dismissed === move.title ? null : <NextMoveHead move={move} compact={detent > 0} onDismiss={() => setDismissed(move.title)} />) : gusHead;
 
   const panel = dark ? (
-    slug ? <WithoutQlooPanel slug={slug} focusCity={focusCity} regions={constraints?.regions ?? ['midwest', 'east']} wide={false} /> : null
+    slug ? (
+      <WithoutQlooPanel slug={slug} focusCity={focusCity} regions={constraints?.regions ?? ['midwest', 'east']} wide={false} />
+    ) : null
   ) : cityId ? (
     cityData ? (
-      <CityPanel
+      <CitySheet
         d={cityData}
+        full={detent === detents.length - 1}
         pending={!!city.data?.neighborhoodsPending && !cityWait.data}
         isDemo={!!state?.artist.isDemo}
-        onBack={() => {
+        onClose={() => {
           setCityId(null);
           setFocusRoom(null);
+          setDetent(0);
         }}
         onPost={post}
         onPoster={() => router.push(`/a/${slug}/posters?city=${cityId}`)}
+        onPitch={() => setPitch({ city: cityData.metro.id, cityName: cityData.metro.name, roomId: focusRoom, date: null })}
+        onAsk={() => {
+          gus.say(`${cityData.metro.name}. What do you want to know?`, 'reading');
+          gus.openCard();
+        }}
         posting={posting}
         focusRoom={focusRoom}
       />
@@ -171,64 +211,59 @@ export default function MapScreen() {
     )
   ) : map ? (
     <>
-      <View style={{ flexDirection: 'row', backgroundColor: C.card, borderRadius: R.card, borderCurve: 'continuous', paddingVertical: S.md }}>
-        <StatCell value={ranked.length} label="Cities scored" />
-        <StatCell value={sleepers.length} label="Sleepers" color={C.gold} />
-        <StatCell value={signatures} label="Signatures" color={C.fans} />
-      </View>
       {map.notices.map((n) => (
-        <Card key={n} style={{ padding: S.md }}>
-          <T v="footnote">{n}</T>
-        </Card>
+        <T key={n} v="footnote">
+          {n}
+        </T>
       ))}
-      {state?.opened.length ? (
-        <Section title="Posters up" tint={C.fans} trailing={state.artist.isDemo ? <DemoTag /> : undefined}>
-          <Group>
-            {state.opened.map((o) => (
-              <ListRow
-                key={o.city}
-                onPress={() => dive(o.city)}
-                accessibilityLabel={`${o.name}: ${o.proof?.signatures ?? 0} signatures. Dive in.`}
-                leading={
-                  <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(180,92,240,0.16)', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon name="signature" variant="bold" size={17} color={C.fans} />
-                  </View>
-                }
-                title={o.name}
-                subtitle={`${o.proof?.signatures ?? 0} signatures${o.proof?.ratio !== null && o.proof?.ratio !== undefined ? ` · ${o.proof.ratio.toFixed(1)}× predicted` : ''}`}
-                trailing={
-                  <Row gap={S.sm}>
-                    {o.proof?.crossed ? <Chip color={C.good} bg="rgba(52,199,89,0.14)">Proven</Chip> : null}
-                    <Icon name="chevron" size={16} color={C.text3} />
-                  </Row>
-                }
+      {!q.trim() ? <TheFive ranked={ranked} map={map} onDive={dive} /> : null}
+      <View style={{ gap: S.sm }}>
+        <SectionLabel>{q.trim() ? 'Search' : 'Everywhere else'}</SectionLabel>
+        <SearchBar value={q} onChange={setQ} count={ranked.length} onFocus={() => setDetent(detents.length - 1)} />
+        {q.trim() && !matches.length ? (
+          <Empty title={`No “${q.trim()}” in ${ranked.length} cities`} line="Wanted scores US cities with enough taste data. Try the nearest big city." />
+        ) : (
+          <Group style={{ backgroundColor: 'rgba(255,255,255,0.07)' }}>
+            {(q.trim() ? matches : ranked.slice(5, showAll ? 60 : 15)).map((m) => (
+              <CityRow
+                key={m.id}
+                m={m}
+                top={m.id === ranked[0]?.id}
+                opened={map.opened.includes(m.id)}
+                signatures={proofBy[m.id]?.signatures ?? 0}
+                onPress={() => {
+                  setQ('');
+                  dive(m.id);
+                  setDetent(1);
+                }}
               />
             ))}
+            {!q.trim() && ranked.length > 15 ? (
+              <ListRow
+                onPress={() => setShowAll((v) => !v)}
+                title={
+                  <T v="body" color={C.purpleHi}>
+                    {showAll ? 'Show fewer' : `Show all ${ranked.length}`}
+                  </T>
+                }
+              />
+            ) : null}
           </Group>
-        </Section>
-      ) : null}
-      {sleepers.length ? (
-        <Section title="Sleeper cities" tint={C.gold}>
-          <T v="footnote">Top 15 for lift, outside the top 15 for raw heat: they like you more than they like everyone.</T>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -S.gutter }} contentContainerStyle={{ gap: S.sm, paddingHorizontal: S.gutter }}>
-            {sleepers.map((m) => (
-              <Chip key={m.id} color={C.gold} bg="rgba(245,197,66,0.13)" icon={<Icon name="star" variant="bold" size={14} color={C.gold} />} onPress={() => setWhy(m)} accessibilityLabel={`Sleeper city ${m.name}. See why.`}>
-                {m.name}, {m.state}
-              </Chip>
-            ))}
-          </ScrollView>
-        </Section>
-      ) : null}
-      <Section title="Most wanted cities" trailing={<Prov kind="qloo" receipts={map.receipts} title="Where this taste lives" values={{ 'cells (geohash-4)': map.sound.cellCount, 'baseline acts': 20, 'metros scored': ranked.length }} />}>
-        <Group>
-          {ranked.slice(0, 20).map((m) => (
-            <CityRow key={m.id} m={m} opened={map.opened.includes(m.id)} signatures={proofBy[m.id]?.signatures ?? 0} onPress={() => dive(m.id)} onWhy={() => setWhy(m)} />
-          ))}
-        </Group>
-        <T v="caption">
-          Color is the Wanted Score (0.6 × heat percentile + 0.4 × lift percentile); height is heat. Gold stars are sleepers; white dots are fan signatures, grouped by neighborhood. {ranked.length} metros scored against a 20-act baseline.
-        </T>
-      </Section>
+        )}
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => (haptic.tick(), setHowOpen(true))}
+        hitSlop={8}
+        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, alignSelf: 'center', paddingVertical: S.sm })}
+      >
+        <Row gap={6}>
+          <Icon name="info" size={15} color={C.text3} />
+          <T v="footnote" color={C.text3}>
+            How Wanted ranks cities
+          </T>
+        </Row>
+      </Pressable>
     </>
   ) : mapErr ? (
     <Empty title="The map didn't load" line={mapErr}>
@@ -265,6 +300,7 @@ export default function MapScreen() {
             }
             route={cityId ? null : route}
             dark={dark}
+            basemap={basemap}
             reduceMotion={reduced}
             pulse={pulse}
             padding={wide ? { top: headerH, left: (dark ? 760 : 420) + 24, bottom: 90, right: 20 } : { top: headerH + 8, left: 28, bottom: sheetH + bottomInset + 16, right: 28 }}
@@ -286,12 +322,25 @@ export default function MapScreen() {
         </View>
       ) : null}
 
-      {/* Header: who (opens Settings) and the Without Qloo toggle. Glass only on this chrome. */}
-      <View style={{ position: 'absolute', top: insets.top + S.sm, left: S.gutter, right: S.gutter, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: S.sm }} pointerEvents="box-none">
+      {/* Header: who you are (switch acts, Settings). Glass only on this chrome. */}
+      <View
+        style={{ position: 'absolute', top: insets.top + S.sm, left: S.gutter, right: S.gutter, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: S.sm }}
+        pointerEvents="box-none"
+      >
+        {Platform.OS === 'ios' && slug ? (
+          <ActsMenuNative slug={slug} name={state?.artist.name ?? ''} />
+        ) : (
         <GlassSurface preset="prominent" style={{ borderRadius: 999, overflow: 'hidden', flexShrink: 1 }}>
-          <Pressable onPress={() => router.push(`/a/${slug}/settings`)} accessibilityRole="button" accessibilityLabel={`${state?.artist.name ?? 'Artist'}. Settings`} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm, paddingLeft: 6, paddingRight: 14, height: 46 }}>
-              <Avatar name={state?.artist.name ?? ''} demo={!!state?.artist.isDemo} />
+          <Pressable
+            onPress={() => {
+              haptic.tap();
+              setActsOpen(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`${state?.artist.name ?? 'Artist'}. Switch act`}
+            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, height: 44 }}>
               <T v="headline" numberOfLines={1} style={{ flexShrink: 1 }}>
                 {state?.artist.name ?? ' '}
               </T>
@@ -299,35 +348,150 @@ export default function MapScreen() {
             </View>
           </Pressable>
         </GlassSurface>
-        <GlassSurface preset="prominent" tint={dark ? '#8E1B14' : undefined} style={{ borderRadius: 999, overflow: 'hidden' }}>
-          <Pressable
-            onPress={() => toggleDark(!dark)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: dark }}
-            accessibilityLabel="Without Qloo"
-            accessibilityHint="Compares Wanted with a generic LLM and turns the taste data off"
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, height: 46 }}>
-              <Icon name={dark ? 'moon' : 'eye'} variant={dark ? 'bold' : 'linear'} size={18} color={C.text} />
-              <T style={{ fontFamily: F.rounded ?? F.bodyMed, fontWeight: '600', fontSize: 15, color: C.text }}>Without Qloo</T>
-            </View>
-          </Pressable>
-        </GlassSurface>
+        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
+          {!dark && map ? (
+            Platform.OS === 'ios' ? (
+              <LayersMenuNative value={basemap} options={BASEMAPS} onChange={(k) => (haptic.tick(), setBasemap(k))} />
+            ) : (
+            <GlassSurface preset="prominent" style={{ borderRadius: 999, overflow: 'hidden' }}>
+              <Pressable onPress={() => (haptic.tap(), setLayersOpen((o) => !o))} accessibilityRole="button" accessibilityLabel="Map style" accessibilityState={{ expanded: layersOpen }} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+                <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="layers" size={20} color={C.text} />
+                </View>
+              </Pressable>
+            </GlassSurface>
+            )
+          ) : null}
+          {dark ? (
+            <GlassSurface preset="prominent" tint="#8E1B14" style={{ borderRadius: 999, overflow: 'hidden' }}>
+              <Pressable onPress={() => toggleDark(false)} accessibilityRole="button" accessibilityLabel="Turn taste data back on" style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, height: 46 }}>
+                  <Icon name="eye" size={18} color={C.text} />
+                  <T style={{ fontFamily: F.rounded, fontWeight: '600', fontSize: 15, color: C.text }}>Back to Wanted</T>
+                </View>
+              </Pressable>
+            </GlassSurface>
+          ) : null}
+          {slug ? (
+            <GlassSurface preset="prominent" style={{ borderRadius: 999, overflow: 'hidden' }}>
+              <Pressable onPress={() => (haptic.tap(), router.push(`/a/${slug}/settings`))} accessibilityRole="button" accessibilityLabel="Settings" style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+                <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="settings" size={20} color={C.text} />
+                </View>
+              </Pressable>
+            </GlassSurface>
+          ) : null}
+        </View>
       </View>
 
+      {layersOpen && Platform.OS !== 'ios' ? (
+        <>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setLayersOpen(false)} accessibilityLabel="Close map styles" />
+          <GlassSurface preset="prominent" style={{ position: 'absolute', top: insets.top + S.sm + 52, right: S.gutter, width: 200, borderRadius: 22, overflow: 'hidden', paddingVertical: 6 }}>
+            {BASEMAPS.map((b) => (
+              <Pressable
+                key={b.key}
+                onPress={() => {
+                  haptic.tick();
+                  setBasemap(b.key);
+                  setLayersOpen(false);
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: basemap === b.key }}
+                style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 44, backgroundColor: pressed ? 'rgba(255,255,255,0.08)' : 'transparent' })}
+              >
+                <T v="body">{b.label}</T>
+                {basemap === b.key ? <Icon name="check" variant="bold" size={16} color={C.text} /> : null}
+              </Pressable>
+            ))}
+          </GlassSurface>
+        </>
+      ) : null}
+
       {wide ? (
-        <View style={{ position: 'absolute', top: headerH + 8, left: S.md, bottom: insets.bottom + 92, width: dark ? 760 : 420, maxWidth: width - 24, backgroundColor: 'rgba(18,18,20,0.97)', borderRadius: 28, borderWidth: 1, borderColor: C.line, overflow: 'hidden' }}>
+        <View
+          style={{
+            position: 'absolute',
+            top: headerH + 8,
+            left: S.md,
+            bottom: insets.bottom + 92,
+            width: dark ? 760 : 420,
+            maxWidth: width - 24,
+            backgroundColor: 'rgba(18,18,20,0.97)',
+            borderRadius: 28,
+            borderWidth: 1,
+            borderColor: C.line,
+            overflow: 'hidden',
+          }}
+        >
           <ScrollView contentContainerStyle={{ padding: S.gutter, gap: S.xl }}>
             {head}
             {panel}
           </ScrollView>
         </View>
       ) : (
-        <Drawer detents={detents} index={detent} onIndexChange={setDetent} header={head} bottomInset={bottomInset} label={cityId ? 'City panel' : 'Crowd panel'}>
+        <Drawer detents={detents} index={detent} onIndexChange={setDetent} header={head} bottomInset={bottomInset} label={cityId ? 'City panel' : 'Crowd panel'}
+          perch={<GusPerch size={84} line={!cityId && !dark && map ? gusLine?.line : null} />}
+          hero={
+            cityId && cityData && !dark ? (
+              <PosterTile
+                cityId={cityData.metro.id}
+                name={cityData.metro.name}
+                state={cityData.metro.state}
+                hexes={cityData.hexes}
+                signed={cityData.proof ? cityData.proof.signatures : null}
+                proven={!!cityData.proof?.crossed}
+                width={CITY_HERO.width}
+                tilt={-5}
+              />
+            ) : null
+          }
+          heroLift={CITY_HERO.lift}
+          heroHeight={cityHeroHeight}
+        >
           {panel}
         </Drawer>
       )}
+
+      {slug ? <PitchSheet slug={slug} target={pitch} onClose={() => setPitch(null)} /> : null}
+      {slug && Platform.OS !== 'ios' ? <ActsMenu open={actsOpen} onClose={() => setActsOpen(false)} slug={slug} top={insets.top + S.sm + 52} /> : null}
+
+      <GlassSheet open={howOpen} onOpenChange={(o) => !o && setHowOpen(false)}>
+        <GlassSheetContent closeLabel="Close">
+          <View style={{ gap: S.lg }}>
+            <GlassSheetTitle>How Wanted ranks cities</GlassSheetTitle>
+            <T v="callout" color={C.text2} style={{ lineHeight: 22 }}>
+              We ask Qloo’s taste graph where people who love the acts you sound like actually live, block by block. Then we compare that with twenty other acts, so a city only ranks high if it likes
+              you more than it likes everyone.
+            </T>
+            <View style={{ gap: S.sm }}>
+              <HowRow icon="map" title="Where your crowd lives" body="Heat: how many of your kind of fans are in each city." />
+              <HowRow icon="star" title="Sleeper cities" body="Places that over-index for you but that every other act skips. Cheaper rooms, hungrier crowds." color={C.gold} />
+              <HowRow icon="signature" title="Proof" body="Fans sign your WANTED poster. When a city beats what we predicted, Gus tells you to book it." color={C.fans} />
+            </View>
+            {map ? (
+              <Prov
+                kind="qloo"
+                receipts={map.receipts}
+                title="Every Qloo call behind this map"
+                values={{ 'cells (geohash-4)': map.sound.cellCount, 'baseline acts': 20, 'metros scored': ranked.length }}
+              />
+            ) : null}
+            <Btn
+              tone="glass"
+              full
+              icon={<Icon name="moon" size={18} color={C.text} />}
+              onPress={() => {
+                setHowOpen(false);
+                setTimeout(() => toggleDark(true), 250);
+              }}
+            >
+              See it without taste data
+            </Btn>
+          </View>
+        </GlassSheetContent>
+      </GlassSheet>
 
       <GlassSheet open={!!why} onOpenChange={(o) => !o && setWhy(null)}>
         <GlassSheetContent closeLabel="Close">
@@ -338,10 +502,15 @@ export default function MapScreen() {
               </GlassSheetTitle>
               <WhyBars heatPct={why.heatPct} liftPct={why.liftPct} />
               <T v="small">
-                Heat rank #{why.heatRank} · Lift rank #{why.liftRank} · Wanted Score {why.score?.toFixed(0)}. Lift is this Sound’s heat minus what a typical act gets here (a 20-act baseline), so a sleeper is a city that loves you more than it loves everyone.
+                Heat rank #{why.heatRank} · Lift rank #{why.liftRank} · Wanted Score {why.score?.toFixed(0)}. Lift is this Sound’s heat minus what a typical act gets here (a 20-act baseline), so a
+                sleeper is a city that loves you more than it loves everyone.
               </T>
               <GusLine
-                line={why.sleeper ? `Everyone skips ${why.name}. Your crowd doesn't. That's a sleeper.` : `${why.name} ranks #${why.rank} for you. ${why.liftPct && why.liftPct > 0.7 ? 'More yours than most.' : 'Mostly just a big city.'}`}
+                line={
+                  why.sleeper
+                    ? `Everyone skips ${why.name}. Your crowd doesn't. That's a sleeper.`
+                    : `${why.name} ranks #${why.rank} for you. ${why.liftPct && why.liftPct > 0.7 ? 'More yours than most.' : 'Mostly just a big city.'}`
+                }
                 model="gus-lite"
                 compact
               />
@@ -363,58 +532,85 @@ export default function MapScreen() {
   );
 }
 
-function StatCell({ value, label, color = C.text }: { value: number; label: string; color?: string }) {
+function HowRow({ icon, title, body, color = C.text }: { icon: 'map' | 'star' | 'signature'; title: string; body: string; color?: string }) {
   return (
-    <View style={{ flex: 1, alignItems: 'center', gap: 2 }} accessible accessibilityLabel={`${value} ${label}`}>
-      <T style={{ fontFamily: F.monoBold, fontSize: 22, lineHeight: 26, color }}>{value}</T>
-      <T v="caption" color={C.text2}>
-        {label}
-      </T>
+    <View style={{ flexDirection: 'row', gap: S.md, alignItems: 'flex-start' }}>
+      <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: C.fill, alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={icon} variant="bold" size={16} color={color} />
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <T v="headline">{title}</T>
+        <T v="footnote">{body}</T>
+      </View>
     </View>
   );
 }
 
-function Avatar({ name, demo }: { name: string; demo: boolean }) {
-  return demo ? (
-    <Image source={IMAGES['maya-sticker']} style={{ width: 34, height: 34 }} contentFit="contain" accessibilityIgnoresInvertColors />
-  ) : (
-    <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.purple, alignItems: 'center', justifyContent: 'center' }}>
-      <T style={{ fontFamily: F.bold, fontSize: 15, color: C.text }}>{name.slice(0, 1).toUpperCase()}</T>
-    </View>
-  );
+/** The one thing to do now, in a sentence. Proof beats a warm city beats a first poster. */
+
+
+/** Plain words for why a city ranks, so nobody has to read a score. */
+function reason(m: MapMetroRow, top: boolean) {
+  if (top) return 'Your biggest crowd';
+  if (m.sleeper) return 'Sleeper · likes you more than most acts';
+  if ((m.liftPct ?? 0) > 0.7) return 'More yours than most cities';
+  if ((m.heatPct ?? 0) > 0.8) return 'Big crowd, shared with everyone';
+  return 'Steady crowd';
 }
 
-function CityRow({ m, opened, signatures, onPress, onWhy }: { m: MapMetroRow; opened: boolean; signatures: number; onPress: () => void; onWhy: () => void }) {
+function CityRow({ m, top, opened, signatures, onPress }: { m: MapMetroRow; top: boolean; opened: boolean; signatures: number; onPress: () => void }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${m.name}, rank ${m.rank}, Wanted Score ${m.score?.toFixed(0)}${m.sleeper ? ', sleeper city' : ''}${opened ? `, ${signatures} signatures` : ''}. Dive in.`}
-        onPress={onPress}
-        style={({ pressed }) => ({ flex: 1, backgroundColor: pressed ? C.fill2 : 'transparent' })}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md, minHeight: 56, paddingLeft: S.lg, paddingVertical: S.sm }}>
-          <T style={{ fontFamily: F.monoBold, fontSize: 15, width: 24, color: C.text3 }}>{m.rank}</T>
-          <View style={{ flex: 1, gap: 6 }}>
-            <Row gap={6}>
-              <T v="body" numberOfLines={1} style={{ flexShrink: 1 }}>
-                {m.name}, {m.state}
-              </T>
-              {m.sleeper ? <Icon name="star" variant="bold" size={14} color={C.gold} label="Sleeper city" /> : null}
-              {opened ? <Icon name="signature" variant="bold" size={14} color={C.fans} label={`${signatures} signatures`} /> : null}
-            </Row>
-            <View style={{ height: 4, borderRadius: 2, backgroundColor: C.fill2 }}>
-              <View style={{ height: '100%', width: `${m.score ?? 0}%`, borderRadius: 2, backgroundColor: m.sleeper ? C.gold : C.heatHi }} />
-            </View>
-          </View>
-        </View>
-      </Pressable>
-      <Pressable onPress={onWhy} accessibilityRole="button" accessibilityLabel={`Why ${m.name}? Wanted Score ${m.score?.toFixed(0)}`} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, minWidth: 64, minHeight: 56, alignItems: 'center', justifyContent: 'center' })}>
-        <T style={{ fontFamily: F.monoBold, fontSize: 17, color: C.amber }}>{m.score?.toFixed(0)}</T>
-        <T v="caption" style={{ fontSize: 11, lineHeight: 13 }}>
-          why
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Number ${m.rank}, ${m.name}. ${reason(m, top)}${opened ? `. ${signatures} signatures` : ''}.`}
+      onPress={onPress}
+      style={({ pressed }) => ({ backgroundColor: pressed ? C.fill2 : 'transparent' })}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md, minHeight: 58, paddingHorizontal: S.lg, paddingVertical: S.sm }}>
+        <T numberOfLines={1} style={{ fontFamily: F.displayBold, fontSize: 15, width: 30, color: m.sleeper ? C.gold : C.text3, fontVariant: ['tabular-nums'] }}>
+          {m.rank}
         </T>
-      </Pressable>
+        <View style={{ flex: 1, gap: 2 }}>
+          <T v="body" numberOfLines={1}>
+            {m.name}, {m.state}
+          </T>
+          <T v="footnote" numberOfLines={1} color={m.sleeper ? C.gold : C.text2}>
+            {reason(m, top)}
+          </T>
+        </View>
+        {opened ? (
+          <T v="footnote" color={C.fans} style={{ fontWeight: '600' }}>
+            {signatures} signed
+          </T>
+        ) : null}
+        <Icon name="chevron" size={14} color={C.text3} />
+      </View>
+    </Pressable>
+  );
+}
+
+function SearchBar({ value, onChange, count, onFocus }: { value: string; onChange: (v: string) => void; count: number; onFocus: () => void }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, borderRadius: 22, borderCurve: 'continuous', backgroundColor: C.fill, paddingLeft: 14, paddingRight: 6 }}>
+      <Icon name="search" size={18} color={C.text2} />
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        onFocus={onFocus}
+        placeholder={count ? `Search ${count} cities` : 'Search cities'}
+        placeholderTextColor={C.text3}
+        returnKeyType="search"
+        autoCorrect={false}
+        clearButtonMode="never"
+        accessibilityLabel="Search cities"
+        style={{ flex: 1, height: 44, color: C.text, fontFamily: F.body, fontSize: 17 }}
+      />
+      {value ? (
+        <Pressable onPress={() => onChange('')} accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: 6 })}>
+          <Icon name="close" variant="bold" size={18} color={C.text3} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
+

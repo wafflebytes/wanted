@@ -21,7 +21,7 @@ import { Orb } from '@/ui/fx/Orb';
 import { haptic } from '@/ui/haptics';
 import { prime } from '@/ui/hooks';
 import { defaultStart, session } from '@/ui/session';
-import { C, F, IMAGES, R } from '@/ui/theme';
+import { C, F, gradient, IMAGES, R } from '@/ui/theme';
 import { Icon } from '@/ui/icons/Icon';
 
 type Lookup = { role: 'self' | 'reference'; name: string; candidates: ActEntity[]; receipts: never[] };
@@ -51,7 +51,7 @@ const PRESETS: Record<string, { text: string; kind: 'music' | 'comedy' }> = {
   maya: { text: 'I sound like Phoebe Bridgers and Japanese Breakfast. Ten dates, Midwest and East Coast, small rooms.', kind: 'music' },
 };
 
-const STEPS = ['Asking Qloo where your people are', 'Comparing with 20 other acts', 'Finding sleeper cities'];
+const STEPS = ['Finding where your people are', 'Comparing with 20 other acts', 'Finding sleeper cities'];
 
 export default function Scout() {
   const insets = useSafeAreaInsets();
@@ -144,6 +144,7 @@ export default function Scout() {
               startDate: defaultStart(),
             });
             session.setLastArtist(slug);
+            session.addAct({ slug, name: e.artist.name, sounds: refs.map((r) => r.name) });
             haptic.success();
             setTimeout(() => router.replace(`/a/${slug}`), 900);
           }
@@ -163,7 +164,7 @@ export default function Scout() {
       <Head>
         <title>Scout · Wanted</title>
       </Head>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 40, paddingHorizontal: 20, gap: 18, maxWidth: 680, width: '100%', alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + (phase === 'confirm' ? 120 : 40), paddingHorizontal: 20, gap: 18, maxWidth: 680, width: '100%', alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
         <Row style={{ justifyContent: 'space-between' }}>
           <T v="label" color={C.purpleHi}>
             Scout
@@ -214,17 +215,17 @@ export default function Scout() {
               />
               <T v="caption">If Qloo knows you, your own taste signal leads; reference acts fill in when your data is thin.</T>
             </View>
-            <Row gap={10} wrap>
-              <GlassSegmentedControl value={kind} onValueChange={(v) => setKind(v as 'music' | 'comedy')} accessibilityLabel="Kind of act" style={{ minWidth: 190 }}>
+            <View style={{ gap: 10 }}>
+              <GlassSegmentedControl value={kind} onValueChange={(v) => setKind(v as 'music' | 'comedy')} accessibilityLabel="Kind of act" style={{ alignSelf: 'stretch' }}>
                 <GlassSegmentedControlItem value="music">Music</GlassSegmentedControlItem>
                 <GlassSegmentedControlItem value="comedy">Comedy</GlassSegmentedControlItem>
               </GlassSegmentedControl>
-              <GlassSegmentedControl value={band} onValueChange={(v) => setBand(v as RoomBand)} accessibilityLabel="Room size" style={{ minWidth: 260 }}>
+              <GlassSegmentedControl value={band} onValueChange={(v) => setBand(v as RoomBand)} accessibilityLabel="Room size" style={{ alignSelf: 'stretch' }}>
                 <GlassSegmentedControlItem value="small">Small rooms</GlassSegmentedControlItem>
-                <GlassSegmentedControlItem value="mid">Mid</GlassSegmentedControlItem>
-                <GlassSegmentedControlItem value="big">Big</GlassSegmentedControlItem>
+                <GlassSegmentedControlItem value="mid">Mid rooms</GlassSegmentedControlItem>
+                <GlassSegmentedControlItem value="big">Big rooms</GlassSegmentedControlItem>
               </GlassSegmentedControl>
-            </Row>
+            </View>
             <Row gap={8} wrap>
               {Object.entries(PRESETS).map(([k, p]) => (
                 <Chip key={k} onPress={() => (setText(p.text), setKind(p.kind))}>
@@ -244,18 +245,9 @@ export default function Scout() {
             <T v="title">Is this you?</T>
             <T v="small">Qloo’s search is fuzzy, so confirm each act. Wrong one? Pick another, or skip it.</T>
             {resolved.ask ? (
-              <Row gap={6} wrap>
-                {resolved.ask.dates ? <Chip mono>{resolved.ask.dates} dates</Chip> : null}
-                {resolved.ask.regions.map((r) => (
-                  <Chip mono key={r}>
-                    {r}
-                  </Chip>
-                ))}
-                {resolved.ask.roomBand ? <Chip mono>{resolved.ask.roomBand} rooms</Chip> : null}
-                <Chip mono color={C.text3}>
-                  parsed by {resolved.ask.source === 'llm' ? 'Gus' : 'rules'}
-                </Chip>
-              </Row>
+              <T v="callout" color={C.text2}>
+                {['Heard:', resolved.ask.dates ? `${resolved.ask.dates} dates` : null, resolved.ask.regions.length ? resolved.ask.regions.join(', ') : null, resolved.ask.roomBand ? `${resolved.ask.roomBand} rooms` : null].filter(Boolean).join(' ')}
+              </T>
             ) : null}
             {resolved.lookups.map((l, i) => (
               <View key={`${l.name}-${i}`} style={{ gap: 8 }}>
@@ -305,14 +297,6 @@ export default function Scout() {
               </View>
             ))}
             {err ? <T color={C.bad}>{err}</T> : null}
-            <Row gap={10}>
-              <Btn tone="ghost" onPress={() => setPhase('ask')}>
-                Back
-              </Btn>
-              <Btn tone="scout" size="lg" style={{ flex: 1 }} full onPress={run} disabled={!Object.values(chosen).some(Boolean)}>
-                Scout it
-              </Btn>
-            </Row>
           </>
         ) : null}
 
@@ -356,6 +340,18 @@ export default function Scout() {
           </View>
         ) : null}
       </ScrollView>
+      {phase === 'confirm' && resolved ? (
+        <View style={[{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 28, paddingBottom: insets.bottom + 12 }, gradient('linear-gradient(180deg, rgba(0,0,0,0) 0%, #000 40%)')]}>
+          <Row gap={10} style={{ maxWidth: 640, width: '100%', alignSelf: 'center' }}>
+            <Btn tone="glass" size="lg" onPress={() => setPhase('ask')}>
+              Back
+            </Btn>
+            <Btn tone="scout" size="lg" style={{ flex: 1 }} full onPress={run} disabled={!Object.values(chosen).some(Boolean)} icon={<Icon name="scout" variant="bold" size={20} color={C.text} />}>
+              Scout it
+            </Btn>
+          </Row>
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }

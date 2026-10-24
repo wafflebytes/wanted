@@ -6,14 +6,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import Head from 'expo-router/head';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, absoluteUrl } from '@/ui/api';
 import { useArtist } from '@/ui/artist';
 import { Btn, Chip, Empty, Group, ListRow, Row, Section } from '@/ui/components/core';
-import { GusLine } from '@/ui/components/Gus';
+import { PitchSheet, type PitchTarget } from '@/ui/components/PitchSheet';
 import { Poster, POSTER_RATIO } from '@/ui/components/Poster';
-import { DemoTag, Prov } from '@/ui/components/Receipts';
+import { Prov } from '@/ui/components/Receipts';
 import { ScreenHeader } from '@/ui/components/ScreenHeader';
 import { TAB_BAR_SPACE } from '@/ui/components/TabBar';
 import { T } from '@/ui/components/T';
@@ -53,6 +53,7 @@ export default function Posters() {
   const o = opened.find((x) => x.city === city) ?? null;
   const [busy, setBusy] = useState<string | null>(null);
   const [stampKey, setStampKey] = useState<number | undefined>(undefined);
+  const [pitch, setPitch] = useState<PitchTarget | null>(null);
 
   // The newest signature scrawls in when the count goes up while you watch.
   const lastCount = useRef<{ city: string | null; n: number } | null>(null);
@@ -75,21 +76,6 @@ export default function Posters() {
     if (!o) return;
     const r = await shareLink(link, `WANTED in ${o.name}`, `${state?.artist.name} is WANTED in ${o.name}. Sign the poster:`);
     if (r === 'copied') toast({ title: 'Link copied', body: link });
-  };
-
-  const simulate = async (n: number) => {
-    if (!slug || !city) return;
-    setBusy(`sim-${n}`);
-    try {
-      await api.post(`/artist/${slug}/simulate`, { city, n });
-      invalidate(`/artist/${slug}`);
-      reload();
-      reloadState();
-    } catch (e) {
-      toast({ title: 'Simulation failed', body: e instanceof Error ? e.message : undefined });
-    } finally {
-      setBusy(null);
-    }
   };
 
   const markPlayed = async () => {
@@ -120,7 +106,7 @@ export default function Posters() {
       </Head>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + S.sm, paddingBottom: insets.bottom + TAB_BAR_SPACE + S.xxl, gap: S.xl, maxWidth: 720, width: '100%', alignSelf: 'center' }}>
         <View style={{ paddingHorizontal: S.gutter }}>
-          <ScreenHeader title="Posters" subtitle={opened.length ? `${opened.length} ${opened.length === 1 ? 'city' : 'cities'} · ${total} signatures` : undefined} slug={slug} />
+          <ScreenHeader title="Posters" subtitle={opened.length ? `${opened.length} ${opened.length === 1 ? 'city' : 'cities'} · ${total} signatures` : undefined} slug={slug} gus={false} />
         </View>
 
         {!state ? null : !opened.length ? (
@@ -171,6 +157,8 @@ export default function Posters() {
                       portrait: poster.artist.portrait,
                       imageUrl: poster.artist.imageUrl,
                       isDemo: poster.artist.isDemo,
+                      cityId: poster.city.id,
+                      hexes: poster.hexes,
                     }}
                   />
                 </View>
@@ -182,9 +170,9 @@ export default function Posters() {
             {o ? (
               <View style={{ paddingHorizontal: S.gutter, gap: S.xl }}>
                 <View style={{ flexDirection: 'row', backgroundColor: C.card, borderRadius: R.card, borderCurve: 'continuous', paddingVertical: S.md }}>
-                  <Cell value={`${o.proof?.signatures ?? 0}`} label="Signatures" color={C.fans} />
-                  <Cell value={o.proof?.ratio !== null && o.proof?.ratio !== undefined ? `${o.proof.ratio.toFixed(1)}×` : '—'} label="vs. predicted" color={o.proof?.crossed ? C.good : C.text} />
-                  <Cell value={`${poster?.deputiesLeft ?? '—'}`} label="Deputy spots" color={C.gold} />
+                  <Cell value={`${o.proof?.signatures ?? 0}`} label="Signed" color={C.fans} />
+                  {o.proof?.crossed ? <Cell value="Proved" label="Enough to book" color={C.good} /> : <Cell value={`${Math.max(0, 50 - (o.proof?.signatures ?? 0))}`} label="To go" />}
+                  <Cell value={`${poster?.deputiesLeft ?? '—'}`} label="Deputy spots left" color={C.gold} />
                 </View>
 
                 <View style={{ gap: S.md }}>
@@ -201,23 +189,21 @@ export default function Posters() {
                   </Row>
                 </View>
 
-                {o.proof?.crossed ? <GusLine line={`${o.name} has you on a WANTED poster. ${o.proof.signatures} signatures. I'm drafting the pitch.`} mood="proud" model="gus-lite" /> : null}
-
-                {state?.artist.isDemo ? (
-                  <Section title="Demo" trailing={<DemoTag />}>
-                    <T v="footnote">Simulated fans sign in the neighborhoods Qloo predicted, labeled as demo data everywhere.</T>
-                    <Row gap={S.sm}>
-                      <Btn size="sm" busy={busy === 'sim-1'} onPress={() => simulate(1)}>
-                        +1 fan
-                      </Btn>
-                      <Btn size="sm" busy={busy === 'sim-10'} onPress={() => simulate(10)}>
-                        +10 fans
-                      </Btn>
-                      <Btn size="sm" busy={busy === 'sim-40'} onPress={() => simulate(40)}>
-                        +40 fans
-                      </Btn>
-                    </Row>
-                  </Section>
+                {o.proof?.crossed ? (
+                  <Pressable onPress={() => (haptic.tap(), setPitch({ city: o.city, cityName: o.name, roomId: null, date: null }))} accessibilityRole="button" style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md, backgroundColor: 'rgba(52,199,89,0.12)', borderRadius: R.card, borderCurve: 'continuous', padding: S.lg }}>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <T v="headline">{o.name} proved it</T>
+                        <T v="footnote" color={C.text2}>
+                          Enough people signed. Gus will write to a room for you.
+                        </T>
+                      </View>
+                      <T v="callout" color={C.good} style={{ fontWeight: '600' }}>
+                        Pitch a room
+                      </T>
+                      <Icon name="chevron" size={14} color={C.good} />
+                    </View>
+                  </Pressable>
                 ) : null}
 
                 {hoods.length ? (
@@ -283,6 +269,7 @@ export default function Posters() {
           </>
         )}
       </ScrollView>
+      {slug ? <PitchSheet slug={slug} target={pitch} onClose={() => setPitch(null)} /> : null}
     </View>
   );
 }

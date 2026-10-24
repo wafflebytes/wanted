@@ -14,6 +14,11 @@ export const env = {
   get fishKey() {
     return read('FISH_AUDIO_API_KEY');
   },
+  /** Stripe, test mode only: a live key is ignored, so Gus can never move real money. */
+  get stripeTestKey() {
+    const k = read('STRIPE_SECRET_KEY');
+    return k?.startsWith('sk_test_') ? k : undefined;
+  },
   get setlistKey() {
     return read('SETLIST_API_KEY');
   },

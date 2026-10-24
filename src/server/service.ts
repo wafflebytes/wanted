@@ -3,7 +3,7 @@
  * pitches and posters from the modules below it.
  */
 import { cellToLatLng } from 'h3-js';
-import { applyFix, plan as planRoute, rescore, resequence, swapCandidates, tryFix, roasts as findRoasts, type PlanInput, type PlannerRoom } from '../lib/tour';
+import { applyFix, plan as planRoute, rescore, resequence, swapCandidates, tryFix, roasts as findRoasts, namesFrom, roastCard, type PlanInput, type PlannerRoom } from '../lib/tour';
 import type { Region } from '../lib/regions';
 import type { CityProof, DayKey, Locality, Receipt, Roast, RoastFix, RoomBand, TourConstraints, TourPlan, TourStop } from '../lib/types';
 import { getArtist, openCity, openedCities, type ArtistRow } from './artists';
@@ -359,7 +359,7 @@ export async function planFor(artist: ArtistRow, constraints: TourConstraints & 
   if (!Object.keys(base.rooms).length) base.rooms = await roomsFor(artist, stops.map((s) => s.metroId));
   // Final pass: dates and rooms are already settled; this only recomputes totals.
   const scored = rescore(stops, base, { startDate: stops[0]?.date });
-  const roastList = await verifyFixes(artist, findRoasts(scored.stops, base), scored, base, constraints.startDate);
+  const roastList = (await verifyFixes(artist, findRoasts(scored.stops, base), scored, base, constraints.startDate)).map((r) => ({ ...r, card: roastCard(r, scored.stops, namesFrom(base)) }));
   const lines = await routeLines({ stops: scored.stops, roasts: roastList, total: scored.total, artistName: artist.name });
   scored.stops.forEach((s, i) => (s.blurb = lines.blurbs[i]));
 

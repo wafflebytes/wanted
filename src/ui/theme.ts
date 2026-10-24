@@ -53,34 +53,40 @@ export const S = { xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 28, xxxl: 
 /** Minimum touch target (HIG: 44x44 pt on iOS). */
 export const HIT = 44;
 
-/** Font families, loaded in the root layout. */
+/**
+ * Type system, one voice everywhere:
+ * - Archivo Expanded: Wanted's own voice. Screen titles, city names, and the numbers that
+ *   matter (scores, signatures, ranks). Wide letterforms read like a tour poster.
+ * - SF Pro (system): everything you read or tap. Native, Dynamic Type, no surprises.
+ * - SF Pro Rounded: Gus speaking. Warm and solid, never light or italic.
+ * - Chivo Mono: raw evidence only (receipts, API numbers) for people who want to probe.
+ * - Handwriting faces: fan signatures, nothing else.
+ */
+const SYSTEM_WEB = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif';
+const ROUNDED_WEB = 'ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif';
 export const F = {
-  logo: 'Archivo-Medium',
+  logo: 'Archivo-ExpandedBlack',
   display: 'Archivo-ExpandedExtraBold',
   displayBlack: 'Archivo-ExpandedBlack',
   displayBold: 'Archivo-ExpandedBold',
-  head: 'Archivo-SemiBold',
-  bold: 'Archivo-Bold',
-  body: Platform.select({ web: 'Archivo-Regular', default: undefined }),
-  bodyMed: Platform.select({ web: 'Archivo-Medium', default: undefined }),
-  serif: 'InstrumentSerif-Regular',
+  head: Platform.select({ web: SYSTEM_WEB, default: undefined }),
+  bold: Platform.select({ web: SYSTEM_WEB, default: undefined }),
+  body: Platform.select({ web: SYSTEM_WEB, default: undefined }),
+  bodyMed: Platform.select({ web: SYSTEM_WEB, default: undefined }),
+  /** Retired: Gus now speaks in the rounded face. Kept as an alias so old call sites stay sane. */
+  serif: Platform.select({ ios: 'ui-rounded', web: ROUNDED_WEB, default: undefined }),
   mono: 'ChivoMono-Regular',
   monoMed: 'ChivoMono-Medium',
   monoBold: 'ChivoMono-Bold',
   sig: ['Caveat-SemiBold', 'NothingYouCouldDo-Regular', 'HomemadeApple-Regular'] as const,
-  /** Rounded system face for buttons, chips and Gus's lines (PRD 8.1). */
-  rounded: Platform.select({ ios: 'ui-rounded', web: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', default: undefined }),
+  /** Rounded system face for Gus's lines and soft controls. */
+  rounded: Platform.select({ ios: 'ui-rounded', web: ROUNDED_WEB, default: undefined }),
 } as const;
 
 export const FONT_FILES = {
-  'Archivo-Regular': require('../../assets/fonts/Archivo-Regular.ttf'),
-  'Archivo-Medium': require('../../assets/fonts/Archivo-Medium.ttf'),
-  'Archivo-SemiBold': require('../../assets/fonts/Archivo-SemiBold.ttf'),
-  'Archivo-Bold': require('../../assets/fonts/Archivo-Bold.ttf'),
   'Archivo-ExpandedBold': require('../../assets/fonts/Archivo-ExpandedBold.ttf'),
   'Archivo-ExpandedExtraBold': require('../../assets/fonts/Archivo-ExpandedExtraBold.ttf'),
   'Archivo-ExpandedBlack': require('../../assets/fonts/Archivo-ExpandedBlack.ttf'),
-  'InstrumentSerif-Regular': require('../../assets/fonts/InstrumentSerif-Regular.ttf'),
   'ChivoMono-Regular': require('../../assets/fonts/ChivoMono-Regular.ttf'),
   'ChivoMono-Medium': require('../../assets/fonts/ChivoMono-Medium.ttf'),
   'ChivoMono-Bold': require('../../assets/fonts/ChivoMono-Bold.ttf'),
@@ -99,9 +105,38 @@ export function heatRgb(t: number): [number, number, number] {
   return [0, 1, 2].map((i) => Math.round(p[i] + (q[i] - p[i]) * k)) as [number, number, number];
 }
 
+/**
+ * The map's halftone scale, like embers: a dark coal where few people are, through orange and
+ * gold, to near-white where they cluster. Used for the dots on every map and the poster stamp.
+ */
+const EMBER: [number, [number, number, number]][] = [
+  [0, [0x3b, 0x24, 0x2c]],
+  [0.35, [0xb4, 0x4a, 0x2a]],
+  [0.65, [0xff, 0x9f, 0x1c]],
+  [0.88, [0xff, 0xd2, 0x6a]],
+  [1, [0xff, 0xf1, 0xd0]],
+];
+export function emberRgb(t: number): [number, number, number] {
+  const x = Math.max(0, Math.min(1, t));
+  const i = Math.max(0, EMBER.findIndex(([at]) => at >= x) - 1);
+  const [a, p] = EMBER[i];
+  const [b, q] = EMBER[Math.min(EMBER.length - 1, i + 1)];
+  const k = b === a ? 0 : (x - a) / (b - a);
+  return [0, 1, 2].map((j) => Math.round(p[j] + (q[j] - p[j]) * k)) as [number, number, number];
+}
+export function emberColor(t: number) {
+  const [r, g, b] = emberRgb(t);
+  return `rgb(${r},${g},${b})`;
+}
+
 export function heatColor(t: number, alpha = 1) {
   const [r, g, b] = heatRgb(t);
   return alpha === 1 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},${alpha})`;
+}
+
+/** A CSS gradient as a view background: React Native's experimental prop, plain CSS on the web. */
+export function gradient(css: string): object {
+  return Platform.OS === 'web' ? { backgroundImage: css } : { experimental_backgroundImage: css };
 }
 
 export const IMAGES = {
@@ -129,6 +164,13 @@ export const IMAGES = {
   'gus-losing-it': require('../../assets/images/gus-losing-it.webp'),
   'gus-reading': require('../../assets/images/gus-reading.webp'),
   'gus-wave': require('../../assets/images/gus-wave.webp'),
+  'gus-cut-idle': require('../../assets/images/gus-cut-idle.webp'),
+  'gus-cut-thinking': require('../../assets/images/gus-cut-thinking.webp'),
+  'gus-cut-proud': require('../../assets/images/gus-cut-proud.webp'),
+  'gus-cut-unimpressed': require('../../assets/images/gus-cut-unimpressed.webp'),
+  'gus-cut-losing-it': require('../../assets/images/gus-cut-losing-it.webp'),
+  'gus-cut-reading': require('../../assets/images/gus-cut-reading.webp'),
+  'gus-cut-wave': require('../../assets/images/gus-cut-wave.webp'),
 } as const;
 
 export type ImageKey = keyof typeof IMAGES;

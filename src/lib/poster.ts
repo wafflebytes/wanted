@@ -25,6 +25,29 @@ export const POSTER_BOXES = {
 export const POSTER_INK = '#3a2213';
 export const POSTER_RED = '#a3261b';
 
+/**
+ * Each city's edition: an old print ink for its city line and stamp, and a paper tone.
+ * Shared by the app poster and the share image so both print a city the same way.
+ */
+const INKS = [
+  { name: 'Oxblood', ink: '#7a1f1a', paper: '#b8663f' },
+  { name: 'Prairie', ink: '#2f5233', paper: '#8fa36a' },
+  { name: 'Lake', ink: '#1f3b63', paper: '#7c93a8' },
+  { name: 'Plum', ink: '#4f2347', paper: '#a07a96' },
+  { name: 'Rust', ink: '#8a3b12', paper: '#c98a4a' },
+  { name: 'Night', ink: '#1d1b2e', paper: '#6f6a80' },
+] as const;
+
+const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+
+/** The city's edition: same city, same ink, every time and on every device. */
+export function cityEdition(cityId: string) {
+  const h = hash(cityId);
+  return { ...INKS[h % INKS.length], tilt: ((h >> 4) % 17) - 9 };
+}
+
+
+
 /** Wear level by signature count (PRD 8.3): 50, 100, 250. */
 export function posterAsset(wear: 0 | 1 | 2 | 3) {
   return `poster-${wear}`;

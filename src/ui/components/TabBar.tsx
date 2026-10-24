@@ -15,7 +15,7 @@ import type { IconName } from '../icons/names';
 
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 
-const ICONS: Record<string, IconName> = { index: 'map', tour: 'tour', crowd: 'crowd', posters: 'posters', inbox: 'inbox' };
+const ICONS: Record<string, IconName> = { index: 'map', tour: 'tour', pulse: 'mail', posters: 'posters' };
 
 /** Height of the floating bar plus its gap from the bottom edge; screens pad scroll content by this. */
 export const TAB_BAR_SPACE = 64 + 8;
@@ -29,7 +29,7 @@ export function GlassTabBar({ state, descriptors, navigation, unread }: BottomTa
           {state.routes.map((route, i) => {
             const focused = state.index === i;
             const label = (descriptors[route.key].options.title ?? route.name) as string;
-            const badge = route.name === 'inbox' && unread > 0 ? unread : 0;
+            const badge = route.name === 'pulse' && unread > 0 ? unread : 0;
             return (
               <Pressable
                 key={route.key}

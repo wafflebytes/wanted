@@ -1,19 +1,15 @@
 /**
- * Artist app tabs on the web and Android: a floating Glassy UI capsule (PRD 8.2). Five tabs;
- * Settings opens from each screen's header.
+ * Artist app tabs on the web and Android: a floating Glassy UI capsule (PRD 8.2). Four tabs.
+ * Gus lives in each screen's header; Settings opens from there too.
  */
 import { Tabs } from 'expo-router';
-import { useEffect } from 'react';
-import { useArtist } from '@/ui/artist';
+import { useArtist, useRememberArtist } from '@/ui/artist';
 import { GlassTabBar } from '@/ui/components/TabBar';
-import { session } from '@/ui/session';
 import { C } from '@/ui/theme';
 
 export default function ArtistTabs() {
   const { slug, data } = useArtist();
-  useEffect(() => {
-    if (slug) session.setLastArtist(slug);
-  }, [slug]);
+  useRememberArtist(slug, data);
   return (
     <Tabs
       tabBar={(props) => <GlassTabBar {...props} unread={data?.unread ?? 0} />}
@@ -21,9 +17,8 @@ export default function ArtistTabs() {
     >
       <Tabs.Screen name="index" options={{ title: 'Map' }} />
       <Tabs.Screen name="tour" options={{ title: 'Tour' }} />
-      <Tabs.Screen name="crowd" options={{ title: 'Crowd' }} />
+      <Tabs.Screen name="pulse" options={{ title: 'Fan Mail' }} />
       <Tabs.Screen name="posters" options={{ title: 'Posters' }} />
-      <Tabs.Screen name="inbox" options={{ title: 'Inbox' }} />
     </Tabs>
   );
 }
