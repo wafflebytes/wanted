@@ -1,11 +1,9 @@
 """
-Builds the splash in two parts that line up exactly:
+Builds the launch animation's dots.
 
-  assets/images/splash.png   Gus, the WANTED wordmark and the country as faint dots. This is
-                             the native launch screen, so it shows the instant the app opens.
-  src/ui/splash/dots.json    The heat on top: the same halftone grid, grouped into bands by
-                             how many people live nearby. The app grows each band's dots from
-                             nothing, hottest first, so the map lights up city by city.
+  src/ui/splash/dots.json    The country as faint dots plus the heat on top: the same halftone grid,
+                             grouped into bands by how many people live nearby. The app grows each
+                             band's dots from nothing, hottest first, so the map lights up city by city.
 
 Every dot sits on one grid over the lower 48 (a hand-traced outline, Great Lakes cut out).
 A dot's size is how many people live near it (data/metros.json).
@@ -19,10 +17,10 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
-W = H = 1200
+W, H = 1179, 2556  # an iPhone's screen, so the launch image can run edge to edge
 EMBER = [(0, (0x3B, 0x24, 0x2C)), (0.35, (0xB4, 0x4A, 0x2A)), (0.65, (0xFF, 0x9F, 0x1C)), (0.88, (0xFF, 0xD2, 0x6A)), (1, (0xFF, 0xF1, 0xD0))]
 PAPER = (0xF1, 0xE6, 0xCF)
-BASE = (0x55, 0x3C, 0x3C)
+BASE = (0x6E, 0x4C, 0x48)
 BANDS = 14
 
 # The lower 48, clockwise from Cape Flattery, as (lon, lat). Coarse on purpose: a 15 px grid can't see more.
@@ -73,16 +71,15 @@ x1, y1 = merc(24.5, -66.9)
 us = [merc(lat, lon) for lon, lat in US]
 lake = [merc(lat, lon) for lon, lat in LAKE_MICHIGAN]
 
-# Layout on the 1200 canvas: Gus, the wordmark, then the map.
-GUS_H = 300
-TOP = 40
-WORD_Y = TOP + GUS_H + 8
-WORD_SIZE = 132
-bw = 1110
+# Layout: Gus and the wordmark in the upper middle, the country big and cropped by the bottom,
+# left and right edges, as if peeking up from below.
+GUS_H = 400
+WORD_SIZE = 150
+bw = 1520
 bh = bw * (y1 - y0) / (x1 - x0)
-bx, by = (W - bw) / 2, WORD_Y + 150
-step = 15
-sigma = 0.0055  # about 2° of influence per city, in mercator units
+bx, by = (W - bw) / 2, (H - bh) / 2
+step = 22
+sigma = 0.0055  # about 2 degrees of influence per city, in mercator units
 
 grid = []
 for gy in range(int(bh // step) + 1):
@@ -94,30 +91,13 @@ for gy in range(int(bh // step) + 1):
         my = y0 + py / bh * (y1 - y0)
         if not inside(mx, my, us) or inside(mx, my, lake):
             continue
+        if not (-40 < bx + px < W + 40 and by + py < H + 40):
+            continue
         v = sum(p * math.exp(-((mx - x) ** 2 + (my - y) ** 2) / (2 * sigma**2)) for x, y, p in pts)
         grid.append((bx + px, by + py, v))
 peak = max(v for *_, v in grid)
 
-S = 3  # supersample, then shrink for smooth dots
-img = Image.new("RGB", (W * S, H * S), (0, 0, 0))
-d = ImageDraw.Draw(img)
-
-# The country, faint: every land dot at its smallest, so the whole map reads before the heat arrives.
-BASE_R = 2.2
-for x, y, _ in grid:
-    d.ellipse([(x - BASE_R) * S, (y - BASE_R) * S, (x + BASE_R) * S, (y + BASE_R) * S], fill=BASE)
-
-gus = Image.open(ROOT / "assets/images/gus-cut-wave.webp").convert("RGBA")
-gw = round(gus.width * GUS_H / gus.height)
-gus = gus.resize((gw * S, GUS_H * S), Image.LANCZOS)
-img.paste(gus, ((W * S - gus.width) // 2, TOP * S), gus)
-
-font = ImageFont.truetype(str(ROOT / "assets/fonts/Archivo-ExpandedBlack.ttf"), WORD_SIZE * S)
-text = "WANTED"
-tw = d.textlength(text, font=font)
-d.text(((W * S - tw) / 2, WORD_Y * S), text, font=font, fill=PAPER)
-
-img.resize((W, H), Image.LANCZOS).save(ROOT / "assets/images/splash.png", optimize=True)
+BASE_R = 3.9
 
 # The heat, in bands. Each band is one path of zero-length strokes; with round caps, its stroke
 # width is every dot's diameter, so the app grows a whole band by animating one number.
@@ -137,5 +117,6 @@ for i, b in enumerate(bands):
     color = "#%02x%02x%02x" % ember(0.25 + 0.75 * t)
     out.append({"t": round(t, 3), "r": round(r, 2), "color": color, "d": "".join(f"M{x:.1f} {y:.1f}h.01" for x, y in b)})
 (ROOT / "src/ui/splash").mkdir(exist_ok=True)
-json.dump({"size": W, "bands": out}, open(ROOT / "src/ui/splash/dots.json", "w"), separators=(",", ":"))
-print(f"wrote splash.png and dots.json ({len(grid)} land dots, {sum(len(b) for b in bands)} heat dots in {len(out)} bands)")
+base = "".join(f"M{x:.1f} {y:.1f}h.01" for x, y, _ in grid)
+json.dump({"w": W, "h": H, "baseR": BASE_R, "baseColor": "#%02x%02x%02x" % BASE, "base": base, "bands": out}, open(ROOT / "src/ui/splash/dots.json", "w"), separators=(",", ":"))
+print(f"wrote dots.json ({len(grid)} land dots, {sum(len(b) for b in bands)} heat dots in {len(out)} bands)")

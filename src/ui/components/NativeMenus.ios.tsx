@@ -4,7 +4,7 @@
  */
 import { Host } from '@expo/ui';
 import { Button, Divider, Menu } from '@expo/ui/swift-ui';
-import { buttonBorderShape, buttonStyle, controlSize, menuIndicator, tint } from '@expo/ui/swift-ui/modifiers';
+import { buttonBorderShape, buttonStyle, controlSize, menuIndicator, opacity, scaleEffect, tint } from '@expo/ui/swift-ui/modifiers';
 import { router, useNavigation } from 'expo-router';
 import { useMemo } from 'react';
 import type { Basemap } from '@/ui/map/types';
@@ -32,10 +32,11 @@ export function ActsMenuNative({ slug, name }: { slug: string; name: string }) {
 }
 
 /** Map style, as a round glass button with a native menu. */
+/** The system menu with its label hidden, to sit over a button that is drawn in JS; the menu owns the tap. */
 export function LayersMenuNative({ value, options, onChange }: { value: Basemap; options: { key: Basemap; label: string }[]; onChange: (b: Basemap) => void }) {
   return (
-    <Host matchContents style={{ width: 44, height: 44 }}>
-      <Menu label="" systemImage="square.3.layers.3d" modifiers={[buttonStyle('glass'), buttonBorderShape('circle'), controlSize('large'), menuIndicator('hidden'), tint(C.text)]}>
+    <Host style={{ position: 'absolute', left: 0, top: 0, width: 44, height: 44 }}>
+      <Menu label="" systemImage="circle.fill" modifiers={[buttonStyle('plain'), scaleEffect(4), opacity(0.011), menuIndicator('hidden')]}>
         {options.map((b) => (
           <Button key={b.key} label={b.label} systemImage={b.key === value ? 'checkmark' : undefined} onPress={() => onChange(b.key)} />
         ))}

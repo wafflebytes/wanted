@@ -11,7 +11,12 @@
       "icon": "./assets/images/icon.png",
       "supportsTablet": true,
       "bundleIdentifier": "fm.wanted.app",
-      "appleTeamId": "L893X3WZYR"
+      "appleTeamId": "L893X3WZYR",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
     },
     "android": {
       "package": "fm.wanted.app",
@@ -38,7 +43,8 @@
         {
           "backgroundColor": "#000000",
           "image": "./assets/images/splash.png",
-          "imageWidth": 360
+          "imageWidth": 200,
+          "resizeMode": "contain"
         }
       ],
       "expo-audio",

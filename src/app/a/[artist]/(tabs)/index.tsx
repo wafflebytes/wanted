@@ -352,7 +352,12 @@ export default function MapScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
           {!dark && map ? (
             Platform.OS === 'ios' ? (
-              <LayersMenuNative value={basemap} options={BASEMAPS} onChange={(k) => (haptic.tick(), setBasemap(k))} />
+              <GlassSurface preset="prominent" style={{ borderRadius: 999, overflow: 'hidden' }}>
+                <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="layers" size={20} color={C.text} />
+                </View>
+                <LayersMenuNative value={basemap} options={BASEMAPS} onChange={(k) => (haptic.tick(), setBasemap(k))} />
+              </GlassSurface>
             ) : (
             <GlassSurface preset="prominent" style={{ borderRadius: 999, overflow: 'hidden' }}>
               <Pressable onPress={() => (haptic.tap(), setLayersOpen((o) => !o))} accessibilityRole="button" accessibilityLabel="Map style" accessibilityState={{ expanded: layersOpen }} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
