@@ -20,6 +20,7 @@ export async function posterPng(slug: string, city: string, format: 'story' | 'w
   return renderPoster(
     {
       artistName: artist.name,
+      cityId: city,
       cityName: metro.name,
       state: metro.state,
       count,

@@ -57,8 +57,8 @@ export function Btn({
       accessibilityState={{ disabled: !!disabled, busy: !!busy }}
       disabled={disabled || busy}
       hitSlop={size === 'sm' ? 4 : undefined}
-      onPressIn={() => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, speed: 40, bounciness: 0 }).start()}
-      onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 18, bounciness: 8 }).start()}
+      onPressIn={() => Animated.timing(scale, { toValue: 0.97, duration: 90, useNativeDriver: true }).start()}
+      onPressOut={() => Animated.timing(scale, { toValue: 1, duration: 180, useNativeDriver: true }).start()}
       onPress={(e) => {
         haptic.tap();
         onPress?.(e);
@@ -139,12 +139,12 @@ export function Divider() {
   return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: C.lineHi, marginVertical: 4 }} />;
 }
 
-/** A labeled stat: big mono number over a small caps label. */
+/** A labeled stat: a wide Archivo number over a quiet label. */
 export function Stat({ value, label, color = C.text, sub }: { value: ReactNode; label: string; color?: string; sub?: string }) {
   return (
     <View style={{ gap: 2, minWidth: 64 }}>
-      <T v="label">{label}</T>
-      <T style={{ fontFamily: F.monoBold, fontSize: 24, lineHeight: 28, color }}>{value}</T>
+      <T style={{ fontFamily: F.display, fontSize: 24, lineHeight: 28, color, fontVariant: ['tabular-nums'] }}>{value}</T>
+      <T v="footnote">{label}</T>
       {sub ? <T v="caption">{sub}</T> : null}
     </View>
   );
@@ -221,12 +221,12 @@ const styles = StyleSheet.create({
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start' },
 });
 
-/** Section header for grouped content: an uppercase label with an optional trailing action. */
+/** Section header for grouped content: a title3 heading with an optional trailing action. */
 export function Section({ title, trailing, children, style, tint }: { title: string; trailing?: ReactNode; children?: ReactNode; style?: StyleProp<ViewStyle>; tint?: string }) {
   return (
     <View style={[{ gap: S.sm }, style]}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 24, gap: S.sm }}>
-        <T v="label" color={tint} accessibilityRole="header" style={{ flexShrink: 1 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28, gap: S.sm }}>
+        <T v="head" color={tint} accessibilityRole="header" style={{ flexShrink: 1 }}>
           {title}
         </T>
         {trailing}

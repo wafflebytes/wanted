@@ -8,8 +8,15 @@ import { Platform } from 'react-native';
 /** Web uses same-origin requests. Native talks to the dev server (or the deployed origin). */
 export function apiOrigin(): string {
   if (Platform.OS === 'web') return '';
+  // A Release build has no Metro to ask, so it is told where the server is when it's built.
+  if (!__DEV__ && process.env.EXPO_PUBLIC_API_ORIGIN) return process.env.EXPO_PUBLIC_API_ORIGIN;
   const host = Constants.expoConfig?.hostUri?.split('/')[0];
   if (host) return `http://${host}`;
+  // A debug build on a device: the JS bundle came from Metro, so the API lives at the same address.
+  try {
+    const dev = (require('react-native/Libraries/Core/Devtools/getDevServer') as { default: () => { url: string } }).default().url.replace(/\/$/, '');
+    if (dev && !/localhost|127\.0\.0\.1/.test(dev)) return dev;
+  } catch {}
   const origin = (Constants.expoConfig?.extra?.router as { origin?: string } | undefined)?.origin;
   return origin ?? 'http://localhost:8081';
 }
@@ -24,7 +31,8 @@ export class ApiError extends Error {
 }
 
 async function request<T>(method: 'GET' | 'POST', path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(`${apiOrigin()}/api${path}`, {
+  const url = `${apiOrigin()}/api${path}`;
+  const res = await fetch(url, {
     method,
     headers: body !== undefined ? { 'content-type': 'application/json' } : undefined,
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -48,14 +56,16 @@ export const api = {
 };
 
 /**
- * Reads an NDJSON stream (Scout's progress theater). Falls back to reading the whole body
+ * Reads an NDJSON stream (Scout's progress theater, Gus's steps). Falls back to reading the whole body
  * when the platform's fetch has no streaming reader (older React Native).
  */
 export async function streamNdjson<E>(path: string, body: unknown, onEvent: (e: E) => void, signal?: AbortSignal) {
+  // FormData (an audio ask) goes as multipart; anything else as JSON.
+  const form = typeof FormData !== 'undefined' && body instanceof FormData;
   const res = await fetch(`${apiOrigin()}/api${path}`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
+    headers: form ? undefined : { 'content-type': 'application/json' },
+    body: form ? (body as FormData) : JSON.stringify(body),
     signal,
   });
   if (!res.ok) {

@@ -28,7 +28,7 @@ export function ScoreDial({ score, size = 168 }: { score: number | null; size?: 
     if (score === null) return;
     const id = v.addListener(({ value }) => setShown(value));
     if (reduced) v.setValue(score);
-    else Animated.spring(v, { toValue: score, useNativeDriver: false, speed: 6, bounciness: 14 }).start(() => haptic.tick());
+    else Animated.timing(v, { toValue: score, duration: 700, easing: Easing.bezier(0.2, 0, 0, 1), useNativeDriver: false }).start(() => haptic.tick());
     return () => v.removeListener(id);
   }, [score, reduced, v]);
   const w = size;

@@ -3,15 +3,16 @@
  * pitches and posters from the modules below it.
  */
 import { cellToLatLng } from 'h3-js';
-import { applyFix, plan as planRoute, rescore, resequence, swapCandidates, tryFix, roasts as findRoasts, type PlanInput, type PlannerRoom } from '../lib/tour';
+import { applyFix, plan as planRoute, rescore, resequence, swapCandidates, tryFix, roasts as findRoasts, namesFrom, roastCard, type PlanInput, type PlannerRoom } from '../lib/tour';
 import type { Region } from '../lib/regions';
 import type { CityProof, DayKey, Locality, Receipt, Roast, RoastFix, RoomBand, TourConstraints, TourPlan, TourStop } from '../lib/types';
 import { getArtist, openCity, openedCities, type ArtistRow } from './artists';
+import { bountyView, ensureBounty } from './bounty';
 import { cityDetail, shapeRooms, warmNeighborhoods, type RoomView } from './city';
 import { cityCount, claimByDevice, proofFor, recentSignatures, wearLevel } from './claims';
 import { config } from './config';
 import { crowdCard } from './crowd';
-import { id } from './crypto';
+import { deviceHash, id } from './crypto';
 import { one, run } from './db';
 import { pitchEmail, routeLines, type PitchEvidence } from './gus/agent';
 import { HttpError } from './http';
@@ -182,6 +183,8 @@ export async function openPoster(artist: ArtistRow, metroId: string) {
   const loc = await cityNeighborhoods(artist.sound.entities, metro.query, metro.name, `artist:${artist.id}`).catch(() => null);
   const top = loc?.data.neighborhoods.slice(0, 3).map((n) => n.name) ?? [];
   await openCity(artist, metroId, m?.heat ?? null, top);
+  // Seal the Bounty's draw secret the day the poster goes up.
+  await ensureBounty(artist, metroId);
   return { city: metroId, topNeighborhoods: top, posterPath: `/w/${artist.slug}/${metroId}` };
 }
 
@@ -212,6 +215,7 @@ export async function posterState(slug: string, metroId: string, deviceToken: st
     mine,
     played: opened.playedAt ? { at: opened.playedAt, venue: opened.playedVenue } : null,
     rank: score?.rank ?? null,
+    bounty: await bountyView(artist, metroId, deviceToken ? deviceHash(deviceToken) : null),
     hexes: (city?.hexes ?? []).slice(0, 400).map((h) => {
       const [lat, lon] = cellToLatLng(h.h3);
       return { h3: h.h3, heat: h.heat, lat, lon };
@@ -359,7 +363,7 @@ export async function planFor(artist: ArtistRow, constraints: TourConstraints & 
   if (!Object.keys(base.rooms).length) base.rooms = await roomsFor(artist, stops.map((s) => s.metroId));
   // Final pass: dates and rooms are already settled; this only recomputes totals.
   const scored = rescore(stops, base, { startDate: stops[0]?.date });
-  const roastList = await verifyFixes(artist, findRoasts(scored.stops, base), scored, base, constraints.startDate);
+  const roastList = (await verifyFixes(artist, findRoasts(scored.stops, base), scored, base, constraints.startDate)).map((r) => ({ ...r, card: roastCard(r, scored.stops, namesFrom(base)) }));
   const lines = await routeLines({ stops: scored.stops, roasts: roastList, total: scored.total, artistName: artist.name });
   scored.stops.forEach((s, i) => (s.blurb = lines.blurbs[i]));
 

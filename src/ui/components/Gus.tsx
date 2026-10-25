@@ -1,15 +1,14 @@
 /**
  * Gus, the veteran tour manager (PRD 8.4): a die-cut sticker whose mood follows the data,
- * his line in Instrument Serif, a "Gus thinks" label, and a play button for his voice
- * (Fish Audio, Verity). Tough love about routes, never mean about people.
+ * his line in SF Rounded, and a small speaker to hear it in his voice (Fish Audio, Verity).
+ * Which model wrote a line lives in the receipts, not on screen. Tough love about routes, never mean about people.
  */
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Animated, Easing, Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Orb } from '../fx/Orb';
 import { haptic } from '../haptics';
 import { useReducedMotion } from '../hooks';
-import { PLACEHOLDERS } from '../placeholders.generated';
 import { C, F, IMAGES } from '../theme';
 import { sayLine, stopVoice, type VoiceMood } from '../voice';
 import { T } from './T';
@@ -17,15 +16,19 @@ import { Icon } from '@/ui/icons/Icon';
 
 export type GusMood = 'idle' | 'thinking' | 'proud' | 'unimpressed' | 'losing-it' | 'reading' | 'wave';
 
-const FACE: Record<GusMood, keyof typeof IMAGES> = {
-  idle: 'gus-idle',
-  thinking: 'gus-thinking',
-  proud: 'gus-proud',
-  unimpressed: 'gus-unimpressed',
-  'losing-it': 'gus-losing-it',
-  reading: 'gus-reading',
-  wave: 'gus-wave',
+/** Die-cut busts (transparent, cut at the waist) so Gus can stand behind cards and peek over them. */
+export const GUS_CUT: Record<GusMood, keyof typeof IMAGES> = {
+  idle: 'gus-cut-idle',
+  thinking: 'gus-cut-thinking',
+  proud: 'gus-cut-proud',
+  unimpressed: 'gus-cut-unimpressed',
+  'losing-it': 'gus-cut-losing-it',
+  reading: 'gus-cut-reading',
+  wave: 'gus-cut-wave',
 };
+
+/** Width/height of each cut. All share one height and eye line, so sizing by height keeps his head the same size in every mood. */
+const CUT_RATIO: Record<GusMood, number> = { idle: 0.81, thinking: 0.885, proud: 1.21, unimpressed: 0.84, 'losing-it': 0.97, reading: 0.93, wave: 1.02 };
 
 const VOICE: Record<GusMood, VoiceMood> = { idle: 'idle', thinking: 'thinking', proud: 'proud', unimpressed: 'unimpressed', 'losing-it': 'losing-it', reading: 'thinking', wave: 'proud' };
 
@@ -38,16 +41,20 @@ export function moodForScore(score: number | null | undefined): GusMood {
   return 'losing-it';
 }
 
+/**
+ * Gus himself: the die-cut bust, no frame. Bottom-aligned in a `size` square so he can sit on
+ * an edge (or behind one). A new mood dips him down and back up, like he ducked behind the card.
+ */
 export function GusSticker({ mood = 'idle', size = 56, style }: { mood?: GusMood; size?: number; style?: StyleProp<ViewStyle> }) {
   const reduced = useReducedMotion();
-  const pop = useRef(new Animated.Value(1)).current;
+  const dip = useRef(new Animated.Value(0)).current;
   const last = useRef(mood);
   useEffect(() => {
     if (last.current === mood || reduced) return;
     last.current = mood;
-    pop.setValue(0.82);
-    Animated.spring(pop, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 14 }).start();
-  }, [mood, pop, reduced]);
+    dip.setValue(1);
+    Animated.timing(dip, { toValue: 0, duration: 260, easing: Easing.bezier(0.2, 0, 0, 1), useNativeDriver: true }).start();
+  }, [mood, dip, reduced]);
   return (
     <Animated.View
       accessibilityRole="image"
@@ -56,21 +63,18 @@ export function GusSticker({ mood = 'idle', size = 56, style }: { mood?: GusMood
         {
           width: size,
           height: size,
-          borderRadius: size / 2,
-          borderWidth: Math.max(2, size / 22),
-          borderColor: '#fff',
-          overflow: 'hidden',
-          backgroundColor: C.cream,
-          transform: [{ scale: pop }, { rotate: '-4deg' }],
+          transform: [{ translateY: dip.interpolate({ inputRange: [0, 1], outputRange: [0, size * 0.18] }) }],
+          opacity: dip.interpolate({ inputRange: [0, 1], outputRange: [1, 0.4] }),
           shadowColor: '#000',
-          shadowOpacity: 0.5,
-          shadowRadius: 6,
-          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.45,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
         },
         style,
       ]}
     >
-      <Image source={IMAGES[FACE[mood]]} placeholder={{ uri: PLACEHOLDERS[FACE[mood]] }} placeholderContentFit="cover" style={{ width: '100%', height: '100%' }} contentFit="cover" transition={120} />
+      {/* Sized by height and centred, so wide poses overhang the box instead of shrinking. */}
+      <Image source={IMAGES[GUS_CUT[mood]]} style={{ position: 'absolute', bottom: 0, height: size, width: size * CUT_RATIO[mood], left: (size - size * CUT_RATIO[mood]) / 2 }} contentFit="contain" transition={120} />
     </Animated.View>
   );
 }
@@ -88,6 +92,7 @@ export function GusLine({
   compact,
   style,
   voice = true,
+  sticker = true,
 }: {
   line: string | null | undefined;
   mood?: GusMood;
@@ -97,6 +102,8 @@ export function GusLine({
   compact?: boolean;
   style?: StyleProp<ViewStyle>;
   voice?: boolean;
+  /** Off when Gus is already standing right above (the header perch), so he isn't on screen twice. */
+  sticker?: boolean;
 }) {
   const [speaking, setSpeaking] = useState(false);
   const [voiceErr, setVoiceErr] = useState<string | null>(null);
@@ -118,10 +125,9 @@ export function GusLine({
       setVoiceErr(e instanceof Error ? e.message : 'Gus lost his voice.');
     }
   };
-  const lite = model?.startsWith('gus-lite');
   return (
     <View style={[{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }, style]}>
-      <GusSticker mood={thinking ? 'thinking' : mood} size={compact ? 40 : 52} />
+      {sticker ? <GusSticker mood={thinking ? 'thinking' : mood} size={compact ? 40 : 48} /> : null}
       <View style={{ flex: 1, gap: 6, paddingTop: compact ? 0 : 2 }}>
         {thinking ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 32 }}>
@@ -131,26 +137,20 @@ export function GusLine({
             </T>
           </View>
         ) : line ? (
-          <T v="gus" style={compact ? { fontSize: 18, lineHeight: 23 } : null} accessibilityLiveRegion="polite">
-            “{line}”
-          </T>
-        ) : null}
-        {!thinking && line ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <View style={{ backgroundColor: 'rgba(127,209,255,0.12)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 }}>
-              <T style={{ fontFamily: F.monoMed, fontSize: 12, lineHeight: 15, color: C.gus }}>{lite ? 'Gus (lite)' : 'Gus thinks'}</T>
-            </View>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+            <T v="gus" style={[{ flex: 1 }, compact ? { fontSize: 16, lineHeight: 21 } : null]} accessibilityLiveRegion="polite">
+              {line}
+            </T>
             {voice ? (
-              <Pressable accessibilityRole="button" accessibilityLabel={speaking ? 'Stop Gus' : 'Hear Gus say it'} onPress={speak} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 12, minHeight: 30, backgroundColor: speaking ? C.purple : C.fill }}>
-                  <Icon name={speaking ? 'stop' : 'volume'} variant="bold" size={15} color={C.text} />
-                  <T style={{ fontFamily: F.rounded ?? F.bodyMed, fontWeight: '600', fontSize: 14, color: C.text }}>{speaking ? 'Stop' : 'Hear Gus'}</T>
+              <Pressable accessibilityRole="button" accessibilityLabel={speaking ? 'Stop Gus' : 'Hear Gus say it'} onPress={speak} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+                <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: speaking ? C.purple : C.fill2 }}>
+                  <Icon name={speaking ? 'stop' : 'volume'} variant="bold" size={14} color={speaking ? C.text : C.text2} />
                 </View>
               </Pressable>
             ) : null}
-            {voiceErr ? <T v="caption">{voiceErr}</T> : null}
           </View>
         ) : null}
+        {voiceErr ? <T v="caption">{voiceErr}</T> : null}
       </View>
     </View>
   );

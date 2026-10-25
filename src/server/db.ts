@@ -64,6 +64,15 @@ export const SCHEMA = [
     read integer not null default 0
   )`,
   `create index if not exists inbox_artist on gus_inbox(artist_id, created_at)`,
+  `create table if not exists deals (
+    id text primary key,
+    artist_id text not null,
+    city text not null,
+    body text not null,
+    created_at integer not null,
+    updated_at integer not null
+  )`,
+  `create index if not exists deals_artist on deals(artist_id, created_at)`,
   `create table if not exists watcher_state (
     artist_id text not null,
     city text not null,
@@ -133,6 +142,49 @@ export const SCHEMA = [
     value text not null,
     updated_at integer not null
   )`,
+  `create table if not exists bounties (
+    artist_id text not null,
+    city text not null,
+    secret text not null,
+    commit_hash text not null,
+    prize text not null,
+    status text not null default 'open',
+    snapshot text,
+    snapshot_hash text,
+    ticket integer,
+    total integer,
+    winner_claim_id text,
+    winner_number integer,
+    drawn_by text,
+    drawn_at integer,
+    created_at integer not null,
+    primary key(artist_id, city)
+  )`,
+  `create table if not exists gus_log (
+    id text primary key,
+    artist_id text not null,
+    kind text not null,
+    city text,
+    title text not null,
+    detail text,
+    source text not null,
+    level integer not null default 0,
+    ref text,
+    created_at integer not null
+  )`,
+  `create index if not exists gus_log_artist on gus_log(artist_id, created_at)`,
+  `create table if not exists gus_calls (
+    id text primary key,
+    artist_id text not null,
+    deal_id text not null,
+    city text not null,
+    script text not null,
+    status text not null,
+    outcome text,
+    created_at integer not null,
+    updated_at integer not null
+  )`,
+  `create index if not exists gus_calls_artist on gus_calls(artist_id, created_at)`,
   `create table if not exists rate_limits (
     key text not null,
     win integer not null,

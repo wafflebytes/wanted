@@ -10,7 +10,7 @@
  */
 import { driveEstimate, haversineKm } from './geo';
 import { inRegions, type Region } from './regions';
-import type { DayKey, MetroScore, Roast, RoastFix, RoomBand, StopScore, TourStop } from './types';
+import type { DayKey, MetroScore, Roast, RoastCard, RoastFix, RoomBand, StopScore, TourStop } from './types';
 
 export type TourConfig = {
   weights: { wanted: number; proof: number; roomFit: number; openNight: number; drive: number };
@@ -121,6 +121,36 @@ function pickCities(input: PlanInput, slots: number, already: MetroScore[]): Met
     .sort((a, b) => b.value - a.value);
   const chosen: MetroScore[] = [];
   const near = (a: MetroScore, b: MetroScore) => haversineKm(a.lat, a.lon, b.lat, b.lon) * DEFAULT_TOUR_CONFIG.roadFactor < 130;
+  // "Anywhere in the US": grow one drivable cluster from the strongest city instead of
+  // connecting the country's top cities coast to coast. Each candidate pays about one score
+  // point per 60 km from the nearest city already on the tour, and nothing past a day's
+  // drive (~700 road km) joins unless fans there already proved it.
+  if (!input.regions.length) {
+    const left = [...pool];
+    // First pass keeps one crowd per night; the second lets neighbors share a crowd but
+    // still never reaches past the cap, so a thin cluster stays short instead of flying south.
+    for (const allowNear of [false, true]) {
+      while (chosen.length < slots && left.length) {
+        const anchor = [...already, ...chosen];
+        let bi = 0;
+        let bv = -Infinity;
+        left.forEach(({ c, value }, i) => {
+          const proven = !!input.proof[c.id]?.crossed;
+          if (!allowNear && !proven && anchor.some((x) => near(x, c))) return;
+          const km = anchor.length ? Math.min(...anchor.map((x) => haversineKm(x.lat, x.lon, c.lat, c.lon))) : 0;
+          if (km * DEFAULT_TOUR_CONFIG.roadFactor > 700 && !proven) return;
+          const v = value - km / 60;
+          if (v > bv) {
+            bv = v;
+            bi = i;
+          }
+        });
+        if (bv === -Infinity) break;
+        chosen.push(left.splice(bi, 1)[0].c);
+      }
+    }
+    return chosen;
+  }
   for (const { c } of pool) {
     if (chosen.length >= slots) break;
     // Don't split one crowd across two nights unless the second city has proof of its own.
@@ -548,6 +578,50 @@ export function roasts(stops: TourStop[], input: PlanInput): Roast[] {
 
   return dedupe(out).sort((a, b) => b.severity - a.severity);
 }
+
+/**
+ * Writes a roast as a card a musician reads at a glance: what's off, the swap, why in a few
+ * words, and the button. Runs after fixes are verified, so `to` names what the button does.
+ */
+export type CardNames = { city: (id: string) => string | undefined; room: (metroId: string, id: string) => string | undefined; signatures: (id: string) => number | undefined };
+
+/** Name lookups from a plan's own inputs, for the server. */
+export const namesFrom = (input: PlanInput): CardNames => ({
+  city: (id) => input.candidates.find((c) => c.id === id)?.name,
+  room: (metroId, id) => input.rooms[metroId]?.find((x) => x.id === id)?.name,
+  signatures: (id) => input.proof[id]?.signatures,
+});
+
+export function roastCard(r: Roast, stops: TourStop[], names: CardNames): RoastCard {
+  const s = r.stopIndex !== null ? stops[r.stopIndex] : null;
+  const f = r.fix;
+  const city = (id: string) => names.city(id) ?? 'a better city';
+  const room = (metroId: string, id: string) => names.room(metroId, id) ?? 'a better room';
+  const to = !f ? null : f.kind === 'swap-city' ? city(f.metroId) : f.kind === 'change-room' && s ? room(s.metroId, f.roomId) : f.kind === 'add-city' ? city(f.metroId) : f.kind === 'move-date' ? `${cap(dayOf(f.date))}` : null;
+  const action = !f ? 'Got it' : f.kind === 'drop' ? `Drop ${s?.city ?? 'it'}` : f.kind === 'add-city' ? `Add ${to}` : f.kind === 'change-room' ? 'Switch rooms' : f.kind === 'move-date' ? `Move to ${to}` : f.kind === 'swap-city' ? `Go to ${to}` : 'Swap the dates';
+  const day = s ? cap(s.day) : '';
+  switch (r.rule) {
+    case 'wrong-side':
+      return { title: `A better room in ${s?.city}`, from: s?.room?.name ?? null, to, note: 'Closer to where your fans live.', action };
+    case 'closed-night':
+      return { title: `${s?.room?.name} is closed that ${day}`, from: s?.room?.name ?? null, to, note: to ? 'Open that night.' : 'Push the show a day.', action };
+    case 'cold-city':
+      return { title: `${s?.city} is quiet for you`, from: s?.city ?? null, to, note: to ? 'More of your people there.' : 'Few fans here yet.', action };
+    case 'long-haul':
+      return { title: `A long drive into ${s?.city}`, from: s?.city ?? null, to, note: `${Math.round(s?.driveHoursFromPrev ?? 0)} hours in the van. ${to} is closer.`, action };
+    case 'weekday-trap':
+      return { title: `${s?.city} on a ${day}`, from: s?.city ?? null, to, note: 'A slow night right after a big weekend.', action };
+    case 'crowd-split':
+      return { title: `Two shows, one crowd`, from: s?.city ?? null, to, note: `${s?.city} is too close to another stop.`, action };
+    case 'famous-hub':
+      return { title: 'Big cities, small crowds', from: s?.city ?? null, to, note: to ? `${to} likes you more.` : 'Your fans are elsewhere.', action };
+    case 'ignored-proof': {
+      const n = f && f.kind === 'add-city' ? names.signatures(f.metroId) : undefined;
+      return { title: `${to} asked for you`, from: null, to, note: `${n ?? 'Enough'} people signed. It's not on the route.`, action };
+    }
+  }
+}
+
 
 function dedupe(rs: Roast[]): Roast[] {
   const seen = new Set<string>();

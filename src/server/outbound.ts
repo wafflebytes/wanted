@@ -3,7 +3,7 @@
  * assert that no Qloo or LLM body ever contains a fan's neighborhood, contact or device hash.
  * Also a runtime guard: LLM prompts are checked against known fan strings before sending.
  */
-export type OutboundRecord = { kind: 'qloo' | 'llm' | 'tts'; url: string; body: string };
+export type OutboundRecord = { kind: 'qloo' | 'llm' | 'tts' | 'asr' | 'web'; url: string; body: string };
 
 type Recorder = (r: OutboundRecord) => void;
 

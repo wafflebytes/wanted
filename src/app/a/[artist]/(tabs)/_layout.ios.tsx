@@ -1,45 +1,41 @@
 /**
  * Artist app tabs on iPhone: the system Liquid Glass tab bar via NativeTabs (PRD 8.2), with
- * MX Icons. Five tabs, so nothing overflows into a system More list (HIG: avoid tab overflow); Settings
- * opens from each screen's header instead.
+ * SF Symbols. Four tabs. Gus stands behind each screen's lead card (see GusPerch), not over the
+ * content: he stays out of the way until he has something worth a decision.
  */
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useArtist } from '@/ui/artist';
+import { useArtist, useRememberArtist } from '@/ui/artist';
 
-// MX Icons rendered as template images by scripts/build-icons.ts; the system tints them. Bold when selected.
 const TAB = {
-  map: { default: require('../../../../../assets/icons/tab-map-linear.png'), selected: require('../../../../../assets/icons/tab-map-bold.png') },
-  tour: { default: require('../../../../../assets/icons/tab-tour-linear.png'), selected: require('../../../../../assets/icons/tab-tour-bold.png') },
-  crowd: { default: require('../../../../../assets/icons/tab-crowd-linear.png'), selected: require('../../../../../assets/icons/tab-crowd-bold.png') },
-  posters: { default: require('../../../../../assets/icons/tab-posters-linear.png'), selected: require('../../../../../assets/icons/tab-posters-bold.png') },
-  inbox: { default: require('../../../../../assets/icons/tab-inbox-linear.png'), selected: require('../../../../../assets/icons/tab-inbox-bold.png') },
-};
+  map: { default: 'map', selected: 'map.fill' },
+  tour: { default: 'point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath', selected: 'point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath.fill' },
+  // Fan Mail lives at /pulse (the route kept its old name so links don't break).
+  pulse: { default: 'envelope', selected: 'envelope.fill' },
+  posters: { default: 'star.square.on.square', selected: 'star.square.on.square.fill' },
+} as const;
 
 export default function ArtistTabs() {
-  const { data } = useArtist();
+  const { slug, data } = useArtist();
+  useRememberArtist(slug, data);
   const unread = data?.unread ?? 0;
   return (
-    <NativeTabs minimizeBehavior="onScrollDown" tintColor="#B45CF0">
+    <NativeTabs minimizeBehavior="onScrollDown" tintColor="#B45CF0" iconColor={{ default: 'rgba(235,235,245,0.68)', selected: '#B45CF0' }}>
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Icon src={TAB.map} />
+        <NativeTabs.Trigger.Icon sf={TAB.map} />
         <NativeTabs.Trigger.Label>Map</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="tour">
-        <NativeTabs.Trigger.Icon src={TAB.tour} />
+        <NativeTabs.Trigger.Icon sf={TAB.tour} />
         <NativeTabs.Trigger.Label>Tour</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="crowd">
-        <NativeTabs.Trigger.Icon src={TAB.crowd} />
-        <NativeTabs.Trigger.Label>Crowd</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="pulse">
+        <NativeTabs.Trigger.Icon sf={TAB.pulse} />
+        <NativeTabs.Trigger.Label>Fan Mail</NativeTabs.Trigger.Label>
+        {unread ? <NativeTabs.Trigger.Badge>{String(unread)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="posters">
-        <NativeTabs.Trigger.Icon src={TAB.posters} />
+        <NativeTabs.Trigger.Icon sf={TAB.posters} />
         <NativeTabs.Trigger.Label>Posters</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="inbox">
-        <NativeTabs.Trigger.Icon src={TAB.inbox} />
-        <NativeTabs.Trigger.Label>Inbox</NativeTabs.Trigger.Label>
-        {unread ? <NativeTabs.Trigger.Badge>{String(unread)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
     </NativeTabs>
   );

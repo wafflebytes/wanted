@@ -87,6 +87,23 @@ export type PosterState = {
   mine: (ClaimView & { refCode: string; earlyAccess: boolean; friends: number }) | null;
   played: { at: number; venue: string | null } | null;
   rank: number | null;
+  /** The Bounty (FR-23d): one signer meets the artist. Mirrors the server's BountyView. */
+  bounty?: {
+    prize: string;
+    status: 'open' | 'drawn';
+    commit: string;
+    signers: number;
+    totalEntries: number;
+    rules: string;
+    mine: { entries: number; deputy: boolean; friends: number } | null;
+    drawn: {
+      at: number;
+      by: 'artist' | 'gus';
+      winner: { number: number; initials: string; neighborhood: string | null };
+      mineWon: boolean;
+      proof: { secret: string; snapshotHash: string; snapshot: string; ticket: number; total: number };
+    } | null;
+  };
   hexes: { h3: string; heat: number; lat: number; lon: number }[];
 };
 

@@ -9,8 +9,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, Text, View } from 'react-native';
 import type { ClaimView } from '@/lib/types';
 import { POSTER_BOXES as B, POSTER_H, POSTER_INK, POSTER_RED, POSTER_W, signatureSpot } from '@/lib/poster';
-import { Metal } from '../fx/Metal';
+import { CityMark, cityEdition, type Hex } from './CityMark';
 import { useReducedMotion } from '../hooks';
+import { posterArt } from '../posterArt';
 import { F, IMAGES, type ImageKey } from '../theme';
 
 export type PosterView = {
@@ -25,6 +26,9 @@ export type PosterView = {
   portrait: string | null;
   imageUrl: string | null;
   isDemo: boolean;
+  /** With these, the poster gets its city's edition: ink, paper tone and the heat stamp. */
+  cityId?: string;
+  hexes?: Hex[];
 };
 
 const box = (b: { x: number; y: number; w: number; h: number }, s: number) => ({ position: 'absolute' as const, left: b.x * s, top: b.y * s, width: b.w * s, height: b.h * s });
@@ -37,13 +41,19 @@ export function Poster({ d, width, fresh, stampKey }: { d: PosterView; width: nu
   const hoods = d.topNeighborhoods.slice(0, 3);
   const wanted = hoods.length ? `Most wanted in ${hoods.join(', ')}` : '';
   const local = d.portrait && d.portrait in IMAGES ? IMAGES[d.portrait as ImageKey] : null;
+  const ed = d.cityId ? cityEdition(d.cityId) : null;
+  const art = posterArt(d.cityId, d.state, d.wear);
+  const paper = art.base;
   return (
     <View
       accessibilityRole="image"
       accessibilityLabel={`WANTED poster: ${d.artistName}, wanted in ${d.cityName}. ${d.count} signatures.${d.played ? ' Caught live.' : ''}`}
       style={{ width, height: POSTER_H * s }}
     >
-      <Image source={IMAGES[`poster-${d.wear}` as ImageKey]} style={{ position: 'absolute', width, height: POSTER_H * s }} contentFit="contain" />
+      <Image source={paper} style={{ position: 'absolute', width, height: POSTER_H * s }} contentFit="contain" />
+      {/* The city's paper tone: the paper again, filled with the tint, only where there's paper. */}
+      {art.overlay ? <Image source={art.overlay} style={{ position: 'absolute', width, height: POSTER_H * s }} contentFit="contain" /> : null}
+      {ed && !art.custom ? <Image source={paper} tintColor={ed.paper} style={{ position: 'absolute', width, height: POSTER_H * s, opacity: 0.14 }} contentFit="contain" /> : null}
       <View style={[box(B.portrait, s), { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }]}>
         {local ? (
           <Image source={local} style={{ width: '100%', height: '100%', opacity: 0.94 }} contentFit="cover" />
@@ -63,7 +73,7 @@ export function Poster({ d, width, fresh, stampKey }: { d: PosterView; width: nu
         </Text>
       </View>
       <View style={[box(B.city, s), { alignItems: 'center', justifyContent: 'center' }]}>
-        <Text numberOfLines={1} style={{ fontFamily: F.display, color: POSTER_RED, fontSize: fit(city, B.city.w, 40) * s, letterSpacing: 1 * s }}>
+        <Text numberOfLines={1} style={{ fontFamily: F.display, color: ed?.ink ?? POSTER_RED, fontSize: fit(city, B.city.w, 40) * s, letterSpacing: 1 * s }}>
           {city}
         </Text>
       </View>
@@ -80,6 +90,11 @@ export function Poster({ d, width, fresh, stampKey }: { d: PosterView; width: nu
       {d.signatures.slice(0, 28).map((c) => (
         <Signature key={c.number} c={c} s={s} animate={c.number === fresh} />
       ))}
+      {ed && d.cityId && d.hexes?.length ? (
+        <View pointerEvents="none" style={{ position: 'absolute', left: 70 * s, top: 830 * s }}>
+          <CityMark cityId={d.cityId} cityName={d.cityName} state={d.state} hexes={d.hexes} size={230 * s} ink={ed.ink} tilt={ed.tilt} />
+        </View>
+      ) : null}
       <View
         style={[
           box(B.count, s),
@@ -95,7 +110,8 @@ export function Poster({ d, width, fresh, stampKey }: { d: PosterView; width: nu
           } as object,
         ]}
       >
-        <Metal text={String(d.count)} size={(d.count > 999 ? 40 : 54) * s} color="#2b1806" />
+        {/* Engraved ink, not liquid metal: at poster scale the metal effect vanished into the gold on the web. */}
+        <Text style={{ fontFamily: F.monoBold, fontSize: (d.count > 999 ? 40 : 54) * s, lineHeight: (d.count > 999 ? 44 : 58) * s, color: '#2b1806', textShadowColor: 'rgba(255,240,200,0.55)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 0 }}>{d.count}</Text>
         <Text style={{ fontFamily: F.display, fontSize: 17 * s, color: '#2b1806', letterSpacing: 2 * s }}>SIGNED</Text>
       </View>
       {d.played ? <Stamp s={s} k={stampKey} /> : null}
@@ -139,7 +155,7 @@ export function Stamp({ s, k }: { s: number; k?: number }) {
   useEffect(() => {
     if (k === undefined || reduced) return;
     v.setValue(0);
-    Animated.spring(v, { toValue: 1, useNativeDriver: true, speed: 9, bounciness: 6 }).start();
+    Animated.timing(v, { toValue: 1, duration: 320, easing: Easing.bezier(0.2, 0, 0, 1), useNativeDriver: true }).start();
   }, [k, reduced, v]);
   return (
     <Animated.View

@@ -1,4 +1,5 @@
 import { sign } from '@/server/claims';
+import { ageHold } from '@/server/deals';
 import { body, handler, HttpError, json, limit } from '@/server/http';
 import { requireArtist } from '@/server/service';
 import { onSignature } from '@/server/watcher';
@@ -14,7 +15,9 @@ export const POST = handler(async (req: Request, { id }: Record<string, string>)
   await limit(req, 'simulate', 20);
   const artist = await requireArtist(id);
   if (!artist.isDemo) throw new HttpError(403, 'Simulation is only for demo artists.');
-  const input = await body<{ city: string; n?: number }>(req);
+  const input = await body<{ city: string; n?: number; action?: 'hold-expiring' }>(req);
+  // The video's "hold expires tonight" beat: the waiting hold now runs out in under 3 hours.
+  if (input.action === 'hold-expiring') return json({ deal: await ageHold(artist, 2.8) });
   const state = await posterState(artist.slug, input.city, null);
   const hoods = state.neighborhoods.slice(0, 8);
   const n = Math.max(1, Math.min(60, input.n ?? 5));
@@ -34,6 +37,7 @@ export const POST = handler(async (req: Request, { id }: Record<string, string>)
       isDemo: true,
     });
   }
-  const watch = await onSignature(artist.id, input.city);
+  // The demo waits for Gus's chain so the next beat (his card, his call) is already there.
+  const watch = await onSignature(artist.id, input.city, { awaitChain: true });
   return json({ count: last?.count ?? state.count, watch });
 });

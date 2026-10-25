@@ -9,13 +9,15 @@ import { Pressable, ScrollView, TextInput, useWindowDimensions, View } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassSheet, GlassSheetContent, GlassSheetTitle } from '@/components/glassyui/glass-sheet';
 import { inRegions, REGION_LABELS, type Region } from '@/lib/regions';
+import { roastCard } from '@/lib/tour';
 import type { Roast, RoomBand, TourPlan, TourStop } from '@/lib/types';
 import { api } from '@/ui/api';
 import { useArtist } from '@/ui/artist';
 import { Btn, Card, Chip, Empty, Group, IconBtn, ListRow, Row, Section, Segmented } from '@/ui/components/core';
 import { ScreenHeader } from '@/ui/components/ScreenHeader';
 import { TAB_BAR_SPACE } from '@/ui/components/TabBar';
-import { ScoreDial, VanRun } from '@/ui/components/Dial';
+import { ScoreDial } from '@/ui/components/Dial';
+import { RouteMap } from '@/ui/map/RouteMap';
 import { GusLine, moodForScore } from '@/ui/components/Gus';
 import { PitchSheet, type PitchTarget } from '@/ui/components/PitchSheet';
 import { DemoTag, Prov } from '@/ui/components/Receipts';
@@ -23,7 +25,7 @@ import { T } from '@/ui/components/T';
 import { useToast } from '@/ui/components/Toaster';
 import { Beam } from '@/ui/fx/Beam';
 import { haptic } from '@/ui/haptics';
-import { invalidate, useApi } from '@/ui/hooks';
+import { invalidate, useApi, useReducedMotion } from '@/ui/hooks';
 import { defaultStart, session } from '@/ui/session';
 import { C, F, R, S } from '@/ui/theme';
 import type { CityData, MapData, PlanResponse } from '@/ui/types';
@@ -50,6 +52,7 @@ const fmtDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString(
 export default function Tour() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const reduced = useReducedMotion();
   const toast = useToast();
   const { slug, data: state } = useArtist();
   const { data: planRes, setData: setPlanRes, loading } = useApi<PlanResponse>(slug ? `/artist/${slug}/plan` : null);
@@ -57,7 +60,6 @@ export default function Tour() {
   const plan = planRes?.plan ?? null;
   const [c, setC] = useState<Constraints | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [runKey, setRunKey] = useState(0);
   const [why, setWhy] = useState<Roast | null>(null);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<number | null>(null);
@@ -86,7 +88,6 @@ export default function Tour() {
       const r = await api.post<PlanResponse>(`/artist/${slug}/plan`, { constraints: { ...c, region: 'all' }, action });
       setPlanRes(r);
       invalidate(`/artist/${slug}/plan`);
-      setRunKey((k) => k + 1);
       haptic.success();
       if (action.kind === 'new') setDismissed(new Set());
     } catch (e) {
@@ -96,7 +97,16 @@ export default function Tour() {
     }
   };
 
-  const roasts = (plan?.roasts ?? []).filter((r) => !dismissed.has(r.id));
+  // Plans saved before cards existed get theirs written here. The map has the city names; a
+  // wrong-side roast's reason names the better room first ("X is in …", after the first sentence).
+  const roasts = useMemo(() => {
+    if (!plan) return [];
+    const city = (id: string) => map?.metros.find((m) => m.id === id)?.name;
+    const signatures = (id: string) => state?.opened.find((o) => o.city === id)?.proof?.signatures;
+    return plan.roasts
+      .filter((r) => !dismissed.has(r.id))
+      .map((r) => (r.card ? r : { ...r, card: roastCard(r, plan.stops, { city, signatures, room: () => r.why.split('. ')[1]?.split(' is in ')[0] || undefined }) }));
+  }, [plan, dismissed, map, state]);
   const proofBy = useMemo(() => Object.fromEntries((state?.opened ?? []).map((o) => [o.city, o.proof])), [state]);
   const alternatives = useMemo(() => {
     if (!map || !plan || !c) return [];
@@ -120,17 +130,21 @@ export default function Tour() {
         <ScreenHeader title="Tour" subtitle={plan ? `${fmtDate(plan.stops[0]?.date)} – ${fmtDate(plan.stops[plan.stops.length - 1]?.date)}` : undefined} slug={slug} />
 
         {plan ? (
-          <View style={{ backgroundColor: C.card, borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.lg }}>
+          <View style={{ backgroundColor: C.card, borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.lg, overflow: 'hidden' }}>
+            {map ? (
+              <View style={{ marginTop: -S.lg, marginHorizontal: -S.lg, borderBottomWidth: 1, borderColor: C.line, backgroundColor: '#0A0A0B' }}>
+                <RouteMap hexes={map.hexes} stops={plan.stops.map((s) => ({ lat: s.lat, lon: s.lon, city: s.city }))} width={Math.min(width, 720) - S.gutter * 2} height={210} reduced={reduced} />
+              </View>
+            ) : null}
             <Row gap={S.lg} style={{ alignItems: 'center' }}>
               <ScoreDial score={plan.total} size={132} />
               <View style={{ flex: 1, gap: S.md }}>
                 <MiniStat icon="calendar" value={`${plan.stops.length}`} label="dates" />
                 <MiniStat icon="van" value={`${driveH}`} label="hours driving" />
-                <MiniStat icon="danger" value={`${roasts.length}`} label={roasts.length === 1 ? 'roast' : 'roasts'} color={roasts.length ? C.flame : C.good} />
+                <MiniStat icon="danger" value={`${roasts.length}`} label={roasts.length === 1 ? 'thing to fix' : 'things to fix'} color={roasts.length ? C.flame : C.good} />
               </View>
             </Row>
-            <GusLine line={plan.gusLine} mood={moodForScore(plan.total)} model={plan.gusModel} />
-            <VanRun runKey={runKey} width={Math.min(width, 720) - S.gutter * 2 - S.lg * 2} />
+            <GusLine line={plan.gusLine} mood={moodForScore(plan.total)} model={plan.gusModel} sticker={false} />
           </View>
         ) : null}
 
@@ -161,7 +175,7 @@ export default function Tour() {
         {busy === 'new' ? <GusLine line={null} thinking="Routing the van. Nearest neighbor, then 2-opt…" orb="solving" /> : null}
 
         {roasts.length ? (
-          <Section title={`Roasts · ${roasts.length}`} tint={C.flame}>
+          <Section title="Gus has notes">
             {roasts.map((r) => (
               <RoastCard
                 key={r.id}
@@ -178,7 +192,7 @@ export default function Tour() {
             <Row gap={S.sm}>
               <Icon name="check" variant="bold" size={20} color={C.good} />
               <T v="callout" style={{ flex: 1 }}>
-                No roasts. {plan.total >= 60 ? "Load-in at six. Doors at eight. Don't be late." : 'Nothing broken, just not great.'}
+                Gus has no notes. {plan.total >= 60 ? "Load-in at six. Doors at eight. Don't be late." : 'Nothing broken, just not great.'}
               </T>
             </Row>
           </Card>
@@ -207,7 +221,7 @@ export default function Tour() {
               ))}
             </View>
             <T v="caption">
-              Stop score = 40% Wanted Score + 20% fan proof + 15% room fit + 10% open that night + 15% drive. Tour Score is the mean stop score minus a crowd-split penalty ({plan.splitPenalty} points here). Drive times are straight-line distance × 1.25 at 88 km/h.
+              Each stop's number blends how many fans live there, the room, the night of the week and the drive in. Tap a stop to see the mix.
             </T>
           </Section>
         ) : null}
@@ -283,7 +297,7 @@ export default function Tour() {
         <GlassSheetContent closeLabel="Close">
           {why ? (
             <View style={{ gap: S.lg }}>
-              <GlassSheetTitle>{RULE_LABEL[why.rule]}</GlassSheetTitle>
+              <GlassSheetTitle>{why.card?.title ?? RULE_LABEL[why.rule]}</GlassSheetTitle>
               <T v="gus">“{why.line}”</T>
               <T v="body">{why.why}</T>
               <Row gap={S.sm}>
@@ -301,12 +315,11 @@ export default function Tour() {
                     act({ kind: 'fix', fix: f }, why.id);
                   }}
                 >
-                  {why.gain ? `Fix it (+${why.gain.toFixed(1)} Tour Score)` : 'Fix it'}
+                  {why.card?.action ?? 'Fix it'}
                 </Btn>
               ) : (
-                <T v="footnote">No fix makes the tour better here, so Gus isn't offering one. Swap or drop the stop by hand if you disagree.</T>
+                <T v="footnote">Nothing Gus tried made the tour better, so this one's your call. Tap the stop to swap or drop it.</T>
               )}
-              <T v="caption">Roasts are rules in code (PRD 6.4). Every Fix is simulated first; Gus only writes the line. Gus roasts routes, not people.</T>
             </View>
           ) : null}
         </GlassSheetContent>
@@ -365,32 +378,42 @@ function MiniStat({ icon, value, label, color = C.text }: { icon: IconName; valu
   );
 }
 
-const SEVERITY = (n: number) => (n >= 3 ? C.bad : n === 2 ? C.flame : C.warn);
 
+/** One note from Gus: what's off, the swap, a few words why, and one button. Tap the card for the whole story. */
 function RoastCard({ r, busy, onFix, onWhy, onDismiss }: { r: Roast; busy: boolean; onFix?: () => void; onWhy: () => void; onDismiss: () => void }) {
+  const card = r.card ?? { title: RULE_LABEL[r.rule], from: null, to: null, note: r.line, action: 'Fix it' };
   return (
-    <View style={{ backgroundColor: C.card, borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.md }}>
-      <Row style={{ justifyContent: 'space-between' }}>
-        <Row gap={6}>
-          <Icon name="danger" variant="bold" size={15} color={SEVERITY(r.severity)} />
-          <T style={{ fontFamily: F.monoBold, fontSize: 12, letterSpacing: 0.8, color: SEVERITY(r.severity) }}>{RULE_LABEL[r.rule].toUpperCase()}</T>
-        </Row>
-        <IconBtn size={30} icon={<Icon name="close" size={18} color={C.text3} />} label={`Dismiss ${RULE_LABEL[r.rule]}`} onPress={onDismiss} tint="transparent" />
-      </Row>
-      <T v="gus" style={{ fontSize: 19, lineHeight: 24 }}>
-        “{r.line}”
-      </T>
-      <Row gap={S.sm}>
-        {onFix ? (
-          <Btn size="sm" tone="scout" busy={busy} onPress={onFix} accessibilityLabel={`Fix: ${RULE_LABEL[r.rule]}${r.gain ? `, plus ${r.gain.toFixed(1)} Tour Score` : ''}`}>
-            {r.gain ? `Fix  +${r.gain.toFixed(1)}` : 'Fix'}
-          </Btn>
+    <Pressable onPress={onWhy} accessibilityRole="button" accessibilityLabel={`${card.title}. ${card.note}`} accessibilityHint="Shows why" style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
+      <View style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.md }}>
+        <View style={{ gap: 4 }}>
+          <T v="headline">{card.title}</T>
+          <T v="footnote" color={C.text2}>
+            {card.note}
+          </T>
+        </View>
+        {card.from && card.to && onFix ? (
+          <Row gap={S.sm} style={{ alignItems: 'center' }}>
+            <T v="callout" color={C.text3} numberOfLines={1} style={{ flexShrink: 1, textDecorationLine: 'line-through' }}>
+              {card.from}
+            </T>
+            <Icon name="forward" size={14} color={C.text3} />
+            <T v="callout" numberOfLines={1} style={{ flexShrink: 1, fontWeight: '600' }}>
+              {card.to}
+            </T>
+          </Row>
         ) : null}
-        <Btn size="sm" onPress={onWhy}>
-          Why
-        </Btn>
-      </Row>
-    </View>
+        <Row gap={S.sm}>
+          {onFix ? (
+            <Btn size="sm" tone="scout" busy={busy} onPress={onFix}>
+              {card.action}
+            </Btn>
+          ) : null}
+          <Btn size="sm" tone="ghost" onPress={onDismiss} accessibilityLabel={`Keep it as is: ${card.title}`}>
+            Keep it
+          </Btn>
+        </Row>
+      </View>
+    </Pressable>
   );
 }
 
@@ -507,10 +530,12 @@ function StopRow({
             {bar('Open night', parts.openNight, 10, C.good)}
             {bar('Drive', parts.drive, 15, C.text2)}
           </View>
-          <Row gap={6} wrap>
-            <Prov kind="qloo" suffix={s.score.inputs.wantedScore !== null ? `Wanted ${s.score.inputs.wantedScore.toFixed(0)}` : undefined} />
-            {s.score.inputs.proofRatio !== null ? <Prov kind="fans" suffix={`${s.score.inputs.proofRatio.toFixed(1)}× proof`} /> : null}
-            {s.score.inputs.openThatNight === false ? <Chip color={C.bad}>Dark that night</Chip> : s.score.inputs.openThatNight === null ? <Chip>No hours on file</Chip> : <Chip color={C.good}>Open that night</Chip>}
+          <T v="footnote" color={s.score.inputs.openThatNight === false ? C.bad : C.text2}>
+            {s.score.inputs.openThatNight === false ? 'The room is dark that night.' : s.score.inputs.openThatNight === null ? 'No hours on file for the room.' : 'The room is open that night.'}
+          </T>
+          <Row gap={14} wrap>
+            <Prov kind="qloo" />
+            {s.score.inputs.proofRatio !== null ? <Prov kind="fans" /> : null}
           </Row>
           <Beam active={strong} radius={999}>
             <Btn tone="action" full onPress={onPitch} icon={<Icon name="mail" variant="bold" size={18} color={C.text} />} accessibilityLabel={`Pitch ${s.room?.name ?? s.city}`}>
@@ -549,8 +574,8 @@ function RoomPicker({ slug, stop, onClose, onPick }: { slug: string; stop: TourS
                     onPress={() => onPick(r.id)}
                     accessibilityLabel={`${r.name}${current ? ', current room' : ''}${dark ? `, dark on ${stop.day}` : ''}`}
                     title={r.name}
-                    subtitle={[r.neighborhood, r.neighborhoodRank ? `#${r.neighborhoodRank} neighborhood` : null, r.sizeGuess ? `Gus thinks ${r.sizeGuess}` : null].filter(Boolean).join(' · ')}
-                    trailing={current ? <Icon name="check" variant="bold" size={20} color={C.blue} /> : dark ? <Chip color={C.bad}>Dark {stop.day.slice(0, 3)}</Chip> : null}
+                    subtitle={[r.neighborhood, r.neighborhoodRank ? `#${r.neighborhoodRank} neighborhood` : null, r.sizeGuess ? `about ${r.sizeGuess}` : null].filter(Boolean).join(' · ')}
+                    trailing={current ? <Icon name="check" variant="bold" size={20} color={C.blue} /> : dark ? <T v="footnote" color={C.bad}>Dark {stop.day.slice(0, 3)}</T> : null}
                   />
                 );
               })}

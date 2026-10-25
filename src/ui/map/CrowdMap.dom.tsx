@@ -2,7 +2,7 @@
 
 /**
  * The Crowd Map (FR-4, FR-5, FR-21; PRD 8.3): OpenFreeMap tiles under deck.gl H3 hexes.
- * Country level: extruded hexes, color = Wanted Score, height = heat; sleeper cities get a
+ * Country level: halftone dots, one per hex, sized and coloured by Wanted Score; sleeper cities get a
  * gold ring and a tin star. City level: flat street-level hexes, Qloo's ranked
  * neighborhoods (ranks, not percentages) with a pulsing ring on #1, and room pins.
  * Fan signatures sit on top as white dots with a purple ring.
@@ -11,43 +11,15 @@
  * on iOS and Android.
  */
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import { H3HexagonLayer } from '@deck.gl/geo-layers';
+import { cellToLatLng, getHexagonEdgeLengthAvg, getResolution, UNITS } from 'h3-js';
 import { IconLayer, PathLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
 import { MX_SVG } from '../icons/mx.native.generated';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { DOMProps } from 'expo/dom';
 
-export type MapMetro = { id: string; name: string; state: string; lat: number; lon: number; score: number | null; heat: number | null; rank: number | null; sleeper: boolean };
-export type MapDot = { lat: number; lon: number; count: number; neighborhood: string; city: string; confirmed: boolean };
-export type MapCity = {
-  id: string;
-  lat: number;
-  lon: number;
-  hexes: { h3: string; heat: number }[];
-  neighborhoods: { name: string; rank: number; lat: number | null; lon: number | null }[];
-  rooms: { id: string; name: string; lat: number | null; lon: number | null; rank: number }[];
-  outline: [number, number][] | null;
-};
-export type MapRoute = { lat: number; lon: number; city: string }[];
-
-export type CrowdMapProps = {
-  hexes: { h3: string; heat: number; score: number | null }[];
-  metros: MapMetro[];
-  opened: string[];
-  dots: MapDot[];
-  city: MapCity | null;
-  route: MapRoute | null;
-  dark: boolean;
-  reduceMotion: boolean;
-  /** Bumps when a new signature lands, to ripple the dots. */
-  pulse: number;
-  /** Screen space covered by the app's panels, so the camera centers in what's visible. */
-  padding: { top: number; left: number; bottom: number; right: number };
-  onPick: (pick: { kind: 'metro' | 'room' | 'neighborhood'; id: string }) => void;
-  dom?: DOMProps;
-};
+export type { CrowdMapProps, MapCity, MapDot, MapMetro, MapRoute } from './types';
+import { BASEMAPS, basemapTile, type CrowdMapProps, type MapCity, type MapDot, type MapMetro } from './types';
 
 /** MX Icons star (bold), tinted gold, as the sleeper marker. */
 const STAR_URL = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(MX_SVG.star.bold.replace(/currentColor/g, '#F5C542').replace('<svg ', '<svg width="64" height="64" ').replace(/width="24" height="24" /, ''))}`;
@@ -58,13 +30,33 @@ const US_BOUNDS: [number, number, number, number] = [-124.6, 25.0, -67.0, 49.2];
 /** On phones, trim the empty ocean margins so the country is as large as it can be. */
 const US_BOUNDS_TIGHT: [number, number, number, number] = [-123.2, 26.0, -68.2, 48.6];
 
+/** The halftone ember scale (see emberRgb in theme.ts), repeated here because this file runs in the DOM bundle. */
+const EMBER: [number, [number, number, number]][] = [
+  [0, [0x3b, 0x24, 0x2c]],
+  [0.35, [0xb4, 0x4a, 0x2a]],
+  [0.65, [0xff, 0x9f, 0x1c]],
+  [0.88, [0xff, 0xd2, 0x6a]],
+  [1, [0xff, 0xf1, 0xd0]],
+];
 function ramp(t: number): [number, number, number] {
   const x = Math.max(0, Math.min(1, t));
-  const a = [0x2b, 0x2d, 0x42];
-  const b = [0xff, 0xb0, 0x00];
-  const c = [0xff, 0x4d, 0x2e];
-  const [p, q, k] = x < 0.5 ? [a, b, x / 0.5] : [b, c, (x - 0.5) / 0.5];
-  return [0, 1, 2].map((i) => Math.round(p[i] + (q[i] - p[i]) * k)) as [number, number, number];
+  const i = Math.max(0, EMBER.findIndex(([at]) => at >= x) - 1);
+  const [a, p] = EMBER[i];
+  const [b, q] = EMBER[Math.min(EMBER.length - 1, i + 1)];
+  const k = b === a ? 0 : (x - a) / (b - a);
+  return [0, 1, 2].map((j) => Math.round(p[j] + (q[j] - p[j]) * k)) as [number, number, number];
+}
+
+type Dot = { pos: [number, number]; v: number; r: number; strong: boolean };
+/** Halftone: one dot per hex at its centre, its radius (metres) the value's share of the cell. */
+function halftone<T extends { h3: string }>(hexes: T[], value: (h: T) => number, strong: (h: T) => boolean, fill = 1): Dot[] {
+  if (!hexes.length) return [];
+  const inner = getHexagonEdgeLengthAvg(getResolution(hexes[0].h3), UNITS.m) * 0.866;
+  return hexes.map((h) => {
+    const [lat, lon] = cellToLatLng(h.h3);
+    const v = value(h);
+    return { pos: [lon, lat], v, r: inner * fill * (0.26 + 0.74 * Math.sqrt(Math.max(0, v))), strong: strong(h) };
+  });
 }
 
 export default function CrowdMap(props: CrowdMapProps) {
@@ -74,7 +66,11 @@ export default function CrowdMap(props: CrowdMapProps) {
   const [ready, setReady] = useState(false);
   const [t, setT] = useState(0);
   const pulseAt = useRef(0);
+  const moving = useRef(false);
   const [zoom, setZoom] = useState(US.zoom);
+  // City layers wait for the camera to be most of the way in, then grow in, so nothing pops.
+  const [cityLive, setCityLive] = useState(false);
+  const [box, setBox] = useState('');
 
   useEffect(() => {
     if (!el.current) return;
@@ -86,11 +82,15 @@ export default function CrowdMap(props: CrowdMapProps) {
       pitch: US.pitch,
       bearing: US.bearing,
       maxPitch: 70,
+      // Phones render at 3x; 2x looks the same on a dark map and costs less than half the pixels.
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      fadeDuration: 0,
+      canvasContextAttributes: { antialias: false },
       attributionControl: { compact: true },
       dragRotate: true,
     });
     map.current = m;
-    const o = new MapboxOverlay({ interleaved: false, layers: [] });
+    const o = new MapboxOverlay({ interleaved: false, layers: [], useDevicePixels: Math.min(window.devicePixelRatio || 1, 2) });
     m.addControl(o as unknown as maplibregl.IControl);
     overlay.current = o;
     m.on('load', () => {
@@ -104,39 +104,76 @@ export default function CrowdMap(props: CrowdMapProps) {
       }
       setReady(true);
     });
-    m.on('zoom', () => setZoom(m.getZoom()));
+    // Labels only care about quarter-zoom steps, so don't re-render on every frame of a zoom.
+    m.on('zoom', () => setZoom((prev) => (Math.round(prev * 4) === Math.round(m.getZoom() * 4) ? prev : m.getZoom())));
+    // Hold the pulse clock while the camera moves so the frame budget goes to the map itself.
+    m.on('movestart', () => (moving.current = true));
+    m.on('moveend', () => (moving.current = false));
+    // Re-frame once the window settles at a new size, so the country never ends up off to one side.
+    let settle: ReturnType<typeof setTimeout>;
+    m.on('resize', () => {
+      clearTimeout(settle);
+      settle = setTimeout(() => setBox(`${m.getContainer().clientWidth}x${m.getContainer().clientHeight}`), 250);
+    });
     return () => {
       o.finalize();
       m.remove();
     };
   }, []);
 
+  // Base map: OpenFreeMap's dark vectors, or an Esri raster for satellite, terrain and streets.
+  const basemap = props.basemap ?? 'dark';
+  const firstStyle = useRef(true);
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    if (firstStyle.current) {
+      firstStyle.current = false;
+      if (basemap === 'dark') return;
+    }
+    const b = BASEMAPS.find((x) => x.key === basemap) ?? BASEMAPS[0];
+    m.setStyle(
+      basemap === 'dark'
+        ? 'https://tiles.openfreemap.org/styles/dark'
+        : { version: 8, sources: { base: { type: 'raster', tiles: [basemapTile(b.layer)], tileSize: 256, maxzoom: b.maxZoom, attribution: '© Esri' } }, layers: [{ id: 'base', type: 'raster', source: 'base' }] },
+    );
+  }, [basemap]);
+
   // Camera: dive into the city, or back out to the country, centered in the visible area.
   const pad = props.padding;
   useEffect(() => {
     const m = map.current;
     if (!m) return;
-    const dur = props.reduceMotion ? 0 : 2200;
+    const dur = props.reduceMotion ? 0 : props.city ? 1700 : 1400;
+    // Ease in and out like a system map, and fly nearly straight (curve ~1) instead of pulling way out first.
+    const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
     const padding = pad;
     const narrow = m.getContainer().clientWidth < 600;
     if (props.city) {
-      m.flyTo({ center: [props.city.lon, props.city.lat], zoom: narrow ? 10.2 : 10.6, pitch: narrow ? 40 : 50, bearing: -12, duration: dur, essential: true, padding });
+      m.flyTo({ center: [props.city.lon, props.city.lat], zoom: narrow ? 10.2 : 10.6, pitch: narrow ? 40 : 50, bearing: -12, duration: dur, essential: true, padding, curve: 1.05, easing: ease });
       return;
     }
     // Fit the lower 48 into whatever the panels leave visible, then tilt a little for depth.
     const cam = m.cameraForBounds(narrow ? US_BOUNDS_TIGHT : US_BOUNDS, { padding: narrow ? { ...padding, left: 4, right: 4 } : padding, bearing: 0, pitch: 0 });
     const zoom = cam?.zoom ?? US.zoom;
-    m.flyTo({ center: cam?.center ?? US.center, zoom: zoom + (narrow ? 0.15 : 0), pitch: narrow ? 28 : US.pitch, bearing: narrow ? -4 : US.bearing, duration: dur, essential: true, padding: { top: 0, left: 0, right: 0, bottom: 0 } });
-  }, [props.city?.id, props.reduceMotion, pad.left, pad.bottom, pad.top, pad.right]);
+    m.flyTo({ center: cam?.center ?? US.center, zoom: zoom + (narrow ? 0.15 : 0), pitch: narrow ? 28 : US.pitch, bearing: narrow ? -4 : US.bearing, duration: dur, essential: true, padding: { top: 0, left: 0, right: 0, bottom: 0 }, curve: 1.05, easing: ease });
+  }, [props.city?.id, props.reduceMotion, pad.left, pad.bottom, pad.top, pad.right, box]);
+
+  useEffect(() => {
+    if (!props.city) return setCityLive(false);
+    setCityLive(false);
+    const id = setTimeout(() => setCityLive(true), props.reduceMotion ? 0 : 750);
+    return () => clearTimeout(id);
+  }, [props.city?.id, props.reduceMotion]);
 
   // A slow clock for the pulsing ring and dot ripples.
   useEffect(() => {
     if (props.reduceMotion) return;
     let raf = 0;
     let last = 0;
-    // ~24 fps is plenty for a ring pulse and keeps React work small.
+    // ~15 fps is plenty for a ring pulse, and it stands still while the camera is moving.
     const tick = (now: number) => {
-      if (now - last > 42) {
+      if (now - last > 66 && !moving.current) {
         last = now;
         setT(now);
       }
@@ -152,6 +189,9 @@ export default function CrowdMap(props: CrowdMapProps) {
 
   const opened = useMemo(() => new Set(props.opened), [props.opened]);
   const scored = useMemo(() => props.metros.filter((m) => m.score !== null), [props.metros]);
+  // Dot positions are worked out once per data change, not on every animation frame.
+  const countryDots = useMemo(() => halftone(props.hexes, (d) => (d.score !== null ? d.score / 100 : d.heat * 0.55), (d) => d.score !== null, 0.96), [props.hexes]);
+  const cityDots = useMemo(() => (props.city ? halftone(props.city.hexes, (d) => 0.15 + d.heat * 0.85, (d) => d.heat > 0.15) : []), [props.city]);
   const [narrow, setNarrow] = useState(false);
   useEffect(() => {
     const on = () => setNarrow(window.innerWidth < 600);
@@ -193,22 +233,15 @@ export default function CrowdMap(props: CrowdMapProps) {
 
     if (!props.dark && !city) {
       layers.push(
-        new H3HexagonLayer({
+        new ScatterplotLayer({
           id: 'country-hex',
-          data: props.hexes,
-          getHexagon: (d: CrowdMapProps['hexes'][number]) => d.h3,
-          extruded: true,
-          elevationScale: 1,
-          getElevation: (d: CrowdMapProps['hexes'][number]) => Math.pow(d.heat, 2.2) * (narrow ? 60000 : 90000),
-          getFillColor: (d: CrowdMapProps['hexes'][number]) => {
-            const v = d.score !== null ? d.score / 100 : d.heat * 0.55;
-            return [...ramp(v), d.score !== null ? 240 : 115] as [number, number, number, number];
-          },
-          material: { ambient: 0.55, diffuse: 0.6, shininess: 24 },
-          coverage: 0.88,
+          data: countryDots,
+          getPosition: (d: Dot) => d.pos,
+          getRadius: (d: Dot) => d.r,
+          radiusUnits: 'meters',
+          getFillColor: (d: Dot) => [...ramp(d.v), d.strong ? 255 : 128] as [number, number, number, number],
           pickable: false,
-          transitions: props.reduceMotion ? undefined : { getElevation: { duration: 1400, enter: () => [0] } },
-          updateTriggers: { getFillColor: props.hexes.length },
+          transitions: props.reduceMotion ? undefined : { getRadius: { duration: 1100, enter: () => [0] } },
         }),
       );
       // Sleeper cities: gold ring plus a tin star.
@@ -284,16 +317,17 @@ export default function CrowdMap(props: CrowdMapProps) {
       }
     }
 
-    if (!props.dark && city) {
+    if (!props.dark && city && cityLive) {
+      const grow = props.reduceMotion ? undefined : { getRadius: { duration: 650, enter: () => [0] } };
       layers.push(
-        new H3HexagonLayer({
+        new ScatterplotLayer({
           id: 'city-hex',
-          data: city.hexes,
-          getHexagon: (d: MapCity['hexes'][number]) => d.h3,
-          extruded: false,
-          getFillColor: (d: MapCity['hexes'][number]) => [...ramp(d.heat), Math.round(70 + d.heat * 150)] as [number, number, number, number],
-          stroked: false,
-          coverage: 0.92,
+          transitions: grow,
+          data: cityDots,
+          getPosition: (d: Dot) => d.pos,
+          getRadius: (d: Dot) => d.r,
+          radiusUnits: 'meters',
+          getFillColor: (d: Dot) => [...ramp(d.v), d.strong ? 150 : 70] as [number, number, number, number],
         }),
       );
       if (city.outline?.length) {
@@ -330,16 +364,20 @@ export default function CrowdMap(props: CrowdMapProps) {
       layers.push(
         new ScatterplotLayer({
           id: 'hoods',
+          transitions: grow,
           data: hoods,
           getPosition: (d: MapCity['neighborhoods'][number]) => [d.lon!, d.lat!],
-          getRadius: (d: MapCity['neighborhoods'][number]) => (d.rank <= 3 ? 6 : 3),
+          getRadius: (d: MapCity['neighborhoods'][number]) => (d.rank <= 3 ? 8 : 3.5),
           radiusUnits: 'pixels',
-          getFillColor: (d: MapCity['neighborhoods'][number]) => (d.rank <= 3 ? [255, 176, 0, 255] : [255, 255, 255, 110]),
+          getFillColor: (d: MapCity['neighborhoods'][number]) => (d.rank <= 3 ? [255, 176, 0, 255] : [255, 255, 255, 120]),
+          stroked: true,
+          getLineColor: (d: MapCity['neighborhoods'][number]) => (d.rank <= 3 ? [26, 18, 11, 255] : [0, 0, 0, 0]),
+          lineWidthMinPixels: 2,
           pickable: true,
         }),
         new TextLayer({
           id: 'hood-labels',
-          data: zoom > 11.3 ? hoods.slice(0, 10) : top,
+          data: zoom > 11.6 ? hoods.slice(0, 8) : top,
           getPosition: (d: MapCity['neighborhoods'][number]) => [d.lon!, d.lat!],
           getText: (d: MapCity['neighborhoods'][number]) => `${d.rank}  ${d.name}`,
           getSize: (d: MapCity['neighborhoods'][number]) => (d.rank <= 3 ? 14 : 11),
@@ -350,13 +388,14 @@ export default function CrowdMap(props: CrowdMapProps) {
           outlineWidth: 3,
           outlineColor: [0, 0, 0, 235],
           fontSettings: { sdf: true },
-          updateTriggers: { getText: zoom > 11.3 },
+          updateTriggers: { getText: zoom > 11.6 },
         }),
       );
       const rooms = city.rooms.filter((r) => r.lat !== null && r.lon !== null);
       layers.push(
         new ScatterplotLayer({
           id: 'rooms',
+          transitions: grow,
           data: rooms,
           getPosition: (d: MapCity['rooms'][number]) => [d.lon!, d.lat!],
           getRadius: 9,
@@ -369,7 +408,7 @@ export default function CrowdMap(props: CrowdMapProps) {
         }),
         new TextLayer({
           id: 'room-labels',
-          data: rooms,
+          data: zoom > 11.4 ? rooms : [],
           getPosition: (d: MapCity['rooms'][number]) => [d.lon!, d.lat!],
           getText: (d: MapCity['rooms'][number]) => d.name,
           getSize: 11.5,
@@ -427,7 +466,7 @@ export default function CrowdMap(props: CrowdMapProps) {
       },
       getCursor: ({ isHovering }: { isHovering: boolean }) => (isHovering ? 'pointer' : 'grab'),
     } as never);
-  }, [ready, props.hexes, props.metros, props.dots, props.city, props.route, props.dark, t, zoom, labelled, scored, opened, narrow]);
+  }, [ready, countryDots, cityDots, props.hexes, props.metros, props.dots, props.city, props.route, props.dark, t, zoom, labelled, scored, opened, narrow, cityLive]);
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#000' }}>

@@ -66,8 +66,8 @@
   "scripts": {
     "start": "expo start",
     "web": "expo start --web",
-    "ios": "expo start --ios",
-    "android": "expo start --android",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
@@ -79,7 +79,8 @@
     "gauntlet": "tsx evals/gauntlet.ts",
     "build:web": "expo export -p web",
     "serve": "expo serve",
-    "icons:build": "tsx scripts/build-icons.ts"
+    "icons:build": "tsx scripts/build-icons.ts",
+    "landing:build": "tsx scripts/build-landing.ts"
   },
   "private": true,
   "description": "Find out where you're wanted. Qloo predicts it. Fans prove it. Gus books it.",

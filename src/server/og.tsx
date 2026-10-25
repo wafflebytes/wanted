@@ -4,7 +4,7 @@
  * and resvg to PNG. Every image carries "Made with Wanted. Find out where you're wanted."
  */
 import type { ReactNode } from 'react';
-import { MADE_WITH, POSTER_BOXES as B, POSTER_H, POSTER_INK, POSTER_RED, POSTER_W, SIGNATURE_FONTS, signatureSpot } from '../lib/poster';
+import { cityEdition, MADE_WITH, POSTER_BOXES as B, POSTER_H, POSTER_INK, POSTER_RED, POSTER_W, SIGNATURE_FONTS, signatureSpot } from '../lib/poster';
 import type { ClaimView } from '../lib/types';
 import { nodeRequire } from './node-require';
 
@@ -82,6 +82,7 @@ async function render(node: ReactNode, width: number, height: number): Promise<B
 
 export type PosterData = {
   artistName: string;
+  cityId?: string;
   cityName: string;
   state: string;
   count: number;
@@ -132,7 +133,7 @@ function Poster({ d, s, portrait }: { d: PosterData; s: number; portrait: string
         <div style={{ fontFamily: 'Archivo Expanded', fontWeight: 900, color: POSTER_INK, fontSize: fitSize(name, B.name.w, 58) * s, letterSpacing: -1 * s, lineHeight: 1 }}>{name}</div>
       </div>
       <div style={{ ...abs(B.city, s), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontFamily: 'Archivo Expanded', fontWeight: 800, color: POSTER_RED, fontSize: fitSize(city, B.city.w, 40) * s, letterSpacing: 1 * s }}>{city}</div>
+        <div style={{ fontFamily: 'Archivo Expanded', fontWeight: 800, color: d.cityId ? cityEdition(d.cityId).ink : POSTER_RED, fontSize: fitSize(city, B.city.w, 40) * s, letterSpacing: 1 * s }}>{city}</div>
       </div>
       <div style={{ ...abs(B.reward, s), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ fontFamily: 'Instrument Serif', color: POSTER_INK, fontSize: 44 * s, letterSpacing: 1 * s }}>One sold-out show.</div>

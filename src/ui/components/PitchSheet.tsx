@@ -6,17 +6,18 @@
  */
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState } from 'react';
-import { Linking, Platform, ScrollView, Share, TextInput, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
 import { GlassSheet, GlassSheetContent, GlassSheetTitle } from '@/components/glassyui/glass-sheet';
 import type { DayKey, Receipt } from '@/lib/types';
 import { api } from '../api';
 import { haptic } from '../haptics';
 import { C, F } from '../theme';
-import { Btn, Chip, Row } from './core';
+import { Btn } from './core';
 import { GusLine } from './Gus';
-import { DemoTag, Prov } from './Receipts';
+import { DemoTag } from './Receipts';
 import { T } from './T';
 import { Icon } from '@/ui/icons/Icon';
+import type { IconName } from '@/ui/icons/names';
 
 type PitchEvidence = {
   artist: { name: string; soundsLike: string[] };
@@ -71,74 +72,101 @@ export function PitchSheet({ slug, target, onClose }: { slug: string; target: Pi
   };
   const mail = () => Linking.openURL(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
 
+  const hoods = ev?.fans.neighborhoods.slice(0, 2).map((n) => n.name) ?? [];
+  const where = ev ? [ev.room.neighborhood, ev.city.name].filter(Boolean).join(', ') : target?.cityName ?? '';
+
   return (
     <GlassSheet open={!!target} onOpenChange={(o) => !o && onClose()}>
       <GlassSheetContent closeLabel="Close pitch">
-        <GlassSheetTitle>Pitch {ev?.room.name ?? target?.cityName ?? ''}</GlassSheetTitle>
-        <ScrollView style={{ maxHeight: 620 }} contentContainerStyle={{ gap: 14, paddingTop: 10 }}>
+        <View style={{ gap: 2 }}>
+          <GlassSheetTitle>{ev ? `Write to ${ev.room.name}` : `Pitch ${target?.cityName ?? ''}`}</GlassSheetTitle>
+          {ev ? (
+            <T v="footnote" color={C.text2}>
+              {where}
+              {ev.date ? ` · ${new Date(`${ev.date.date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}` : ''}
+            </T>
+          ) : null}
+        </View>
+        <ScrollView style={{ maxHeight: 560 }} contentContainerStyle={{ gap: 18, paddingTop: 14, paddingBottom: 4 }} keyboardDismissMode="interactive">
           {err ? <T color={C.bad}>{err}</T> : null}
-          {!res && !err ? <GusLine line={null} thinking="Drafting the pitch. Every number has to come from the evidence…" orb="composing" /> : null}
+          {!res && !err ? <GusLine line={null} thinking={`Writing to ${target?.cityName ?? 'the room'}. Only real numbers go in.`} orb="composing" /> : null}
           {ev ? (
             <>
-              <View style={{ gap: 8 }}>
-                <Row gap={6} wrap>
-                  <Prov kind="qloo" receipts={res!.receipts} title="Evidence behind the pitch" />
-                  {ev.qloo.cityRank ? <Chip mono color={C.qloo}>#{ev.qloo.cityRank} of {ev.qloo.citiesScored} cities</Chip> : null}
-                  {ev.qloo.wantedScore !== null ? <Chip mono color={C.qloo}>Wanted Score {ev.qloo.wantedScore.toFixed(0)}</Chip> : null}
-                  {ev.qloo.sleeper ? <Chip mono color={C.gold} icon={<Icon name="star" variant="bold" size={12} color={C.gold} />}>sleeper city</Chip> : null}
-                  {ev.qloo.roomInTopNeighborhood ? <Chip mono color={C.qloo}>room in a top-3 neighborhood</Chip> : null}
-                  {ev.qloo.pulledBy.length > 1 ? <Chip mono color={C.qloo}>pulled by {ev.qloo.pulledBy.map((p) => `${p.name} ${Math.round(p.share * 100)}%`).join(' · ')}</Chip> : null}
-                </Row>
-                <Row gap={6} wrap>
-                  <Prov kind="fans" />
-                  <Chip mono color={C.fans}>{ev.fans.signatures} signatures</Chip>
-                  {ev.fans.proofRatio !== null ? <Chip mono color={ev.fans.proofRatio >= 1.5 ? C.good : C.fans}>{ev.fans.proofRatio.toFixed(1)}x proof ratio</Chip> : null}
-                  {ev.fans.neighborhoods.slice(0, 2).map((n) => (
-                    <Chip key={n.name} mono color={C.fans}>
-                      {n.count} in {n.name}
-                    </Chip>
-                  ))}
-                  {ev.fans.isDemoData ? <DemoTag /> : null}
-                </Row>
+              {/* Why they should say yes: three lines, an icon each. */}
+              <View style={{ gap: 12 }}>
+                <Proof icon="signature" tint={C.fans}>
+                  {`${ev.fans.signatures} people signed${hoods.length ? `, most from ${hoods.join(' and ')}` : ''}.`}
+                </Proof>
+                <Proof icon="music" tint={C.amber}>
+                  {ev.qloo.pulledBy.length ? `Fans of ${ev.qloo.pulledBy[0].name} here like your sound.` : `${ev.city.name} likes your sound.`}
+                  {ev.qloo.roomInTopNeighborhood ? ' The room is right where they live.' : ''}
+                </Proof>
                 {ev.opener ? (
-                  <Row gap={6} wrap>
-                    <Prov kind="gus" />
-                    <Chip mono color={C.gus}>opener: {ev.opener.name}</Chip>
-                    <Chip mono>shares {ev.opener.shared.slice(0, 3).join(', ')}</Chip>
-                  </Row>
+                  <Proof icon="ticket" tint={C.text2}>
+                    {`${ev.opener.name} would open well.`}
+                  </Proof>
                 ) : null}
+                {ev.fans.isDemoData ? <DemoTag /> : null}
               </View>
-              <View style={{ gap: 6 }}>
-                <T v="label">Subject</T>
-                <TextInput value={subject} onChangeText={setSubject} accessibilityLabel="Email subject" style={{ color: C.text, fontFamily: F.bodyMed, fontSize: 15, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, outlineStyle: 'none' } as object} />
-                <T v="label">Email</T>
+
+              {/* The email, like a Mail compose window: subject on a line, the body below. */}
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 18, borderCurve: 'continuous', overflow: 'hidden' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, minHeight: 46, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: C.lineHi }}>
+                  <T v="callout" color={C.text3} style={{ width: 64 }}>
+                    Subject
+                  </T>
+                  <TextInput value={subject} onChangeText={setSubject} accessibilityLabel="Email subject" style={{ flex: 1, color: C.text, fontFamily: F.bodyMed, fontSize: 15, paddingVertical: 12, outlineStyle: 'none' } as object} />
+                </View>
                 <TextInput
                   value={body}
                   onChangeText={setBody}
                   multiline
+                  scrollEnabled={false}
                   accessibilityLabel="Email body"
-                  style={{ color: C.text, fontFamily: F.body, fontSize: 14.5, lineHeight: 21, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, minHeight: 300, outlineStyle: 'none', textAlignVertical: 'top' } as object}
+                  style={{ color: C.text, fontFamily: F.body, fontSize: 15, lineHeight: 22, padding: 14, paddingTop: 12, outlineStyle: 'none', textAlignVertical: 'top' } as object}
                 />
-                <Row gap={8} wrap>
-                  <Chip mono color={res!.email.check.ok ? C.good : C.warn}>
-                    {res!.email.check.words} words · {res!.email.check.ok ? 'every number checked' : 'check flagged'}
-                  </Chip>
-                  <Chip mono color={C.gus}>{res!.email.model.startsWith('gus-lite') ? 'drafted by Gus (lite)' : `drafted by ${res!.email.model.split('/').pop()?.replace(':free', '')}`}</Chip>
-                </Row>
-                {!res!.email.check.ok ? <T v="caption">{res!.email.check.problems.join('; ')}</T> : null}
               </View>
-              <Row gap={8} wrap>
-                <Btn tone="action" onPress={copy}>
-                  {copied ? 'Copied' : 'Copy email'}
-                </Btn>
-                <Btn onPress={mail}>Open in Mail</Btn>
-                {Platform.OS !== 'web' ? <Btn onPress={share}>Share</Btn> : null}
-              </Row>
-              <T v="caption">Qloo predicts taste, not headcounts, so the pitch never promises a capacity or ticket number.</T>
+              {!res!.email.check.ok ? (
+                <T v="footnote" color={C.warn}>
+                  Gus wasn't sure about: {res!.email.check.problems.join('; ')}
+                </T>
+              ) : null}
+
             </>
           ) : null}
         </ScrollView>
+        {ev ? (
+          // Pinned under the email, so sending never needs a scroll.
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', paddingTop: 12 }}>
+            <Btn tone="scout" size="lg" style={{ flex: 1 }} full onPress={mail} icon={<Icon name="mail" variant="bold" size={18} color={C.text} />}>
+              Open in Mail
+            </Btn>
+            <Round icon={copied ? 'check' : 'copy'} label={copied ? 'Copied' : 'Copy email'} onPress={copy} />
+            {Platform.OS !== 'web' ? <Round icon="share" label="Share" onPress={share} /> : null}
+          </View>
+        ) : null}
       </GlassSheetContent>
     </GlassSheet>
+  );
+}
+
+function Proof({ icon, tint, children }: { icon: IconName; tint: string; children: React.ReactNode }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={icon} size={15} color={tint} />
+      </View>
+      <T v="callout" style={{ flex: 1, paddingTop: 4 }}>
+        {children}
+      </T>
+    </View>
+  );
+}
+
+function Round({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => ({ width: 50, height: 50, borderRadius: 25, backgroundColor: pressed ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' })}>
+      <Icon name={icon} size={20} color={C.text} />
+    </Pressable>
   );
 }
