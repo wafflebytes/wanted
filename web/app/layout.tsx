@@ -4,7 +4,13 @@ import './fonts.css';
 import './globals.css';
 import './shell.css';
 
+/** Where share links and previews point: the set origin, else Vercel's production host, else local. */
+const origin = process.env.WANTED_PUBLIC_ORIGIN?.startsWith('http') && !process.env.WANTED_PUBLIC_ORIGIN.includes(':8081')
+  ? process.env.WANTED_PUBLIC_ORIGIN
+  : process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'http://localhost:3100';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(origin),
   title: 'Wanted',
   description: "Find out where you're wanted. Fans prove it. Gus books it.",
   appleWebApp: { title: 'Wanted', statusBarStyle: 'black-translucent' },

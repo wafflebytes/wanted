@@ -243,14 +243,14 @@ export async function renderPoster(d: PosterData, format: 'story' | 'wide' | 'po
         <div style={{ fontFamily: 'Archivo Expanded', fontWeight: 900, fontSize: 76, lineHeight: 0.95, color: '#ffcf6b' }}>WANTED</div>
         <div style={{ fontFamily: 'Archivo Expanded', fontWeight: 800, fontSize: 40, marginTop: 8 }}>{`IN ${d.cityName.toUpperCase()}`}</div>
         <div style={{ fontFamily: 'Archivo', fontWeight: 700, fontSize: 44, marginTop: 22 }}>{d.artistName}</div>
-        <div style={{ fontFamily: 'Instrument Serif', fontSize: 34, marginTop: 8, opacity: 0.92 }}>Reward: one sold-out show.</div>
+        <div style={{ fontFamily: 'Archivo', fontWeight: 500, fontSize: 32, marginTop: 10, opacity: 0.9 }}>Reward: one sold-out show.</div>
         <div style={{ display: 'flex', alignItems: 'center', marginTop: 26 }}>
           <div style={{ fontFamily: 'Chivo Mono', fontWeight: 700, fontSize: 34, color: '#ffcf6b' }}>{`${d.count} signed`}</div>
           <div style={{ fontFamily: 'Archivo', fontWeight: 700, fontSize: 26, marginLeft: 24, padding: '10px 22px', borderRadius: 999, backgroundColor: '#ff6a1a', color: '#1a0c03' }}>
             Sign the poster
           </div>
         </div>
-        <div style={{ fontFamily: 'Instrument Serif', fontSize: 22, marginTop: 30, opacity: 0.7 }}>{MADE_WITH}</div>
+        <div style={{ fontFamily: 'Archivo', fontWeight: 500, fontSize: 21, marginTop: 30, opacity: 0.7 }}>{MADE_WITH}</div>
       </div>
     </div>,
     1200,

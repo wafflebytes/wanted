@@ -75,6 +75,8 @@ export type CrowdMapProps = {
   hexes: { h3: string; heat: number; score: number | null }[];
   metros: MapMetro[];
   opened: string[];
+  /** Cities with a date held: their pin turns into the green check. */
+  held?: string[];
   dots: MapDot[];
   city: MapCity | null;
   route: MapRoute | null;
@@ -402,16 +404,17 @@ export default function CrowdMap(props: CrowdMapProps) {
           pickable: true,
           updateTriggers: { getFillColor: [zoom, props.opened.join(), dark], getRadius: props.opened.join() },
         }),
-        // A pushpin in every city with a poster up; its point lands on the city's dot.
+        // A pushpin in every city with a poster up; its point lands on the city's dot. A city
+        // with a date held gets the green check instead.
         new IconLayer({
           id: 'opened-pins',
           data: scored.filter((m) => opened.has(m.id)),
           getPosition: (d: MapMetro) => [d.lon, d.lat],
-          getIcon: () => PIN('pin-city'),
+          getIcon: (d: MapMetro) => PIN(props.held?.includes(d.id) ? 'pin-booked' : 'pin-city'),
           getSize: narrow ? 30 : 36,
           sizeUnits: 'pixels',
           pickable: true,
-          updateTriggers: { data: props.opened.join() },
+          updateTriggers: { data: props.opened.join(), getIcon: props.held?.join() },
         }),
       );
       if (!props.route?.length) {
@@ -585,7 +588,7 @@ export default function CrowdMap(props: CrowdMapProps) {
       getCursor: ({ isHovering }: { isHovering: boolean }) => (isHovering ? 'pointer' : 'grab'),
     } as never);
     syncLabels(map.current, marks.current, declutter(map.current, labels), (p) => pickRef.current(p));
-  }, [ready, countryDots, cityDots, props.hexes, props.metros, props.dots, props.city, props.route, dark, t, zoom, labelled, scored, opened, narrow, cityLive, routeT, props.onPick]);
+  }, [ready, countryDots, cityDots, props.hexes, props.metros, props.dots, props.city, props.route, dark, t, zoom, labelled, scored, opened, props.held, narrow, cityLive, routeT, props.onPick]);
 
   return <div ref={el} className="crowd-map" />;
 }

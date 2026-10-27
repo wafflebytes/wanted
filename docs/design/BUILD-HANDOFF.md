@@ -81,6 +81,14 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 - `/lab` deleted. "Your limits" tile now lands on `#gus` in Settings (was a dead `#limits`).
 - Unused so far: `gus-phone` (for when Gus calls you), `badge-sold-out` (no sold-out data yet), `empty-shows` (stage), `receipt-paper`, `pin-booked`, `pin-room`.
 
+## Session 8: link previews and the rest of the art
+
+- Fan poster links unfurl: `w/[artist]/[city]/layout.tsx` sets title, a count-aware line and the server's 1200x630 wide render as og/twitter image (`/img/poster/...?format=wide&w=1200&type=jpg`, ~150 KB so WhatsApp keeps it). The wide render's serif lines are Archivo now.
+- Every other link shows `web/app/opengraph-image.jpg`: Gus under the lamp, poster pinned on a post, "Find out where you're wanted." in Wanted Rounded. Built by `python3 scripts/build-og.py` from the raw renders (local only). `metadataBase` comes from `WANTED_PUBLIC_ORIGIN` (unless it's the Expo :8081 default), else `VERCEL_PROJECT_PRODUCTION_URL`.
+- Map: a city with a held date gets the green check pin (`pin-booked`) instead of the pushpin (MapStage polls deals every 30 s). Not seen painted: the hidden pane doesn't draw WebGL.
+- Logbook Gus is on the phone while a venue talk is open; Tour's empty state is the stage.
+- Still unused: `receipt-paper`, `badge-sold-out` (no sold-out data), `pin-room` on the city map (venues are blue dots).
+
 ## Next steps
 
 (Tour and Posters done. Dark is the main mode: design there first, then check light. Use the material system above for every new control. Judge product and copy as well as pixels: one job per screen, one primary key, plain musician words.)
@@ -89,4 +97,5 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 2. ~~Logbook and Settings~~ (landed, session 5): ruled diary by day with who-dots (You, Gus, A venue, Fans) and an Everything / Needed you switch; the mandate as one paragraph with a key to Settings. Settings: acts, autoAsk switch, venues-at-once segment, deposit and door-cut sliders (debounced POST `/logbook {mandate}`), calls switch, quiet hours, theme, iOS note. Shared `.seg`, `.switch`, `.range` controls live in `globals.css`. "Add an act" is hidden until Welcome exists; `/` redirects to the last act (or the demo act).
 3. Known issues above.
 4. ~~Welcome~~ (landed, session 5): `/` sends a returning device to its last act; a new one gets "Find the cities that want you" (I make music / I'm a fan / demo act), then link → who you sound like → room size → the run streaming picks, then the map. `/?new=1` is Add an act. The full run (`/scout/run`) wasn't exercised from the web yet. Fan poster page `/w/[artist]/[city]` landed too: the poster nailed to the cork wall, count + LED meter + one sentence, a form (initials well, neighbourhood keys, optional contact behind a disclosure), and a torn thermal receipt after signing with a share-to-two-friends key. A real signature wasn't submitted from the web (kept demo counts clean). Splash (session 6): `/` shows Gus with five objects drifting in and the wordmark rolling up, ≤1.4 s, tap to skip, once per browser session, skipped for reduced motion and `?new`. Not yet seen in the browser at full speed (the hidden pane redirected before a screenshot).
-5. Verify every screen at 375 px dark + light (session 7: Welcome, splash, map, tiles, Tour, Logbook, 404 checked; Posters, Fan Mail, Settings, fan poster still to re-check with the new art). ~~Delete `/lab`~~ (session 7). Vercel: `vercel.json` now builds `next build web` and main deploys fine, but the project's production branch is `ui-overhaul-iphone16`, Production branch switched to main (session 6).
+5. Desktop layout (≥900 px): not designed yet; the map already pads for a 520 px left column.
+6. Verify every screen at 375 px dark + light (session 7: Welcome, splash, map, tiles, Tour, Logbook, 404 checked; session 8: Posters, Fan Mail, Settings, fan poster dark, fan poster + Tour light, all fine with the new art). ~~Delete `/lab`~~ (session 7). Vercel: `vercel.json` now builds `next build web` and main deploys fine, but the project's production branch is `ui-overhaul-iphone16`, Production branch switched to main (session 6).

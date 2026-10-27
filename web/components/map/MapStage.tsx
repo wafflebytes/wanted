@@ -1,6 +1,7 @@
 'use client';
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Deal } from '@/lib/types';
 import type { CityData, MapData } from '@/ui/types';
 import { useApi, useDark, usePrefersReducedMotion } from '@web/lib/hooks';
 import { stage, useStage } from '@web/lib/stage';
@@ -18,6 +19,8 @@ export function MapStage({ slug }: { slug: string }) {
   const dark = useDark();
   const reduce = usePrefersReducedMotion();
   const map = useApi<MapData>(mounted ? `/artist/${slug}/map` : null);
+  const deals = useApi<{ deals: Deal[] }>(mounted ? `/artist/${slug}/deals` : null, { every: 30_000 });
+  const held = useMemo(() => [...new Set(deals.data?.deals.filter((d) => d.status === 'held').map((d) => d.city) ?? [])], [deals.data]);
   const city = useApi<CityData>(s.city ? `/artist/${slug}/city/${s.city}` : null);
   const cityWait = useApi<CityData>(s.city && city.data?.neighborhoodsPending ? `/artist/${slug}/city/${s.city}?wait=1` : null);
   const cd = cityWait.data && !cityWait.data.neighborhoodsPending ? cityWait.data : city.data;
@@ -55,6 +58,7 @@ export function MapStage({ slug }: { slug: string }) {
           hexes={map.data.hexes}
           metros={metros}
           opened={map.data.opened}
+          held={held}
           dots={map.data.dots}
           city={cityProp}
           route={s.city ? null : s.route}
