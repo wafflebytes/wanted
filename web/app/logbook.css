@@ -28,7 +28,7 @@ html.on-log { --page: #15130F; --rule: rgba(140, 170, 220, 0.07); --margin: rgba
 /* A day: its name, then a ruled page. */
 .lb-day { animation: rise var(--t-enter) var(--ease) both; animation-delay: calc(min(var(--i), 6) * 50ms + 60ms); }
 .lb-day h2 { margin: 24px 4px 8px; font: 700 20px/1.1 var(--display); letter-spacing: -0.02em; }
-.lb-page { list-style: none; position: relative; overflow: hidden; border-radius: 18px;
+.lb-page { list-style: none; position: relative; overflow: hidden; border-radius: var(--r-m);
   background:
     linear-gradient(90deg, transparent 63px, var(--margin) 63px 64px, transparent 64px),
     repeating-linear-gradient(180deg, transparent 0 27px, var(--rule) 27px 28px),
@@ -48,13 +48,13 @@ html.on-log { --page: #15130F; --rule: rgba(140, 170, 220, 0.07); --margin: rgba
 .lb-e.money .lb-txt b { color: var(--ok-text); }
 
 /* What he may do alone: one paragraph and the key to change it. */
-.lb-mandate { display: flex; flex-direction: column; gap: 10px; margin-top: 28px; padding: 18px; border-radius: 22px; background: var(--well-bg); box-shadow: var(--well); }
+.lb-mandate { display: flex; flex-direction: column; gap: 10px; margin-top: 28px; padding: 18px; border-radius: var(--r-l); background: var(--well-bg); box-shadow: var(--well); }
 .lb-mandate > p:first-of-type { font-size: 15.5px; line-height: 1.45; color: var(--ink-2); }
 .lb-mandate b { color: var(--ink); font-weight: 650; font-variant-numeric: tabular-nums; }
 .lb-mandate .btn { margin-top: 4px; }
 
 /* Milestones, folded: a row with what you have and what's next; open it for the case. */
-.ms { margin: 4px 0 18px; border-radius: 22px; background: var(--raise); box-shadow: var(--bevel), var(--drop); animation: rise var(--t-enter) var(--ease) 60ms both; }
+.ms { margin: 4px 0 18px; border-radius: var(--r-l); background: var(--raise); box-shadow: var(--bevel), var(--drop); animation: rise var(--t-enter) var(--ease) 60ms both; }
 .ms-row { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 14px; text-align: left; }
 .ms-stack { display: flex; flex: none; padding-left: 10px; }
 .ms-coin { width: 42px; height: 42px; margin-left: -12px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--wanted) 22%, var(--well-bg)), var(--well-bg) 70%); box-shadow: 0 0 0 2.5px var(--raise), inset 0 1px 2px rgba(0, 0, 0, 0.35); z-index: calc(3 - var(--i)); }
@@ -69,8 +69,8 @@ html.on-log { --page: #15130F; --rule: rgba(140, 170, 220, 0.07); --margin: rgba
 .ms.open .ms-case ul { padding-bottom: 12px; }
 .ms-case li { opacity: 0; transform: translateY(8px); transition: opacity var(--t-move) var(--ease), transform var(--t-move) var(--ease); }
 .ms.open .ms-case li { opacity: 1; transform: none; transition-delay: calc(var(--i) * 40ms + 80ms); }
-.ms-piece { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px 10px; border-radius: 16px; text-align: center; }
-.ms-piece.won:active { transform: scale(0.97); }
+.ms-piece { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px 10px; border-radius: var(--r-m); text-align: center; }
+.ms-piece.won:active { transform: scale(var(--press)); }
 .ms-plinth { width: 78px; height: 78px; margin-bottom: 6px; border-radius: 50%; display: grid; place-items: center; background: var(--well-bg); box-shadow: var(--well); }
 .ms-piece.won .ms-plinth { background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--wanted) 26%, var(--well-bg)), var(--well-bg) 72%); }
 .ms-piece.won .art { filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.4)); }
@@ -90,3 +90,7 @@ html.on-log { --page: #15130F; --rule: rgba(140, 170, 220, 0.07); --margin: rgba
 .ms-look-in h3 { font: 800 30px/1.1 var(--display); letter-spacing: -0.03em; margin-top: 8px; }
 .ms-look-in p { color: var(--ink-2); font-size: 15.5px; }
 .ms-look-in .btn { margin-top: 18px; }
+.lb-more { display: block; text-align: left; color: inherit; }
+.lb-more p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lb-more.open p { -webkit-line-clamp: unset; }
+.lb-more:not(.open) p { -webkit-mask: linear-gradient(#000 calc(100% - 1.4em), #000 calc(100% - 1.4em)), linear-gradient(90deg, #000 60%, #0000); -webkit-mask-size: 100% calc(100% - 1.4em), 100% 1.4em; -webkit-mask-position: 0 0, 0 100%; -webkit-mask-repeat: no-repeat; }

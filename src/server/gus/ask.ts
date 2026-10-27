@@ -39,6 +39,33 @@ export type GusAnswer = {
   steps: GusStep[];
 };
 
+/**
+ * The last line of defence for Gus's voice: the tools speak in internal words (sleeper, proof
+ * threshold, Wanted Score) and a model sometimes repeats them. Musicians hear these instead.
+ */
+const PLAIN: [RegExp, string][] = [
+  [/\b(?:the )?proof threshold\b/gi, 'fifty signatures'],
+  [/\bcrossed (?:the )?(?:proof|threshold)\b/gi, 'reached fifty signatures'],
+  [/\b(?:a|one of your) sleepers?(?: city| cities)?\b/gi, 'a city nobody plays yet'],
+  [/\bsleeper cities\b/gi, 'cities nobody plays yet'],
+  [/\bsleepers\b/gi, 'cities nobody plays yet'],
+  [/\bsleeper\b/gi, 'overlooked'],
+  [/\b(?:your )?Wanted Score\b/gi, 'how much they want you'],
+  [/\b(?:according to |per )?Qloo(?:'s|’s)?\s*/gi, ''],
+  [/\btesting the market\b/gi, 'trying it out'],
+  [/\bthe market\b/gi, 'the city'],
+  [/\bmarkets\b/gi, 'cities'],
+  [/\bmarket\b/gi, 'city'],
+  [/\branked\b/gi, 'placed'],
+  [/\s+—\s+/g, ', '],
+  [/\s+–\s+/g, ', '],
+];
+export function plainWords(text: string): string {
+  let out = text;
+  for (const [re, to] of PLAIN) out = out.replace(re, to);
+  return out.replace(/\s{2,}/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+}
+
 export type GusEvent = { type: 'heard'; text: string } | { type: 'say'; text: string } | { type: 'step'; step: GusStep } | { type: 'answer'; answer: GusAnswer };
 
 export class AsrError extends Error {}
@@ -424,7 +451,7 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     emit,
   };
   const done = (a: Omit<GusAnswer, 'heard' | 'steps'>): GusAnswer => {
-    const out = { heard, ...a, steps: ctx.steps.map((s) => ({ ...s })) };
+    const out = { heard, ...a, reply: plainWords(a.reply), steps: ctx.steps.map((s) => ({ ...s })) };
     emit({ type: 'answer', answer: out });
     return out;
   };
@@ -461,7 +488,7 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
       const calls = res.toolCalls.slice(0, 4);
       // What he says while he looks ("Let me check Burlington"), if the model said anything.
       const aside = (res.content ?? '').trim();
-      if (aside && !aside.startsWith('{') && !/\d/.test(aside) && aside.length < 140) emit({ type: 'say', text: aside });
+      if (aside && !aside.startsWith('{') && !/\d/.test(aside) && aside.length < 140) emit({ type: 'say', text: plainWords(aside) });
       messages.push({ role: 'assistant', content: res.content, tool_calls: calls });
       // Independent lookups run side by side, the way a person opens three tabs.
       const outs = await Promise.all(

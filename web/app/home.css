@@ -13,7 +13,7 @@
 .nm-count { display: flex; align-items: baseline; gap: 6px; }
 .nm-count b { font: 800 34px/1 var(--display); letter-spacing: -0.03em; color: var(--wanted-text); }
 .nm-count > span { font: 600 15px var(--body); color: var(--ink-2); }
-.nm-ticks { display: grid; grid-template-columns: repeat(50, 1fr); gap: 2px; height: 22px; padding: 4px; border-radius: 9px; background: var(--well-bg); box-shadow: var(--well); }
+.nm-ticks { display: grid; grid-template-columns: repeat(50, 1fr); gap: 2px; height: 22px; padding: 4px; border-radius: var(--r-s); background: var(--well-bg); box-shadow: var(--well); }
 .nm-ticks i { border-radius: 1.5px; background: var(--veil-2); transform-origin: bottom; }
 .nm-ticks i.on { background: linear-gradient(180deg, #FF9257, #E8500F); box-shadow: inset 0 1px 0 rgba(255, 236, 220, 0.5), 0 0 4px rgba(255, 106, 40, 0.35); animation: seg 360ms var(--ease) both; animation-delay: calc(300ms + var(--i) * 14ms); }
 @keyframes seg { from { opacity: 0.15; } }
@@ -31,7 +31,7 @@
 .nm-skel { padding: 6px 0 20px; }
 
 /* The tally: three numbers set into the drawer like a counter on a desk. */
-.home-sum { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 18px; padding: 12px 4px; border-radius: 18px; background: var(--well-bg); box-shadow: var(--well); }
+.home-sum { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 18px; padding: 12px 4px; border-radius: var(--r-m); background: var(--well-bg); box-shadow: var(--well); }
 .home-sum .stat { flex-direction: column; align-items: center; gap: 4px; }
 .home-sum .stat + .stat { box-shadow: -1px 0 0 var(--line); }
 .home-sum .stat b { font-size: 22px; }
@@ -41,8 +41,8 @@
 .five { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 calc(-1 * var(--gutter)); padding: 4px var(--gutter) 14px; scrollbar-width: none; touch-action: pan-x; }
 .five::-webkit-scrollbar { display: none; }
 .five-card { flex: none; width: 46%; max-width: 190px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 8px; text-align: left; animation: rise var(--t-hero) var(--ease) both; animation-delay: calc(var(--i) * 50ms); transition: transform var(--t-move) var(--ease); }
-.five-card:active { transform: scale(0.97); }
-.five-poster, .five-paper { width: 100%; aspect-ratio: 2 / 3; border-radius: 14px; object-fit: cover; box-shadow: var(--shadow-2); transform: rotate(calc((var(--i) - 2) * 0.6deg)); }
+.five-card:active { transform: scale(var(--press)); }
+.five-poster, .five-paper { width: 100%; aspect-ratio: 2 / 3; border-radius: var(--r-m); object-fit: cover; box-shadow: var(--shadow-2); transform: rotate(calc((var(--i) - 2) * 0.6deg)); }
 .five-paper { position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 14px; overflow: hidden; background: linear-gradient(160deg, #FFF8EA, #EBDDC2); color: #2A1D12; }
 :root[data-theme="dark"] .five-paper { background: linear-gradient(160deg, #2E2820, #201C16); color: #F3E6CF; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .five-paper { background: linear-gradient(160deg, #2E2820, #201C16); color: #F3E6CF; } }
@@ -56,7 +56,7 @@
 .five-star { font-style: normal; color: var(--ask); font-size: 13px; }
 
 /* Search and the long list. */
-.search { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 14px; background: var(--veil-2); color: var(--ink-3); margin-bottom: 10px; }
+.search { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: var(--r-m); background: var(--veil-2); color: var(--ink-3); margin-bottom: 10px; }
 .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 16px; color: var(--ink); }
 .rows { overflow: hidden; }
 .city-row { width: 100%; text-align: left; transition: background-color var(--t-fade); }
@@ -84,7 +84,7 @@
 .hood-name { flex: 1; font: 600 16px var(--display); }
 .rooms { display: flex; flex-direction: column; gap: 8px; }
 .room { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 10px; }
-.room-img { width: 54px; height: 54px; border-radius: 12px; overflow: hidden; background: var(--veil-2); flex: none; }
+.room-img { width: 54px; height: 54px; border-radius: var(--r-s); overflow: hidden; background: var(--veil-2); flex: none; }
 .room-img img { width: 100%; height: 100%; object-fit: cover; }
 .room-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .room-txt b { font: 700 15.5px var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

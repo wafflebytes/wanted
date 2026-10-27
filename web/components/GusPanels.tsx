@@ -87,7 +87,7 @@ function Ask({ autoFocus, placeholder = 'Ask Gus anything' }: { autoFocus?: bool
   }, [autoFocus]);
   return (
     <form
-      className="ask"
+      className="ask-bar"
       onSubmit={(e) => {
         e.preventDefault();
         if (!t.trim()) return;

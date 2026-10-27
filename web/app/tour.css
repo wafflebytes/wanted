@@ -19,7 +19,7 @@
 
 .tr-lock { width: 44px; height: 44px; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--ink-3); transition: color var(--t-fade), background-color var(--t-fade), transform var(--t-tap) var(--ease); }
 .tr-lock.on { color: var(--key-fg); background: var(--key); box-shadow: var(--key-bevel), var(--drop); }
-.tr-lock:active { transform: scale(0.9); }
+.tr-lock:active { transform: scale(var(--press-key)); }
 .tr-lock[disabled] { opacity: 0.5; }
 .tr-replan { margin-top: 18px; }
 .tr-body .fine { margin-top: 10px; text-align: center; }
@@ -43,7 +43,7 @@
 .rs-node.locked { background: var(--ink); color: var(--on-ink); box-shadow: none; }
 .rs-node.moved { background: var(--wanted); color: #fff; box-shadow: none; }
 
-.th-score { width: 100%; display: flex; align-items: center; gap: 14px; margin-top: 12px; padding: 12px 14px 12px 12px; border-radius: 20px; background: var(--well-bg); box-shadow: var(--well); }
+.th-score { width: 100%; display: flex; align-items: center; gap: 14px; margin-top: 12px; padding: 12px 14px 12px 12px; border-radius: var(--r-l); background: var(--well-bg); box-shadow: var(--well); }
 .th-score p { flex: 1; font-size: 14.5px; line-height: 1.38; color: var(--ink-2); }
 .th-score p b { color: var(--ink); font-weight: 650; }
 .th .btn.block { margin-top: 12px; }
@@ -71,7 +71,7 @@
 .tr-drive.long { color: var(--no); }
 .tr-stop + .tr-stop .tr-drive + .tr-row { border-top: 0; }
 .tr-row { display: flex; align-items: center; gap: 6px; min-height: 64px; }
-.tr-stop.is-new .tr-row { animation: tr-flash 1600ms var(--ease) both; border-radius: 12px; }
+.tr-stop.is-new .tr-row { animation: tr-flash 1600ms var(--ease) both; border-radius: var(--r-s); }
 @keyframes tr-flash { 0%, 30% { background: var(--wanted-tint); } }
 .tr-main { flex: 1; min-width: 0; display: flex; align-items: center; padding: 8px 0; text-align: left; }
 .tr-what { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
@@ -81,7 +81,7 @@
 .tr-what span { font-size: 13.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Raised: the hero folds into one bar so the list gets the room. */
-.th-compact { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 8px 6px 6px; border-radius: 20px; background: var(--raise); box-shadow: var(--bevel), var(--drop); text-align: left; animation: fade var(--t-fade) var(--ease); }
+.th-compact { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 8px 6px 6px; border-radius: var(--r-l); background: var(--raise); box-shadow: var(--bevel), var(--drop); text-align: left; animation: fade var(--t-fade) var(--ease); }
 .th-mini { width: 42px; height: 42px; flex: none; border-radius: 50%; display: grid; place-items: center; font: 800 15px var(--display); background: radial-gradient(circle, var(--well-bg) 15px, transparent 15.5px), conic-gradient(var(--wanted) calc(var(--v) * 1%), var(--veil-2) 0); }
 .th-compact b { flex: 1; min-width: 0; display: flex; flex-direction: column; font: 700 16px/1.2 var(--display); letter-spacing: -0.01em; }
 .th-compact em { font: 500 13px var(--body); font-style: normal; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

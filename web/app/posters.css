@@ -12,7 +12,7 @@ html.on-wall { --page: #191410; --wall-hole: #191410; }
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .8 0 0 0 0 .55 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
     var(--page);
 }
-.pw-skel { height: 360px; margin-top: 40px; border-radius: 24px; }
+.pw-skel { height: 360px; margin-top: 40px; border-radius: var(--r-l); }
 .pw-empty { padding-top: 30vh; }
 
 /* ---------- the wall */
@@ -28,7 +28,7 @@ html.on-wall { --page: #191410; --wall-hole: #191410; }
   filter: brightness(calc(1 - var(--a, 0) * 0.4)) drop-shadow(0 2px 1.5px rgba(0, 0, 0, 0.45)) drop-shadow(0 18px 18px rgba(0, 0, 0, 0.5));
 }
 .pw-poster img { width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; user-select: none; }
-.pw-poster:active img { transform: scale(0.98); transition: transform var(--t-tap) var(--ease); }
+.pw-poster:active img { transform: scale(var(--press-wide)); transition: transform var(--t-tap) var(--ease); }
 .pw-dots { display: flex; justify-content: center; gap: 6px; height: 6px; margin-top: -24px; }
 .pw-dots i { width: 6px; height: 6px; border-radius: 3px; background: var(--ink-4); transition: width var(--t-move) var(--ease), background-color var(--t-fade); }
 .pw-dots i.ok { background: color-mix(in srgb, var(--ok) 60%, var(--ink-4)); }
@@ -44,7 +44,7 @@ html.on-wall { --page: #191410; --wall-hole: #191410; }
 .pw-line { margin: 10px 0 18px; font-size: 16px; line-height: 1.42; color: var(--ink-2); max-width: 36ch; }
 
 /* The meter: fifty lit segments in a recessed track, like a level meter on a desk. */
-.pw-meter { display: grid; grid-template-columns: repeat(50, 1fr); gap: 2px; height: 22px; margin-top: 14px; padding: 4px; border-radius: 9px; background: var(--well-bg); box-shadow: var(--well); }
+.pw-meter { display: grid; grid-template-columns: repeat(50, 1fr); gap: 2px; height: 22px; margin-top: 14px; padding: 4px; border-radius: var(--r-s); background: var(--well-bg); box-shadow: var(--well); }
 .pw-meter i { border-radius: 1.5px; background: rgba(255, 248, 230, 0.06); }
 :root[data-theme="light"] .pw-meter i { background: rgba(20, 16, 8, 0.07); }
 .pw-meter i.on { background: linear-gradient(180deg, #FF9257, #E8500F); box-shadow: inset 0 1px 0 rgba(255, 236, 220, 0.5), 0 0 4px rgba(255, 106, 40, 0.35); animation: seg 360ms var(--ease) both; animation-delay: calc(var(--i) * 14ms + 200ms); }
@@ -52,9 +52,9 @@ html.on-wall { --page: #191410; --wall-hole: #191410; }
 
 /* Secondary actions as three keys under the main one. */
 .pw-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-.pw-key { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; height: 66px; border-radius: 18px; font: 600 13px var(--body); color: var(--ink); background: var(--raise); box-shadow: var(--bevel), var(--drop); transition: transform var(--t-tap) var(--ease), box-shadow var(--t-tap) var(--ease); }
+.pw-key { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; height: 66px; border-radius: var(--r-m); font: 600 13px var(--body); color: var(--ink); background: var(--raise); box-shadow: var(--bevel), var(--drop); transition: transform var(--t-tap) var(--ease), box-shadow var(--t-tap) var(--ease); }
 .pw-key svg { color: var(--ink-2); }
-.pw-key:active { transform: translateY(1px) scale(0.97); box-shadow: var(--bevel), var(--drop-press); }
+.pw-key:active { transform: translateY(1px) scale(var(--press)); box-shadow: var(--bevel), var(--drop-press); }
 
 .pw-sec { margin-top: 14px; }
 .pw-sec .fine { margin: 10px 4px 0; }
@@ -62,7 +62,7 @@ html.on-wall { --page: #191410; --wall-hole: #191410; }
 /* ---------- the draw: a ticket. Half-moon notches are cut out with a mask (the wall shows
    through them), a dashed perforation, and a stub that says how many are in. */
 .pw-draw { margin-top: 22px; }
-.pw-ticket { --stub: 96px; display: grid; grid-template-columns: 1fr var(--stub); border-radius: 18px; background: var(--raise); box-shadow: var(--bevel);
+.pw-ticket { --stub: 96px; display: grid; grid-template-columns: 1fr var(--stub); border-radius: var(--r-m); background: var(--raise); box-shadow: var(--bevel);
   -webkit-mask: radial-gradient(circle 11px at calc(100% - var(--stub)) 0, #0000 10.5px, #000 11px), radial-gradient(circle 11px at calc(100% - var(--stub)) 100%, #0000 10.5px, #000 11px);
   -webkit-mask-composite: source-in; mask-composite: intersect;
 }
@@ -71,7 +71,7 @@ html.on-wall { --page: #191410; --wall-hole: #191410; }
 .pw-prize { font: 700 19px/1.25 var(--display); letter-spacing: -0.015em; }
 .pw-bounty p { color: var(--ink-2); font-size: 15px; line-height: 1.42; }
 .pw-bounty p strong { color: var(--ink); font-weight: 650; }
-.pw-stub { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 12px 6px; text-align: center; background: color-mix(in srgb, var(--wanted) 10%, transparent); border-radius: 0 18px 18px 0; }
+.pw-stub { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 12px 6px; text-align: center; background: color-mix(in srgb, var(--wanted) 10%, transparent); border-radius: 0 var(--r-m) var(--r-m) 0; }
 .pw-stub::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; border-left: 2px dashed var(--line-2, rgba(128, 128, 128, 0.35)); }
 .pw-stub b { font: 800 34px/1 var(--display); letter-spacing: -0.03em; color: var(--wanted-text); font-variant-numeric: tabular-nums; }
 .pw-stub i { font: 700 11px var(--display); font-style: normal; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }

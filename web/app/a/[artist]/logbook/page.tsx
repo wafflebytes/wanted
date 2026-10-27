@@ -134,7 +134,7 @@ export default function Logbook() {
                   <i className={`lb-dot w-${w}`} title={WHO_NAME[w]} aria-label={WHO_NAME[w]} />
                   <div className="lb-txt">
                     <b>{plain(e.title)}</b>
-                    {e.detail && <p>{plain(e.detail)}</p>}
+                    {e.detail && <Detail text={plain(e.detail)} />}
                   </div>
                   <Icon name={KIND[e.kind]} size={16} className="lb-k" />
                 </li>
@@ -246,5 +246,16 @@ function Shelf({ opened, deals }: { opened: ArtistState['opened']; deals: Deal[]
           document.body,
         )}
     </section>
+  );
+}
+
+/** A page's detail folds to two lines; a tap reads the rest. Short ones never fold. */
+function Detail({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  if (text.length < 90) return <p>{text}</p>;
+  return (
+    <button className={`lb-more ${open ? 'open' : ''}`} onClick={() => (haptic('tick'), setOpen((v) => !v))} aria-expanded={open}>
+      <p>{text}</p>
+    </button>
   );
 }

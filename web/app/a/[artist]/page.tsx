@@ -70,10 +70,10 @@ function Home() {
     const opened = art.data?.opened ?? [];
     const waiting = dl.data?.deals.find((d) => d.status === 'waiting');
     if (waiting?.terms)
-      return { kicker: 'Needs your OK', title: `${waiting.roomName} will hold ${new Date(`${waiting.terms.date}T12:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`, line: `$${waiting.terms.deposit} deposit, ${waiting.terms.split}% of the door is yours.`, action: 'Review', art: 'coin', go: () => gus.open('tray'), progress: null };
+      return { kicker: 'Needs your OK', title: `${waiting.roomName} will hold ${new Date(`${waiting.terms.date}T12:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`, line: `$${waiting.terms.deposit} deposit, ${waiting.terms.split}% of the door is yours.`, action: 'Review', art: 'coin', go: () => (deals.show(waiting), gus.open('room')), progress: null };
     const held = new Set((dl.data?.deals ?? []).filter((d) => d.status === 'held').map((d) => d.city));
     const proven = opened.find((o) => o.proof?.crossed && !held.has(o.city));
-    if (proven) return { kicker: 'Your next move', title: `${proven.name} proved it.`, line: `${proven.proof!.signatures} people signed. I can ask three rooms to hold a date.`, action: 'Ask rooms', art: 'room', go: () => (gus.flash(`Asking rooms in ${proven.name}`, 2200), deals.ask(slug, proven.city).then(() => gus.open('tray')).catch(() => {})), progress: null };
+    if (proven) return { kicker: 'Your next move', title: `${proven.name} proved it.`, line: `${proven.proof!.signatures} people signed. I can ask three rooms to hold a date.`, action: 'Ask rooms', art: 'room', go: () => (gus.flash(`Asking rooms in ${proven.name}`, 2200), deals.ask(slug, proven.city).then(() => gus.open('room')).catch(() => {})), progress: null };
     const warm = [...opened].filter((o) => !o.proof?.crossed).sort((a, b) => (b.proof?.signatures ?? 0) - (a.proof?.signatures ?? 0))[0];
     if (warm && (warm.proof?.signatures ?? 0) > 0) {
       const n = warm.proof!.signatures;

@@ -1,7 +1,7 @@
 /* The deal room: a tall sheet over everything, so the call has the whole screen. */
 .dr { position: fixed; left: 50%; bottom: 0; z-index: 40; width: 100%; max-width: var(--col); height: calc(100dvh - var(--safe-t) - 36px); transform: translate(-50%, 104%); pointer-events: none; transition: transform var(--t-hero) var(--ease); }
 .dr.on { transform: translate(-50%, 0); pointer-events: auto; }
-.dr-sheet { height: 100%; display: flex; flex-direction: column; border-radius: 30px 30px 0 0; background: var(--card); box-shadow: var(--shadow-3), var(--rim); overflow: hidden; }
+.dr-sheet { height: 100%; display: flex; flex-direction: column; border-radius: var(--r-xl) var(--r-xl) 0 0; background: var(--card); box-shadow: var(--shadow-3), var(--rim); overflow: hidden; }
 .dr-sheet::before { content: ""; position: absolute; top: 7px; left: 50%; width: 38px; height: 5px; margin-left: -19px; border-radius: 3px; background: var(--line-2); }
 
 .dr-head { display: flex; align-items: center; gap: 12px; padding: 22px 16px 10px; }
@@ -19,11 +19,11 @@
 .dr-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 6px 16px 16px; display: flex; flex-direction: column; gap: 18px; }
 
 /* Tug lines */
-.dr-lines { display: flex; flex-direction: column; gap: 6px; padding: 16px 16px 14px; border-radius: 22px; background: var(--well-bg); box-shadow: var(--well); }
+.dr-lines { display: flex; flex-direction: column; gap: 6px; padding: 16px 16px 14px; border-radius: var(--r-l); background: var(--well-bg); box-shadow: var(--well); }
 .tug { padding-bottom: 30px; }
 .tug + .tug { padding-top: 6px; }
 .tug-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 34px; font: 650 13px/1 var(--body); color: var(--ink-2); }
-.tug-h b { font: 800 17px/1 var(--display); color: var(--ink); animation: fade 260ms var(--ease) both; }
+.tug-h b { font: 800 17px/1 var(--display); font-variant-numeric: tabular-nums; color: var(--ink); animation: fade 260ms var(--ease) both; }
 .tug-h b.ok { color: var(--ok-text); }
 .tug-h b.no { color: var(--wanted-text); }
 .tug-track { position: relative; height: 6px; border-radius: 3px; background: var(--line-2); }
@@ -33,7 +33,7 @@
 .tug-line em { position: absolute; top: 28px; left: 50%; transform: translateX(-50%); white-space: nowrap; font: 650 11.5px/1 var(--body); font-style: normal; color: var(--ink-2); }
 .tug-puck { position: absolute; top: 50%; transition: left var(--t-hero) var(--ease); }
 .tug-puck i { position: absolute; left: 0; top: 0; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; box-shadow: 0 0 0 2.5px var(--card), 0 3px 8px -2px rgba(30, 18, 6, 0.35); }
-.tug-puck em { position: absolute; bottom: 18px; left: 0; transform: translateX(-50%); white-space: nowrap; font: 800 13px/1 var(--display); font-style: normal; color: var(--ink); }
+.tug-puck em { position: absolute; bottom: 18px; left: 0; transform: translateX(-50%); white-space: nowrap; font: 800 13px/1 var(--display); font-style: normal; font-variant-numeric: tabular-nums; color: var(--ink); }
 .tug-puck.low em { bottom: auto; top: 19px; }
 .tug-puck.gus i { background: var(--wanted); }
 .tug-puck.gus i img { width: 120%; height: 120%; object-fit: cover; }
@@ -48,7 +48,7 @@
 .dr-gist { margin: 2px 0 0; font: 600 15px/1.35 var(--body); color: var(--ink); text-wrap: pretty; animation: fade 260ms var(--ease) both; }
 
 /* Held stamp */
-.dr-stamp { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 20px; background: var(--ok-tint); animation: dr-stamp 420ms var(--ease) both; }
+.dr-stamp { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-l); background: var(--ok-tint); animation: dr-stamp 420ms var(--ease) both; }
 .dr-stamp .art { animation: dr-press 520ms var(--ease) both; }
 .dr-stamp b { display: block; font: 800 17px/1.15 var(--display); color: var(--ink); }
 .dr-stamp span { font: 500 13.5px/1.3 var(--body); color: var(--ink-2); }
@@ -62,13 +62,13 @@
 .beat { display: flex; flex-direction: column; gap: 6px; animation: rise 320ms var(--ease) both; }
 .beat-check { display: flex; align-items: center; gap: 6px; font: 500 12.5px/1.3 var(--body); color: var(--ink-3); padding-left: 2px; }
 .beat-check::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--ink-4); }
-.beat-l { display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: 4px 10px; width: 100%; text-align: left; padding: 11px 13px; border-radius: 16px; background: var(--raise); box-shadow: var(--bevel), var(--drop); transition: transform var(--t-tap) var(--ease); }
-.beat-l:active { transform: scale(0.985); }
+.beat-l { display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: 4px 10px; width: 100%; text-align: left; padding: 11px 13px; border-radius: var(--r-m); background: var(--raise); box-shadow: var(--bevel), var(--drop); transition: transform var(--t-tap) var(--ease); }
+.beat-l:active { transform: scale(var(--press-wide)); background: var(--veil-2); }
 .beat-who { font: 700 12px/1 var(--body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
 .gus .beat-who { color: var(--wanted-text); }
 .beat-t { min-width: 0; font: 500 14.5px/1.35 var(--body); color: var(--ink); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .beat-l.open .beat-t { -webkit-line-clamp: unset; }
-.beat-n { font: 750 13px/1 var(--display); color: var(--ink-2); white-space: nowrap; }
+.beat-n { font: 750 13px/1 var(--display); font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
 .beat.you { align-items: flex-end; }
 .beat.you .beat-l { width: auto; max-width: 86%; grid-template-columns: auto 1fr; background: var(--wanted); box-shadow: var(--hot-bevel), var(--drop); }
 .beat.you .beat-who, .beat.you .beat-t { color: #fff; }
@@ -89,7 +89,7 @@
 .steer-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 4px; }
 .steer-row::-webkit-scrollbar { display: none; }
 .steer-c { flex: none; height: 40px; padding: 0 15px; border-radius: var(--r-pill); background: var(--raise); color: var(--ink); box-shadow: var(--bevel), var(--drop); font: 650 14.5px/1 var(--body); transition: transform var(--t-tap) var(--ease), background var(--t-fade) var(--ease), color var(--t-fade) var(--ease); }
-.steer-c:active { transform: scale(0.95); }
+.steer-c:active { transform: scale(var(--press)); }
 .steer-c.sent { background: var(--wanted); color: #fff; box-shadow: var(--hot-bevel), var(--drop); }
 .steer-p { align-self: flex-start; }
 .dr-next { display: flex; flex-direction: column; gap: 8px; }

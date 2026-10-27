@@ -64,6 +64,12 @@
   --ease-in: cubic-bezier(0.5, 0, 0.75, 0);
   --ease-pop: cubic-bezier(0.34, 1.32, 0.64, 1);
   --ease-reel: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Press vocabulary: round keys and icons sink to --press-key, buttons, chips and tiles to
+     --press, full-width cards and rows to --press-wide (plus a highlight). Nothing else. */
+  --press-key: 0.92; --press: 0.97; --press-wide: 0.985;
+  /* Shape lock: circles are 50%, actions and chips are pills, small keys and inputs --r-s,
+     rows and inner tiles --r-m, cards --r-l, sheets --r-xl. Bars and tracks round to half
+     their height. Nothing else. */
   --t-tap: 120ms; --t-fade: 200ms; --t-move: 300ms; --t-enter: 420ms; --t-hero: 520ms;
 
   --header-h: 56px;
@@ -177,7 +183,7 @@ button { background: none; border: 0; cursor: pointer; -webkit-user-select: none
 a { color: inherit; text-decoration: none; }
 img, svg { display: block; }
 ::selection { background: color-mix(in srgb, var(--wanted) 30%, transparent); }
-:focus-visible { outline: 2px solid var(--wanted); outline-offset: 2px; border-radius: 8px; }
+:focus-visible { outline: 2px solid var(--wanted); outline-offset: 2px; border-radius: var(--r-s); }
 .num { font-family: var(--display); font-variant-numeric: tabular-nums; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -220,7 +226,7 @@ img, svg { display: block; }
   box-shadow: var(--b-bevel), var(--b-drop);
   transition: transform var(--t-tap) var(--ease), box-shadow var(--t-tap) var(--ease), filter var(--t-tap), opacity var(--t-fade);
 }
-.btn:active { --b-drop: var(--drop-press); transform: translateY(1px) scale(0.985); filter: brightness(0.95); }
+.btn:active { --b-drop: var(--drop-press); transform: translateY(1px) scale(var(--press)); filter: brightness(0.95); }
 .btn[disabled] { opacity: 0.35; pointer-events: none; }
 .btn.block { width: 100%; }
 .btn.hot { --b-bg: var(--hot); --b-fg: #fff; --b-bevel: var(--hot-bevel); --b-ts: 0 1px 0 var(--hot-ink); }
@@ -236,7 +242,7 @@ img, svg { display: block; }
   background: var(--raise); color: var(--ink); box-shadow: var(--bevel), var(--drop);
   transition: transform var(--t-tap) var(--ease), box-shadow var(--t-tap) var(--ease);
 }
-.icon-btn:active { transform: translateY(1px) scale(0.95); box-shadow: var(--bevel), var(--drop-press); }
+.icon-btn:active { transform: translateY(1px) scale(var(--press-key)); box-shadow: var(--bevel), var(--drop-press); }
 .icon-btn svg { width: 20px; height: 20px; }
 .icon-btn.flat { background: var(--veil); box-shadow: inset 0 0 0 0.5px var(--line); }
 /* A well: inputs and tracks sit below the surface. */
@@ -283,7 +289,7 @@ img, svg { display: block; }
 .empty p { color: var(--ink-2); max-width: 30ch; }
 
 /* ---------- skeleton */
-.sk { position: relative; overflow: hidden; background: var(--veil-2); border-radius: 10px; }
+.sk { position: relative; overflow: hidden; background: var(--veil-2); border-radius: var(--r-s); }
 .sk::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent); animation: sk 1.4s var(--ease) infinite; }
 :root[data-theme="dark"] .sk::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent); }
 @keyframes sk { to { transform: translateX(100%); } }
@@ -309,24 +315,25 @@ img, svg { display: block; }
 @keyframes reel-blur { 0% { filter: blur(0); } 20% { filter: blur(1.6px); } 70% { filter: blur(0.4px); } 100% { filter: blur(0); } }
 /* Small buttons keep a 44 px hit area even when they look small. */
 .btn.sm, .btn.xs, .icon-btn { position: relative; }
+.icon-btn::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; }
 .btn.xs::after { content: ""; position: absolute; inset: -7px -4px; }
 .btn.sm::after { content: ""; position: absolute; inset: -3px -2px; }
 
 /* ---------- controls: a segmented well, a switch, a slider. Same rule as buttons: the part you
    move is a raised key, the track it moves in is recessed. */
-.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; height: 40px; padding: 3px; border-radius: 13px; background: var(--well-bg); box-shadow: var(--well); }
-.seg button { border-radius: 10px; font: 600 14px var(--body); color: var(--ink-2); transition: color var(--t-fade), background-color var(--t-fade), box-shadow var(--t-fade); }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; height: 44px; padding: 3px; border-radius: var(--r-s); background: var(--well-bg); box-shadow: var(--well); }
+.seg button { border-radius: var(--r-s); font: 600 14px var(--body); color: var(--ink-2); transition: color var(--t-fade), background-color var(--t-fade), box-shadow var(--t-fade); }
 .seg button.on { color: var(--ink); background: var(--raise); box-shadow: var(--bevel), var(--drop); }
 .seg button:active:not(.on) { color: var(--ink); }
 
-.switch { position: relative; flex: none; width: 52px; height: 32px; border-radius: 16px; background: var(--well-bg); box-shadow: var(--well); transition: background-color var(--t-move) var(--ease); }
+.switch { position: relative; flex: none; width: 52px; height: 32px; border-radius: var(--r-m); background: var(--well-bg); box-shadow: var(--well); transition: background-color var(--t-move) var(--ease); }
 .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: var(--key); box-shadow: var(--key-bevel), var(--drop); transition: transform var(--t-move) var(--ease); }
 :root[data-theme="light"] .switch::after { background: linear-gradient(180deg, #FFFFFF, #ECE8E0); box-shadow: var(--bevel), var(--drop); }
 @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .switch::after { background: linear-gradient(180deg, #FFFFFF, #ECE8E0); box-shadow: var(--bevel), var(--drop); } }
 .switch[aria-checked="true"] { background: linear-gradient(180deg, #E8500F, #FF7637); }
 .switch[aria-checked="true"]::after { transform: translateX(20px); }
 
-.range { -webkit-appearance: none; appearance: none; width: 100%; height: 32px; background: none; touch-action: pan-y; }
+.range { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; background: none; touch-action: pan-y; }
 .range::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, #E8500F, #FF7637) 0 / var(--p, 50%) 100% no-repeat, var(--well-bg); box-shadow: var(--well); }
 .range::-moz-range-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, #E8500F, #FF7637) 0 / var(--p, 50%) 100% no-repeat, var(--well-bg); box-shadow: var(--well); }
 .range::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -10px; border-radius: 50%; background: var(--key); box-shadow: var(--key-bevel), var(--drop); transition: transform var(--t-tap) var(--ease); }
@@ -341,3 +348,5 @@ img, svg { display: block; }
 .lost p { color: var(--ink-2); max-width: 30ch; margin-bottom: 10px; }
 .lost .art { filter: drop-shadow(0 18px 18px rgba(20, 10, 0, 0.3)); animation: rise var(--t-enter) var(--ease) both; }
 .art { flex: none; }
+.section-h button { position: relative; }
+.section-h button::after { content: ""; position: absolute; inset: -14px -10px; }

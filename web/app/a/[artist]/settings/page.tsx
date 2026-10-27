@@ -283,6 +283,9 @@ function Hour({ label, value, onChange }: { label: string; value: number; onChan
           </option>
         ))}
       </select>
+      <b className="st-hour-v" aria-hidden>
+        {hour(value)}
+      </b>
     </label>
   );
 }

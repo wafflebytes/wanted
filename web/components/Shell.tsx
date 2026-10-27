@@ -49,6 +49,18 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
     deals.resume(slug);
   }, [slug]);
 
+  // A link can open the deal room: /a/<act>?deal=<id> (from Fan Mail, a notification, a share).
+  useEffect(() => {
+    const id = new URLSearchParams(location.search).get('deal');
+    const d = id && dealList.data?.deals.find((x) => x.id === id);
+    if (!d) return;
+    deals.show(d);
+    gus.open('room');
+    const u = new URL(location.href);
+    u.searchParams.delete('deal');
+    history.replaceState(history.state, '', u);
+  }, [dealList.data]);
+
   useEffect(() => {
     if (artist.data) session.addAct({ slug, name: artist.data.artist.name, sounds: artist.data.artist.sound.entities.map((e) => e.name) });
   }, [artist.data, slug]);
