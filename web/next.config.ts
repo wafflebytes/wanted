@@ -12,6 +12,21 @@ const config: NextConfig = {
   turbopack: { root: repo },
   outputFileTracingRoot: repo,
   serverExternalPackages: ['@libsql/client', 'libsql', 'sharp', '@resvg/resvg-js', 'satori'],
+  // The server loads these through nodeRequire (Metro can't bundle native addons), which file
+  // tracing can't see; web/lib/externals.ts names them for it. libsql then picks its platform
+  // binary by name at runtime, and the share renders read fonts and art from assets/, so those
+  // ship explicitly.
+  outputFileTracingIncludes: {
+    '/**': [
+      '../node_modules/@libsql/**/*',
+      '../node_modules/libsql/**/*',
+      '../node_modules/@neon-rs/**/*',
+      '../node_modules/detect-libc/**/*',
+      '../node_modules/@resvg/**/*',
+      '../assets/fonts/*.ttf',
+      '../assets/og/**/*',
+    ],
+  },
   typedRoutes: false,
   devIndicators: false,
   images: { unoptimized: true },

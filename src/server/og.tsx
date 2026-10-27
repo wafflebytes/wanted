@@ -12,7 +12,9 @@ type FontDef = { name: string; data: Buffer; weight: 400 | 500 | 600 | 700 | 800
 
 const fs = () => process.getBuiltinModule('node:fs') as typeof import('node:fs');
 const path = () => process.getBuiltinModule('node:path') as typeof import('node:path');
-const root = () => process.cwd();
+// The repo root: where the app runs from locally, one up when Next serves from web/ (Vercel).
+let rootDir: string | null = null;
+const root = () => (rootDir ??= [process.cwd(), path().join(process.cwd(), '..')].find((d) => fs().existsSync(path().join(d, 'assets/og'))) ?? process.cwd());
 
 let fontCache: FontDef[] | null = null;
 function fonts(): FontDef[] {

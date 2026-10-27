@@ -5,6 +5,9 @@
  */
 import sharp from 'sharp';
 import { posterPng } from '@/server/share';
+import { traceExternals } from '@web/lib/externals';
+
+traceExternals();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

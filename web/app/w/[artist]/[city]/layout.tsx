@@ -7,6 +7,9 @@ import type { ReactNode } from 'react';
 import { getArtist } from '@/server/artists';
 import { cityCount } from '@/server/claims';
 import { metroById } from '@/server/score';
+import { traceExternals } from '@web/lib/externals';
+
+traceExternals();
 
 export async function generateMetadata({ params }: { params: Promise<{ artist: string; city: string }> }): Promise<Metadata> {
   const { artist: slug, city } = await params;
