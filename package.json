@@ -95,7 +95,8 @@
     "web:build": "next build web",
     "web:start": "next start web --port 3100",
     "web:routes": "tsx scripts/web-routes.ts",
-    "smoke:prod": "tsx scripts/smoke-prod.ts"
+    "smoke:prod": "tsx scripts/smoke-prod.ts",
+    "mcp:view": "node scripts/build-mcp-view.mjs"
   },
   "private": true,
   "description": "Find out where you're wanted. Qloo predicts it. Fans prove it. Gus books it.",

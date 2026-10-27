@@ -1,0 +1,297 @@
+<!doctype html>
+<!--
+  Gus's card inside Claude (MCP Apps, io.modelcontextprotocol/ui). One view for every tool: it
+  reads the tool's structuredContent and draws the city list, one city, the deals, Gus's answer
+  or a call in progress. Taps call the same MCP tools back through the host. No SDK; the
+  postMessage JSON-RPC is small enough to speak by hand. __ORIGIN__ is filled in by mcp.ts, and
+  `npm run mcp:view` turns this file into mcp-view.gen.ts.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+@font-face { font-family: "Wanted Display"; font-weight: 700; src: local("SF Pro Rounded Bold"), url("__ORIGIN__/fonts/WantedRounded-700.woff2") format("woff2"); }
+@font-face { font-family: "Wanted Display"; font-weight: 800; src: local("SF Pro Rounded Heavy"), url("__ORIGIN__/fonts/WantedRounded-800.woff2") format("woff2"); }
+:root {
+  --display: ui-rounded, "Wanted Display", system-ui, sans-serif;
+  --body: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --paper: #EFE9DD; --card: #FFFFFF; --ink: #15130F; --ink-2: #6B675F; --ink-3: #A29E95; --line: rgba(20, 16, 8, 0.08);
+  --veil: rgba(20, 16, 8, 0.05);
+  --wanted: #FF5A1F; --wanted-text: #C2410C; --wanted-tint: #FFE9DF;
+  --ok: #1F9D63; --ok-tint: #E3F4EA; --ok-text: #0B6E49;
+  --ask-tint: #FDF2D3; --ask-text: #855C00; --sky-tint: #E2EEFA; --sky-text: #2459B8;
+  --shadow: 0 1px 2px rgba(60, 40, 0, 0.05), 0 12px 32px -12px rgba(60, 40, 0, 0.18);
+  --rim: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --paper: #171612; --card: #22211C; --ink: #F3EFE6; --ink-2: #A8A397; --ink-3: #6E6A61; --line: rgba(255, 248, 230, 0.08);
+  --veil: rgba(255, 248, 230, 0.06);
+  --wanted-text: #FF8A4C; --wanted-tint: rgba(255, 90, 31, 0.16);
+  --ok-tint: rgba(31, 157, 99, 0.18); --ok-text: #5FD39C;
+  --ask-tint: rgba(242, 183, 5, 0.16); --ask-text: #F2C94C; --sky-tint: rgba(58, 123, 242, 0.18); --sky-text: #8DB4FF;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
+  --rim: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: transparent; }
+body { font: 400 14px/1.4 var(--body); color: var(--ink); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.sheet { background: var(--paper); border-radius: 22px; padding: 14px; overflow: hidden; }
+
+/* who's talking */
+.top { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.top img { width: 30px; height: 30px; border-radius: 9px; box-shadow: 0 2px 6px -2px rgba(255, 90, 31, 0.6); }
+.top b { font: 700 14px var(--display); display: block; }
+.top span { font-size: 12px; color: var(--ink-2); }
+.top .open { margin-left: auto; font: 700 12.5px var(--display); color: var(--wanted-text); padding: 6px 10px; border-radius: 99px; background: var(--wanted-tint); }
+
+h1 { font: 800 21px/1.15 var(--display); letter-spacing: -0.01em; margin: 2px 2px 10px; }
+.kicker { font: 700 11px var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin: 14px 4px 7px; }
+.card { background: var(--card); border-radius: 16px; box-shadow: var(--shadow), var(--rim); }
+.view { animation: rise 420ms var(--ease) both; }
+/* Slide only: a frame that never gets to animate still shows the card. */
+@keyframes rise { from { transform: translateY(8px); } }
+
+/* city list */
+.rows { padding: 4px 0; }
+.row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 14px; transition: background 160ms var(--ease); }
+.row + .row { border-top: 1px solid var(--line); }
+.row:active, .row:hover { background: var(--veil); }
+.rank { flex: none; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font: 800 13px var(--display); background: var(--veil); color: var(--ink-2); }
+.row.top3 .rank { background: var(--wanted); color: #fff; }
+.row .what { flex: 1; min-width: 0; }
+.row .what b { font: 700 16px var(--display); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .what span { font-size: 12.5px; color: var(--ink-2); }
+.row .what .sleeper { color: var(--wanted-text); font-weight: 600; }
+.sig { flex: none; text-align: right; font: 700 13px var(--display); }
+.sig small { display: block; font: 500 11px var(--body); color: var(--ink-3); }
+.bar { width: 54px; height: 4px; border-radius: 9px; background: var(--veil); margin-top: 4px; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: inherit; background: var(--wanted); }
+.chev { flex: none; color: var(--ink-3); font-size: 18px; }
+
+/* one city */
+.back { font: 700 13px var(--display); color: var(--ink-2); padding: 2px 4px 8px; }
+.big { padding: 16px; display: flex; align-items: center; gap: 14px; }
+.big .n { font: 800 34px/1 var(--display); letter-spacing: -0.02em; }
+.big .n small { font-size: 16px; color: var(--ink-3); }
+.big p { font-size: 13px; color: var(--ink-2); }
+.big .bar { width: 100%; height: 6px; margin-top: 8px; }
+.big img { width: 64px; height: 64px; flex: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 700 13px var(--display); padding: 7px 11px; border-radius: 99px; background: var(--card); box-shadow: var(--shadow), var(--rim); }
+.chip:first-child { background: var(--wanted); color: #fff; }
+.room { padding: 11px 14px; display: flex; align-items: center; gap: 10px; }
+.room + .room { border-top: 1px solid var(--line); }
+.room .what { flex: 1; min-width: 0; }
+.room b { font: 700 15px var(--display); display: block; }
+.room span { font-size: 12px; color: var(--ink-2); }
+.days { display: flex; gap: 3px; flex: none; }
+.days i { width: 15px; height: 17px; border-radius: 5px; font: 700 9.5px/17px var(--display); text-align: center; font-style: normal; background: var(--veil); color: var(--ink-3); }
+.days i.on { background: var(--ok-tint); color: var(--ok-text); }
+
+/* buttons */
+.cta { display: block; width: 100%; margin-top: 12px; padding: 13px 16px; border-radius: 14px; font: 800 15px var(--display); color: #fff;
+  background: linear-gradient(#FF7A3D, #F0500F); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 18px -8px rgba(255, 90, 31, 0.8); transition: transform 160ms var(--ease), opacity 160ms var(--ease); }
+.cta:active { transform: scale(0.98); }
+.cta.quiet { background: var(--card); color: var(--ink); box-shadow: var(--shadow), var(--rim); }
+.cta[disabled] { opacity: 0.6; }
+
+/* deals */
+.deal { padding: 14px; position: relative; }
+.deal + .deal { margin-top: 10px; }
+.deal b { font: 800 17px var(--display); display: block; padding-right: 110px; }
+.deal .city { font-size: 12.5px; color: var(--ink-2); }
+.stamp { position: absolute; top: 12px; right: 12px; font: 800 11.5px var(--display); padding: 5px 9px; border-radius: 8px; transform: rotate(2deg); }
+.st-waiting { background: var(--ask-tint); color: var(--ask-text); }
+.st-held { background: var(--ok-tint); color: var(--ok-text); }
+.st-talking { background: var(--sky-tint); color: var(--sky-text); }
+.terms { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.terms span { font: 700 12.5px var(--display); padding: 5px 9px; border-radius: 8px; background: var(--veil); }
+.letter { margin-top: 10px; font-size: 13px; color: var(--ink-2); font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Gus answering */
+.say { display: flex; gap: 10px; align-items: flex-end; }
+.say img { width: 76px; height: 76px; flex: none; margin-bottom: -4px; }
+.bubble { flex: 1; padding: 13px 15px; border-radius: 18px 18px 18px 6px; font: 700 16.5px/1.3 var(--display); }
+.checked { padding: 4px 0; }
+.step { display: flex; gap: 10px; padding: 9px 14px; align-items: flex-start; }
+.step + .step { border-top: 1px solid var(--line); }
+.step i { flex: none; width: 18px; height: 18px; border-radius: 50%; background: var(--ok); color: #fff; font: 800 11px/18px var(--display); text-align: center; font-style: normal; margin-top: 1px; }
+.step b { font: 700 13.5px var(--display); display: block; }
+.step span { font-size: 12.5px; color: var(--ink-2); }
+
+/* waiting and calling */
+.wait { display: flex; align-items: center; gap: 12px; padding: 18px 6px; }
+.wait img { width: 64px; height: 64px; }
+.wait b { font: 800 17px var(--display); display: block; }
+.wait span { color: var(--ink-2); font-size: 13px; }
+.dots i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--wanted); margin-right: 4px; animation: dot 1.2s var(--ease) infinite; }
+.dots i:nth-child(2) { animation-delay: 160ms; } .dots i:nth-child(3) { animation-delay: 320ms; }
+@keyframes dot { 0%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+.note { font-size: 12.5px; color: var(--ink-2); margin: 10px 4px 0; }
+@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="sheet" id="app">
+  <div class="top">
+    <img src="__ORIGIN__/icon.png" alt="" />
+    <div><b>Gus</b><span id="who">Your tour manager</span></div>
+    <button class="open" id="open">Open in Wanted ↗</button>
+  </div>
+  <div id="body"><div class="wait view"><img src="__ORIGIN__/art/gus-thinking.webp" alt="" /><div><b>Looking it up</b><span class="dots"><i></i><i></i><i></i></span></div></div></div>
+</div>
+<script>
+(() => {
+  const ORIGIN = '__ORIGIN__';
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const art = (name) => ORIGIN + '/art/' + name + '.webp';
+  const state = { act: 'maya-ortiz', name: null, back: null, data: null };
+
+  // ---- JSON-RPC over postMessage with the host
+  let nextId = 1;
+  const pending = new Map();
+  const on = {};
+  window.addEventListener('message', (e) => {
+    if (e.source !== window.parent) return;
+    const m = e.data;
+    if (!m || m.jsonrpc !== '2.0') return;
+    if (m.id != null && pending.has(m.id) && !m.method) {
+      const p = pending.get(m.id);
+      pending.delete(m.id);
+      m.error ? p.reject(m.error) : p.resolve(m.result);
+    } else if (m.method) {
+      const r = on[m.method]?.(m.params || {});
+      if (m.id != null) window.parent.postMessage({ jsonrpc: '2.0', id: m.id, result: r || {} }, '*');
+    }
+  });
+  const request = (method, params) => new Promise((resolve, reject) => {
+    const id = nextId++;
+    pending.set(id, { resolve, reject });
+    window.parent.postMessage({ jsonrpc: '2.0', id, method, params }, '*');
+  });
+  const notify = (method, params) => window.parent.postMessage({ jsonrpc: '2.0', method, params }, '*');
+
+  function theme(ctx) {
+    if (!ctx) return;
+    if (ctx.theme) document.documentElement.dataset.theme = ctx.theme;
+  }
+  const openLink = (url) => request('ui/open-link', { url }).catch(() => window.open(url, '_blank'));
+  const appUrl = () => ORIGIN + '/a/' + state.act;
+  $('#open').onclick = () => openLink(appUrl());
+
+  async function call(name, args, waitText) {
+    wait(waitText);
+    try {
+      const r = await request('tools/call', { name, arguments: { act: state.act, ...args } });
+      show(r);
+    } catch (e) {
+      oops('That didn’t come back. Try again in a moment.');
+    }
+  }
+
+  // ---- views
+  const body = $('#body');
+  const paint = (html) => { body.innerHTML = '<div class="view">' + html + '</div>'; };
+  const wait = (text) => paint('<div class="wait"><img src="' + art('gus-working') + '" alt="" /><div><b>' + esc(text || 'Looking it up') + '</b><span class="dots"><i></i><i></i><i></i></span></div></div>');
+  const oops = (text) => paint('<div class="wait"><img src="' + art('gus-oops') + '" alt="" /><div><b>' + esc(text) + '</b></div></div>');
+  const pct = (n) => n == null ? '' : 'Hotter than ' + Math.min(99, n) + '% of US cities';
+
+  function cities(d) {
+    const rows = d.cities.map((c, i) => {
+      // The rank already says how strong; the line under it says what's happening there.
+      const sub = (c.sleeper ? '<span class="sleeper">Sleeper · </span>' : '') + '<span>' + (c.posterUp ? (c.signatures >= 50 ? 'Poster full, asking rooms' : 'Poster up') : c.sleeper ? 'more fans than its size' : 'No poster yet') + '</span>';
+      const sig = c.posterUp
+        ? '<div class="sig">' + c.signatures + '<small>of 50 signed</small><div class="bar"><i style="width:' + Math.min(100, c.signatures * 2) + '%"></i></div></div>'
+        : '<span class="chev">›</span>';
+      return '<button class="row' + (i < 3 ? ' top3' : '') + '" data-city="' + esc(c.id) + '"><span class="rank">' + c.rank + '</span><span class="what"><b>' + esc(c.city) + '</b>' + sub + '</span>' + sig + '</button>';
+    }).join('');
+    paint('<h1>Where your crowd already is</h1><div class="card rows">' + rows + '</div><p class="note">From Qloo’s taste data, measured against other acts so big cities don’t win on size. Tap a city.</p>');
+    body.querySelectorAll('[data-city]').forEach((b) => b.onclick = () => { state.back = d; call('city_brief', { city: b.dataset.city }, 'Opening ' + b.querySelector('b').textContent.split(',')[0]); });
+  }
+
+  const DAYS = [['monday', 'M'], ['tuesday', 'T'], ['wednesday', 'W'], ['thursday', 'T'], ['friday', 'F'], ['saturday', 'S'], ['sunday', 'S']];
+  function city(d) {
+    const back = state.back ? '<button class="back" id="back">‹ All cities</button>' : '';
+    const s = d.signatures || 0;
+    const head = '<div class="card big"><img src="' + art(s >= 50 ? 'badge-fifty' : 'pin-city') + '" alt="" /><div style="flex:1"><div class="n">' + s + ' <small>of 50</small></div><p>' + (s ? 'fans signed the WANTED poster here.' : 'No poster up yet. Gus can put one up.') + (d.heatPercentile != null ? ' ' + esc(pct(d.heatPercentile)) + '.' : '') + '</p><div class="bar"><i style="width:' + Math.min(100, s * 2) + '%"></i></div></div></div>';
+    const hoods = d.neighborhoods.length ? '<div class="kicker">Where your crowd lives</div><div class="chips">' + d.neighborhoods.map((h) => '<span class="chip">' + esc(h) + '</span>').join('') + '</div>' : '';
+    const rooms = d.rooms.length ? '<div class="kicker">Rooms that fit you</div><div class="card">' + d.rooms.map((r) => {
+      const open = r.openDays ? new Set(r.openDays.map((x) => String(x).toLowerCase())) : null;
+      const days = open ? '<span class="days">' + DAYS.map(([k, l]) => '<i class="' + (open.has(k) ? 'on' : '') + '">' + l + '</i>').join('') + '</span>' : '';
+      return '<div class="room"><span class="what"><b>' + esc(r.name) + '</b><span>' + esc([r.neighborhood, r.size].filter(Boolean).join(' · ')) + '</span></span>' + days + '</div>';
+    }).join('') + '</div>' : '<p class="note">No rooms that fit here yet.</p>';
+    const ask = d.rooms[0] ? '<button class="cta" id="ask">Send Gus to ask ' + esc(d.rooms[0].name) + '</button>' : '';
+    paint(back + '<h1>' + esc(d.cityName || d.city) + '</h1>' + head + hoods + rooms + ask);
+    if (state.back) $('#back').onclick = () => { const b = state.back; state.back = null; cities(b); };
+    if (d.rooms[0]) $('#ask').onclick = () => call('ask_rooms', { city: d.city, room: d.rooms[0].id }, 'Calling ' + d.rooms[0].name);
+  }
+
+  const STAMP = { waiting: 'Needs your yes', held: 'Held', talking: 'Talking', declined: 'You passed' };
+  const when = (iso) => { const t = new Date(iso + 'T12:00:00'); return isNaN(t) ? iso : t.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); };
+  const ORDER = { waiting: 0, talking: 1, held: 2, declined: 3 };
+  function deals(d) {
+    const all = d.deals.slice().sort((a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9));
+    const more = all.length - 4;
+    d = { ...d, deals: all.slice(0, 4) };
+    if (!d.deals.length) return paint('<h1>No dates in talks</h1><p class="note">Ask Gus to try a room in one of your cities.</p>');
+    const cards = d.deals.map((x) => {
+      const terms = [x.split != null ? x.split + '% of the door' : null, x.deposit != null ? '$' + x.deposit + ' to hold' : null, x.date ? when(x.date) : null].filter(Boolean).map((t) => '<span>' + esc(t) + '</span>').join('');
+      return '<div class="card deal"><span class="stamp st-' + esc(x.status) + '">' + esc(STAMP[x.status] || x.status) + '</span><b>' + esc(x.room) + '</b><span class="city">' + esc(x.city) + '</span>' + (terms ? '<div class="terms">' + terms + '</div>' : '') + (x.status === 'talking' && x.lastLetter ? '<p class="letter">“' + esc(x.lastLetter) + '”</p>' : '') + '</div>';
+    }).join('');
+    const yes = d.deals.some((x) => x.status === 'waiting');
+    paint('<h1>Dates Gus is working on</h1>' + cards + (more > 0 ? '<p class="note">And ' + more + ' more in the app.</p>' : '') + '<button class="cta' + (yes ? '' : ' quiet') + '" id="go">' + (yes ? 'Say yes in Wanted' : 'See them in Wanted') + '</button><p class="note">Nothing gets paid from here. You approve the exact offer in the app.</p>');
+    $('#go').onclick = () => openLink(appUrl());
+  }
+
+  const MOOD = { proud: 'gus-proud', thinking: 'gus-thinking', unimpressed: 'gus-waiting', idle: 'gus-idle' };
+  function gus(d) {
+    const steps = (d.steps || []).filter((s) => s.status === 'done');
+    const checked = steps.length ? '<div class="kicker">What I checked</div><div class="card checked">' + steps.map((s) => '<div class="step"><i>✓</i><div><b>' + esc(s.label) + '</b>' + (s.found ? '<span>' + esc(s.found) + '</span>' : '') + '</div></div>').join('') + '</div>' : '';
+    const a = d.action;
+    const act = a && ['city', 'deal', 'link'].includes(a.type) ? '<button class="cta" id="act">' + esc(a.label) + '</button>' : '';
+    paint('<div class="say"><img src="' + art(MOOD[d.mood] || 'gus-idle') + '" alt="" /><div class="card bubble">' + esc(d.reply) + '</div></div>' + checked + act);
+    if (act) $('#act').onclick = () =>
+      a.type === 'city' ? call('city_brief', { city: a.id }, 'Opening ' + a.name)
+      : a.type === 'deal' ? call('ask_rooms', { city: a.id, room: a.roomId }, 'Calling the room')
+      : openLink(a.url);
+  }
+
+  function calling(d) {
+    const x = d.deal;
+    paint('<div class="wait"><img src="' + art('gus-phone') + '" alt="" /><div><b>Calling ' + esc(x.room) + '</b><span>' + esc(x.city) + ' </span><span class="dots"><i></i><i></i><i></i></span></div></div><p class="note">He’ll stay inside your limits on the door and the deposit. Nothing gets paid until you say yes on the exact offer.</p><button class="cta" id="go">Watch the call in Wanted</button>');
+    $('#go').onclick = () => openLink(appUrl());
+  }
+
+  function show(r) {
+    if (!r) return;
+    const d = r.structuredContent;
+    if (r.isError || !d) return oops((r.content && r.content[0] && r.content[0].text) || 'Gus hit a snag.');
+    if (d.act) state.act = d.act;
+    if (d.actName) $('#who').textContent = d.actName + '’s tour manager';
+    ({ cities, city, deals, gus, calling })[d.view]?.(d);
+  }
+
+  on['ui/notifications/tool-input'] = (p) => { if (p.arguments && p.arguments.act) state.act = p.arguments.act; };
+  on['ui/notifications/tool-result'] = show;
+  on['ui/notifications/tool-cancelled'] = () => oops('Stopped.');
+  on['ui/notifications/host-context-changed'] = theme;
+  on['ui/resource-teardown'] = () => ({});
+
+  new ResizeObserver(() => notify('ui/notifications/size-changed', { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight })).observe(document.body);
+
+  if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark';
+  request('ui/initialize', {
+    protocolVersion: '2026-01-26',
+    clientInfo: { name: 'gus-card', version: '1.0.0' },
+    appCapabilities: { availableDisplayModes: ['inline'] },
+  }).then((r) => { theme(r && r.hostContext); notify('ui/notifications/initialized', {}); }).catch(() => {});
+})();
+</script>
+</body>
+</html>

@@ -10,12 +10,18 @@ import type { ArtistRow } from './artists';
 import { tick } from './ambient';
 import { dealsFor, startDeal } from './deals';
 import { answer } from './gus/ask';
+import { MCP_VIEW_HTML } from './mcp-view.gen';
 import { METROS } from './score';
 import { cityData, mapData, requireArtist } from './service';
 
 const DEMO = 'maya-ortiz';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const origin = () => process.env.WANTED_PUBLIC_ORIGIN ?? 'https://trywanted.vercel.app';
+/** MCP Apps: every tool's answer also draws as Gus's card inside Claude (src/server/mcp-view.html). */
+const UI_EXT = 'io.modelcontextprotocol/ui';
+const UI_MIME = 'text/html;profile=mcp-app';
+const VIEW_URI = 'ui://wanted/gus-card.html';
+const icons = () => [{ src: `${origin()}/icon.png`, mimeType: 'image/png', sizes: ['512x512'] }];
 
 type Args = Record<string, unknown>;
 type Tool = {
@@ -74,7 +80,7 @@ const TOOLS: Tool[] = [
         ...rows.map((r) => `${r.rank}. ${r.city}: hotter than ${r.heatPercentile ?? '?'}% of cities${r.sleeper ? ' (sleeper: more fans than its size suggests)' : ''}${r.posterUp ? `, poster up, ${r.signatures} signed` : ''}.`),
         `Map: ${origin()}/a/${artist.slug}`,
       ].join('\n');
-      return { text, data: { act: artist.slug, cities: rows } };
+      return { text, data: { view: 'cities', act: artist.slug, actName: artist.name, cities: rows } };
     },
   },
   {
@@ -105,7 +111,20 @@ const TOOLS: Tool[] = [
       ]
         .filter(Boolean)
         .join('\n');
-      return { text, data: { act: artist.slug, city: metro.id, neighborhoods: hoods, rooms, signatures: d.proof?.signatures ?? 0 } };
+      return {
+        text,
+        data: {
+          view: 'city',
+          act: artist.slug,
+          actName: artist.name,
+          city: metro.id,
+          cityName: `${metro.name}, ${metro.state}`,
+          heatPercentile: d.score?.heatPct != null ? Math.round(d.score.heatPct * 100) : null,
+          neighborhoods: hoods,
+          rooms,
+          signatures: d.proof?.signatures ?? 0,
+        },
+      };
     },
   },
   {
@@ -133,7 +152,7 @@ const TOOLS: Tool[] = [
       const text = rows.length
         ? rows.map((r) => `${r.room}, ${r.city}: ${say[r.status as keyof typeof say] ?? r.status}${r.split != null ? `. ${r.split}% of the door, $${r.deposit} to hold${r.date ? `, ${r.date}` : ''}` : ''}.`).join('\n')
         : 'No dates in talks right now.';
-      return { text: `${text}\nApprove or pass in the app: ${origin()}/a/${artist.slug}`, data: { act: artist.slug, deals: rows } };
+      return { text: `${text}\nApprove or pass in the app: ${origin()}/a/${artist.slug}`, data: { view: 'deals', act: artist.slug, actName: artist.name, deals: rows } };
     },
   },
   {
@@ -149,7 +168,7 @@ const TOOLS: Tool[] = [
       const a = await answer(artist, q, null);
       const checked = a.steps.filter((s) => s.status === 'done' && s.found).map((s) => `${s.label}: ${s.found}`);
       const text = [a.reply, checked.length ? `\nWhat Gus checked:\n${checked.map((c) => `- ${c}`).join('\n')}` : null, a.action ? `\nHe'd suggest: ${a.action.label}.` : null].filter(Boolean).join('\n');
-      return { text, data: { reply: a.reply, steps: a.steps, action: a.action } };
+      return { text, data: { view: 'gus', act: artist.slug, actName: artist.name, reply: a.reply, mood: a.mood, steps: a.steps, action: a.action } };
     },
   },
   {
@@ -164,9 +183,37 @@ const TOOLS: Tool[] = [
       const d = await startDeal(artist, metro.id, args.room ? String(args.room) : null);
       return {
         text: `Gus is calling ${d.roomName} in ${d.cityName} now. Nothing gets paid without your yes in the app: ${origin()}/a/${artist.slug}`,
-        data: { deal: { id: d.id, room: d.roomName, city: d.cityName, status: d.status } },
+        data: { view: 'calling', act: artist.slug, actName: artist.name, deal: { id: d.id, room: d.roomName, city: d.cityName, status: d.status } },
       };
     },
+  },
+];
+
+/** Starters that show up in Claude's menu for this connector. */
+const PROMPTS: { name: string; title: string; description: string; arguments: { name: string; description: string; required: boolean }[]; text: (act: string, city?: string) => string }[] = [
+  {
+    name: 'where_am_i_wanted',
+    title: 'Where am I wanted?',
+    description: 'The cities where your sound already has a crowd.',
+    arguments: [{ name: 'act', description: `Your Wanted slug (demo: ${DEMO})`, required: false }],
+    text: (act) => `Ask Gus where ${act} is wanted. Show me the cities and tell me which one I should play first and why.`,
+  },
+  {
+    name: 'plan_a_night',
+    title: 'Plan a night in a city',
+    description: 'Where the crowd lives in one city and the rooms that fit.',
+    arguments: [
+      { name: 'city', description: 'The city, like Burlington', required: true },
+      { name: 'act', description: `Your Wanted slug (demo: ${DEMO})`, required: false },
+    ],
+    text: (act, city) => `Ask Gus about ${city || 'Burlington'} for ${act}: where the crowd lives, which rooms fit and which are open on a Tuesday.`,
+  },
+  {
+    name: 'whats_waiting',
+    title: 'What needs my yes?',
+    description: 'The dates Gus is negotiating and what is waiting on you.',
+    arguments: [{ name: 'act', description: `Your Wanted slug (demo: ${DEMO})`, required: false }],
+    text: (act) => `Check with Gus which dates he's negotiating for ${act} and what's waiting on my yes.`,
   },
 ];
 
@@ -182,25 +229,49 @@ async function one(m: Rpc) {
       const want = String(m.params?.protocolVersion ?? '');
       return ok(id, {
         protocolVersion: PROTOCOLS.includes(want) ? want : PROTOCOLS[0],
-        capabilities: { tools: { listChanged: false } },
+        capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, prompts: { listChanged: false }, extensions: { [UI_EXT]: { mimeTypes: [UI_MIME] } } },
         serverInfo: {
           name: 'wanted-gus',
           title: 'Gus from Wanted',
           version: '1.0.0',
           websiteUrl: origin(),
           // Gus's face, so the connector shows him in Claude's tool list instead of a blank tile.
-          icons: [
-            { src: `${origin()}/icon.png`, mimeType: 'image/png', sizes: ['512x512'] },
-            { src: `${origin()}/apple-icon.png`, mimeType: 'image/png', sizes: ['180x180'] },
-          ],
+          icons: [...icons(), { src: `${origin()}/apple-icon.png`, mimeType: 'image/png', sizes: ['180x180'] }],
         },
         instructions: `Gus is a tour manager for independent musicians. He knows where an act is wanted (Qloo's taste graph plus fan signatures), which rooms fit, and the dates he's negotiating. Every tool takes an optional act slug; the demo act is "${DEMO}". Money never moves from here: the artist approves deposits in the app.`,
       });
     }
     case 'ping':
       return ok(id, {});
+    case 'resources/list':
+      return ok(id, { resources: [{ uri: VIEW_URI, name: 'gus_card', title: 'Gus’s card', description: 'How Gus shows his answers inside the chat.', mimeType: UI_MIME }] });
+    case 'resources/templates/list':
+      return ok(id, { resourceTemplates: [] });
+    case 'resources/read': {
+      if (m.params?.uri !== VIEW_URI) return fail(id, -32002, 'Resource not found');
+      const o = origin();
+      return ok(id, {
+        contents: [
+          {
+            uri: VIEW_URI,
+            mimeType: UI_MIME,
+            text: MCP_VIEW_HTML.split('__ORIGIN__').join(o),
+            // Gus's art and our rounded font come from the app; nothing else is reached.
+            _meta: { ui: { csp: { connectDomains: [], resourceDomains: [o] }, prefersBorder: false } },
+          },
+        ],
+      });
+    }
+    case 'prompts/list':
+      return ok(id, { prompts: PROMPTS.map(({ text: _t, ...p }) => p) });
+    case 'prompts/get': {
+      const p = PROMPTS.find((x) => x.name === m.params?.name);
+      if (!p) return fail(id, -32602, `Unknown prompt: ${String(m.params?.name)}`);
+      const a = (m.params?.arguments ?? {}) as Record<string, string>;
+      return ok(id, { description: p.description, messages: [{ role: 'user', content: { type: 'text', text: p.text(a.act || DEMO, a.city) } }] });
+    }
     case 'tools/list':
-      return ok(id, { tools: TOOLS.map(({ run: _run, ...t }) => t) });
+      return ok(id, { tools: TOOLS.map(({ run: _run, ...t }) => ({ ...t, icons: icons(), _meta: { ui: { resourceUri: VIEW_URI, visibility: ['model', 'app'] } } })) });
     case 'tools/call': {
       const tool = TOOLS.find((t) => t.name === m.params?.name);
       if (!tool) return fail(id, -32602, `Unknown tool: ${String(m.params?.name)}`);

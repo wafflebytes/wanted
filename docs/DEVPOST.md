@@ -30,7 +30,7 @@ In the cities you pick, he puts up a WANTED poster. Fans sign it with their neig
 
 Then he helps fill the room. The signers hear first, posters go where the crowd hangs out, and an opener who shares your crowd gets an invite. After the show, he checks the room's ticket count against the door.
 
-You can ask Gus anything along the way, by typing or out loud. He looks things up as he answers and shows each lookup as it runs. He'll even call you about an offer. He also works as an MCP connector, so you can ask him from Claude or ChatGPT where you're wanted.
+You can ask Gus anything along the way, by typing or out loud. He looks things up as he answers and shows each lookup as it runs. He'll even call you about an offer. He also works as an MCP connector, so you can ask him from Claude or ChatGPT where you're wanted. In Claude his answers come back as cards in the chat (an MCP App): tap a city to open it, then send him to ask the room, without leaving the conversation.
 
 ### How we built it
 
