@@ -40,7 +40,7 @@ export function liteRoastLine(r: Roast, stops: TourStop[]): string {
     case 'weekday-trap':
       return `${s?.city ?? 'This city'} on a ${day} after ${prev?.city ?? 'a big'} ${prev ? `on a ${prev.day.charAt(0).toUpperCase() + prev.day.slice(1)}` : 'weekend'}? Bold. Swap it.`;
     case 'wrong-side':
-      return 'Great room. Wrong zip code. Your people live across town.';
+      return 'Great venue. Wrong zip code. Your people live across town.';
     case 'crowd-split':
       return `Two nights this close together? You're splitting your own crowd.`;
     case 'famous-hub':

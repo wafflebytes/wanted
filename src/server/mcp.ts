@@ -174,7 +174,7 @@ const TOOLS: Tool[] = [
   },
   {
     name: 'ask_rooms',
-    title: 'Send Gus to ask a room',
+    title: 'Send Gus to ask a venue',
     description:
       "Send Gus to ask the best-fitting room in a city (or a named room id from city_brief) for a date. He negotiates inside the artist's limits in the background; the call shows live in the act's app. This never spends money: the deposit needs the artist's yes in the app on the exact offer.",
     inputSchema: { type: 'object', properties: { act, city, room: { type: 'string', description: 'Optional room id from city_brief.' } }, required: ['city'] },
@@ -202,12 +202,12 @@ const PROMPTS: { name: string; title: string; description: string; arguments: { 
   {
     name: 'plan_a_night',
     title: 'Plan a night in a city',
-    description: 'Where the crowd lives in one city and the rooms that fit.',
+    description: 'Where the crowd lives in one city and the venues that fit.',
     arguments: [
       { name: 'city', description: 'The city, like Burlington', required: true },
       { name: 'act', description: `Your Wanted slug (demo: ${DEMO})`, required: false },
     ],
-    text: (act, city) => `Ask Gus about ${city || 'Burlington'} for ${act}: where the crowd lives, which rooms fit and which are open on a Tuesday.`,
+    text: (act, city) => `Ask Gus about ${city || 'Burlington'} for ${act}: where the crowd lives, which venues fit and which are open on a Tuesday.`,
   },
   {
     name: 'whats_waiting',

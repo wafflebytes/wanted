@@ -237,7 +237,7 @@ export async function steerDeal(artist: ArtistRow, dealId: string, patch: Partia
   if (typeof patch.minSplit === 'number') {
     t.limits.minSplit = Math.max(40, Math.min(95, Math.round(patch.minSplit)));
     t.gus.split = Math.max(t.gus.split, t.limits.minSplit);
-    said.push(`Don’t go under ${t.limits.minSplit}% of the door`);
+    said.push(`Don’t go under ${t.limits.minSplit}% of ticket sales`);
   }
   if (typeof patch.maxDeposit === 'number') {
     t.limits.maxDeposit = Math.max(0, Math.min(2000, tens(patch.maxDeposit)));
@@ -407,7 +407,7 @@ export async function passDeal(artist: ArtistRow, dealId: string): Promise<void>
   if (deal.status !== 'waiting' && deal.status !== 'talking') return;
   delete deal.talk;
   deal.status = 'passed';
-  deal.thread.push(letter('gus', 'Thanks for the quick answer. We went with another room this time, and we’d love to come back.', null));
+  deal.thread.push(letter('gus', 'Thanks for the quick answer. We went with another venue this time, and we’d love to come back.', null));
   deal.updatedAt = Date.now();
   await save(artist.id, deal);
 }

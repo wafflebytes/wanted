@@ -103,7 +103,7 @@ export async function onSignature(artistId: string, city: string, opts: { includ
     kind: 'decision',
     city,
     title: `${metro.name} filled its poster: ${proof.signatures} people signed`,
-    detail: `Interest over-indexed against the heat share. It is a reason to research rooms, not proof of ticket sales or attendance.${artist.isDemo ? ' (Demo signatures.)' : ''}`,
+    detail: `Interest over-indexed against the heat share. It’s a reason to look at venues there, not a promise of ticket sales.${artist.isDemo ? ' (Demo signatures.)' : ''}`,
     source: 'fans',
     level: 1,
   });

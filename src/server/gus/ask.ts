@@ -494,7 +494,7 @@ async function liteAgent(ctx: Ctx, heard: string): Promise<Omit<GusAnswer, 'hear
   // Lookups ran but none of the shortcuts fit: say what they turned up rather than shrugging.
   const found = ctx.steps.map((s) => s.found).filter((f): f is string => !!f).slice(-2);
   if (found.length) return { reply: `Here’s what I’ve got. ${found.map((f) => f.replace(/\.$/, '')).join('. ')}.`, mood: 'idle', action: null };
-  return { reply: 'Ask me about a city, a room, an opener or who’s signing. I’ll look it up.', mood: 'unimpressed', action: null };
+  return { reply: 'Ask me about a city, a venue, an opener or who’s signing. I’ll look it up.', mood: 'unimpressed', action: null };
 }
 
 // ---------- the agent ----------

@@ -12,7 +12,7 @@ test('initialize echoes a supported protocol and offers tools', async () => {
 });
 test('an unknown protocol gets the newest one we speak', async () => {
   const r = await rpc('initialize', { protocolVersion: '1999-01-01' });
-  assert.equal(r.result?.protocolVersion, '2025-06-18');
+  assert.equal(r.result?.protocolVersion, '2025-11-25');
 });
 test('tools carry schemas and say which ones only read', async () => {
   const r = await rpc('tools/list');
