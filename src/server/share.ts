@@ -129,7 +129,7 @@ export async function announcePng(slug: string, city: string, kind: 'winner' | '
   } else {
     const held = (await dealsFor(artist.id)).find((x) => x.city === city && x.status === 'held');
     if (!held?.terms) throw new HttpError(404, 'Nothing booked here yet.');
-    const date = new Date(`${held.terms.date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }).toUpperCase();
+    const date = new Date(`${held.terms.date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
     d = { ...base, kind, venue: held.roomName, date };
   }
   return renderAnnounce(d);
