@@ -288,7 +288,7 @@ h1 { font: 800 21px/1.15 var(--display); letter-spacing: -0.01em; margin: 2px 2p
   if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark';
   request('ui/initialize', {
     protocolVersion: '2026-01-26',
-    clientInfo: { name: 'gus-card', version: '1.0.0' },
+    appInfo: { name: 'gus-card', version: '1.0.0' },
     appCapabilities: { availableDisplayModes: ['inline'] },
   }).then((r) => { theme(r && r.hostContext); notify('ui/notifications/initialized', {}); }).catch(() => {});
 })();
