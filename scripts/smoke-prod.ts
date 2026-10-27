@@ -1,7 +1,7 @@
 /**
  * What a judge hits, checked against the live URL: every page, the JSON the pages need, the
  * images links unfurl to, and the agent surfaces. Fails on a non-200, a slow answer, or a
- * demo act with nothing for Gus to show (no call, no offer, no held date).
+ * demo act with nothing for Gus to show (no call, no offer, no held date), or the MCP connector down.
  *
  *   npm run smoke:prod                       # https://wanted-qloo.vercel.app
  *   npm run smoke:prod -- http://localhost:3100
@@ -9,8 +9,10 @@
 const base = (process.argv[2] ?? process.env.SMOKE_URL ?? 'https://wanted-qloo.vercel.app').replace(/\/$/, '');
 const act = 'maya-ortiz';
 const city = 'burlington-vt';
+/** A city with a held date, read from the deals check; the booked story needs one. */
+let heldCity = city;
 
-type Check = { path: string; kind?: 'page' | 'json' | 'image' | 'text'; budget?: number; expect?: (body: unknown) => string | null };
+type Check = { path: string | (() => string); kind?: 'page' | 'json' | 'image' | 'text'; budget?: number; post?: unknown; expect?: (body: unknown) => string | null };
 
 const checks: Check[] = [
   { path: '/', kind: 'page' },
@@ -35,13 +37,21 @@ const checks: Check[] = [
     kind: 'json',
     budget: 20_000,
     expect: (b) => {
-      const s = new Set(((b as { deals?: { status: string }[] }).deals ?? []).map((d) => d.status));
+      const deals = (b as { deals?: { status: string; city: string }[] }).deals ?? [];
+      heldCity = deals.find((d) => d.status === 'held')?.city ?? heldCity;
+      const s = new Set(deals.map((d) => d.status));
       const missing = ['held', 'waiting'].filter((x) => !s.has(x));
       return missing.length ? `demo act has no ${missing.join(' or ')} deal` : null;
     },
   },
   { path: `/img/poster/${act}/${city}?w=400`, kind: 'image', budget: 20_000 },
-  { path: `/img/story/${act}/${city}?kind=booked`, kind: 'image', budget: 20_000 },
+  { path: () => `/img/story/${act}/${heldCity}?kind=booked`, kind: 'image', budget: 20_000 },
+  {
+    path: '/api/mcp',
+    kind: 'json',
+    post: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'where_am_i_wanted', arguments: { limit: 3 } } },
+    expect: (b) => ((b as { result?: { isError?: boolean } }).result?.isError === false ? null : 'MCP tool call failed'),
+  },
   { path: '/opengraph-image.jpg', kind: 'image' },
   { path: '/llms.txt', kind: 'text' },
   { path: '/llms-full.txt', kind: 'text' },
@@ -52,12 +62,14 @@ const checks: Check[] = [
 async function run(c: Check) {
   const t = Date.now();
   const budget = c.budget ?? 8_000;
+  const path = typeof c.path === 'function' ? c.path() : c.path;
   try {
-    const res = await fetch(base + c.path, { signal: AbortSignal.timeout(Math.max(budget * 2, 30_000)), redirect: 'follow' });
+    const init: RequestInit = c.post ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(c.post) } : {};
+    const res = await fetch(base + path, { ...init, signal: AbortSignal.timeout(Math.max(budget * 2, 30_000)), redirect: 'follow' });
     const ms = Date.now() - t;
     const ctype = res.headers.get('content-type') ?? '';
     let problem: string | null = null;
-    const okStatus = c.path === '/no-such-page' ? res.status === 404 : res.ok;
+    const okStatus = path === '/no-such-page' ? res.status === 404 : res.ok;
     if (!okStatus) problem = `HTTP ${res.status}`;
     else if (c.kind === 'json') {
       if (!ctype.includes('json')) problem = `not JSON (${ctype})`;
@@ -65,9 +77,9 @@ async function run(c: Check) {
     } else if (c.kind === 'image' && !ctype.startsWith('image/')) problem = `not an image (${ctype})`;
     else if (c.kind === 'page' && !ctype.includes('html')) problem = `not HTML (${ctype})`;
     if (!problem && ms > budget) problem = `slow: ${ms} ms > ${budget} ms`;
-    return { path: c.path, ms, problem };
+    return { path, ms, problem };
   } catch (e) {
-    return { path: c.path, ms: Date.now() - t, problem: String(e).slice(0, 120) };
+    return { path, ms: Date.now() - t, problem: String(e).slice(0, 120) };
   }
 }
 
