@@ -616,8 +616,11 @@ export function roastCard(r: Roast, stops: TourStop[], names: CardNames): RoastC
     case 'famous-hub':
       return { title: 'Big cities, small crowds', from: s?.city ?? null, to, note: to ? `${to} likes you more.` : 'Your fans are elsewhere.', action };
     case 'ignored-proof': {
-      const n = f && f.kind === 'add-city' ? names.signatures(f.metroId) : undefined;
-      return { title: `${to} asked for you`, from: null, to, note: `${n ?? 'Enough'} people signed. It's not on the route.`, action };
+      // With no fix to offer, the city still comes from the roast's own id ("ignored-proof:<metro>").
+      const metro = f && f.kind === 'add-city' ? f.metroId : r.id.split(':')[1];
+      const name = to ?? (metro ? names.city(metro) : undefined);
+      const n = metro ? names.signatures(metro) : undefined;
+      return { title: name ? `${name} asked for you` : 'A city asked for you', from: null, to, note: `${n ?? 'Enough'} people signed. It's not on the route.`, action };
     }
   }
 }

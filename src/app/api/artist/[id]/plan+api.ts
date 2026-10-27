@@ -1,9 +1,9 @@
 import type { Region } from '@/lib/regions';
 import type { TourConstraints } from '@/lib/types';
-import { body, handler, HttpError, json, limit } from '@/server/http';
+import { body, handler, HttpError, json, limit, ndjson } from '@/server/http';
 import { loadPlan, planFor, requireArtist, type PlanAction } from '@/server/service';
 
-type In = { constraints: TourConstraints & { regions: Region[]; excluded?: string[] }; action?: PlanAction };
+type In = { constraints: TourConstraints & { regions: Region[]; excluded?: string[] }; action?: PlanAction; stream?: boolean };
 
 export const GET = handler(async (_req: Request, { id }: Record<string, string>) => {
   const artist = await requireArtist(id);
@@ -22,5 +22,12 @@ export const POST = handler(async (req: Request, { id }: Record<string, string>)
     roomBand: (['small', 'mid', 'big'] as const).includes(c.roomBand) ? c.roomBand : 'small',
     regions: (c.regions ?? []).filter((r): r is Region => ['midwest', 'east', 'northeast', 'south', 'west'].includes(r)),
   };
-  return json({ plan: await planFor(artist, constraints, input.action ?? { kind: 'new' }) });
+  const action = input.action ?? { kind: 'new' };
+  // The web asks for a stream so the island can say what Gus is doing during a ~15 s change.
+  if (input.stream)
+    return ndjson(async (send) => {
+      const plan = await planFor(artist, constraints, action, (words) => send({ type: 'step', words }));
+      send({ type: 'plan', plan });
+    });
+  return json({ plan: await planFor(artist, constraints, action) });
 });

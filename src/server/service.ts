@@ -328,7 +328,14 @@ export type PlanAction =
   | { kind: 'room'; stopIndex: number; roomId: string }
   | { kind: 'replan' };
 
-export async function planFor(artist: ArtistRow, constraints: TourConstraints & { regions: Region[]; excluded?: string[] }, action: PlanAction): Promise<TourPlan & { receipts: Receipt[] }> {
+export async function planFor(
+  artist: ArtistRow,
+  constraints: TourConstraints & { regions: Region[]; excluded?: string[] },
+  action: PlanAction,
+  /** What Gus is doing right now, in a few plain words, for the island while the plan changes. */
+  say: (words: string) => void = () => {},
+): Promise<TourPlan & { receipts: Receipt[] }> {
+  say('Reading your cities');
   const scout = await scoutFor(artist);
   const proof = await proofFor(artist.id, { includeDemo: artist.isDemo });
   const proofMap: PlanInput['proof'] = Object.fromEntries(proof.map((p) => [p.city, { ratio: p.ratio, signatures: p.signatures, crossed: p.crossed }]));
@@ -352,6 +359,7 @@ export async function planFor(artist: ArtistRow, constraints: TourConstraints & 
   if (!previous || action.kind === 'new' || action.kind === 'replan') {
     // First pass picks the cities; then we fetch their rooms and plan for real.
     const draft = planRoute({ ...base, previous: previous?.stops });
+    say(`Checking venues in ${draft.stops.length} cities`);
     base.rooms = await roomsFor(artist, draft.stops.map((s) => s.metroId));
     stops = planRoute({ ...base, previous: previous?.stops }).stops;
   } else {
@@ -366,6 +374,7 @@ export async function planFor(artist: ArtistRow, constraints: TourConstraints & 
     }
     const fix: RoastFix | null = action.kind === 'fix' ? action.fix : action.kind === 'swap' ? { kind: 'swap-city', stopIndex: action.stopIndex, metroId: action.metroId } : null;
     const extra = fix && 'metroId' in fix ? [fix.metroId] : [];
+    say(extra.length ? `Checking venues in ${metroById(extra[0])?.name ?? 'the new city'}` : 'Checking the dates still work');
     base.rooms = { ...(await roomsFor(artist, [...new Set([...next.map((s) => s.metroId), ...extra])])), ...base.rooms };
     // Shifts are anchored on the artist's chosen start, so repeated edits never drift the tour.
     stops = fix ? tryFix(next, fix, base, constraints.startDate).stops : rescore(next, base, { startDate: [...previous.stops.map((s) => s.date)].sort()[0] ?? constraints.startDate }).stops;
@@ -374,7 +383,9 @@ export async function planFor(artist: ArtistRow, constraints: TourConstraints & 
   if (!Object.keys(base.rooms).length) base.rooms = await roomsFor(artist, stops.map((s) => s.metroId));
   // Final pass: dates and rooms are already settled; this only recomputes totals.
   const scored = rescore(stops, base, { startDate: stops[0]?.date });
+  say('Looking for anything better');
   const roastList = (await verifyFixes(artist, findRoasts(scored.stops, base), scored, base, constraints.startDate)).map((r) => ({ ...r, card: roastCard(r, scored.stops, namesFrom(base)) }));
+  say('Writing it up');
   const lines = await routeLines({ stops: scored.stops, roasts: roastList, total: scored.total, artistName: artist.name });
   scored.stops.forEach((s, i) => (s.blurb = lines.blurbs[i]));
 

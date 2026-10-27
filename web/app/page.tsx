@@ -14,7 +14,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { ActEntity, RoomBand } from '@/lib/types';
-import { Art } from '@web/components/Art';
+import { Art, type ArtName } from '@web/components/Art';
 import { Gus } from '@web/components/Gus';
 import { Icon } from '@web/components/Icon';
 import { api, streamNdjson } from '@web/lib/api';
@@ -43,15 +43,77 @@ const fans = (n: number | null) => (n == null ? null : n >= 1e6 ? `${(n / 1e6).t
 
 export default function Page() {
   const router = useRouter();
-  const [ready, setReady] = useState(false);
+  const [phase, setPhase] = useState<'blank' | 'splash' | 'welcome'>('blank');
+  const next = useRef<() => void>(() => {});
   useEffect(() => {
     const fresh = new URLSearchParams(location.search).has('new');
     const last = session.lastArtist();
-    if (last && !fresh) router.replace(`/a/${last}`);
-    else setReady(true);
+    next.current = last && !fresh ? () => router.replace(`/a/${last}`) : () => setPhase('welcome');
+    if (last && !fresh) router.prefetch(`/a/${last}`);
+    // Once per visit, and never on "Add an act" or for people who asked for less motion.
+    let seen = true;
+    try {
+      seen = !!sessionStorage.getItem('wanted-splash');
+    } catch {}
+    if (fresh || seen || matchMedia('(prefers-reduced-motion: reduce)').matches) next.current();
+    else setPhase('splash');
   }, [router]);
-  if (!ready) return <main className="wl" />;
+  const done = () => {
+    try {
+      sessionStorage.setItem('wanted-splash', '1');
+    } catch {}
+    next.current();
+  };
+  if (phase === 'splash') return <Splash onDone={done} />;
+  if (phase !== 'welcome') return <main className="wl" />;
   return <Welcome />;
+}
+
+/** Things from the road, drifting onto the table around Gus. Offsets are from the centre. */
+const DRIFT: { name: ArtName; x: number; y: number; r: number; size: number }[] = [
+  { name: 'poster', x: -112, y: -132, r: -9, size: 92 },
+  { name: 'mail', x: 116, y: -118, r: 11, size: 76 },
+  { name: 'ticket', x: -124, y: 34, r: 14, size: 70 },
+  { name: 'cassette', x: 122, y: 40, r: -12, size: 72 },
+  { name: 'pin', x: 4, y: -176, r: 0, size: 56 },
+];
+
+/** At most 1.4 s: the objects settle, the wordmark rolls up, then it clears. Tap to skip. */
+function Splash({ onDone }: { onDone: () => void }) {
+  const [out, setOut] = useState(false);
+  const done = useRef(false);
+  const finish = () => {
+    if (done.current) return;
+    done.current = true;
+    setOut(true);
+    setTimeout(onDone, 300);
+  };
+  useEffect(() => {
+    const t = setTimeout(finish, 1100);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <main className={`sp${out ? ' out' : ''}`} onClick={finish} aria-label="Wanted">
+      <div className="wl-ground" />
+      <div className="sp-table" aria-hidden>
+        {DRIFT.map((d, i) => (
+          <span key={d.name} className="sp-obj" style={{ ['--x' as string]: `${d.x}px`, ['--y' as string]: `${d.y}px`, ['--r' as string]: `${d.r}deg`, ['--i' as string]: i }}>
+            <Art name={d.name} size={d.size} />
+          </span>
+        ))}
+        <span className="sp-gus">
+          <Gus mood="proud" size={104} />
+        </span>
+      </div>
+      <h1 className="sp-word">
+        {'Wanted'.split('').map((c, i) => (
+          <span key={i} style={{ ['--i' as string]: i }}>
+            {c}
+          </span>
+        ))}
+      </h1>
+    </main>
+  );
 }
 
 function Welcome() {

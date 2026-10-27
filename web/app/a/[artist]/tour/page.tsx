@@ -11,7 +11,7 @@ import type { Roast, TourPlan, TourStop } from '@/lib/types';
 import { Art } from '@web/components/Art';
 import { Icon } from '@web/components/Icon';
 import { Sheet } from '@web/components/Sheet';
-import { api } from '@web/lib/api';
+import { ApiError, streamNdjson } from '@web/lib/api';
 import { gus } from '@web/lib/gus';
 import { mutate, useApi, useViewport } from '@web/lib/hooks';
 import { stage } from '@web/lib/stage';
@@ -34,6 +34,7 @@ export default function TourPage() {
   const detents = useMemo(() => [Math.min(h - 200, 430 + dock), Math.round(h * 0.66), h - 72], [h]);
   const [at, setAt] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
+  const [step, setStep] = useState<string | null>(null);
   const [moved, setMoved] = useState<Set<string>>(new Set());
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const fixesRef = useRef<HTMLDivElement>(null);
@@ -47,19 +48,34 @@ export default function TourPage() {
   const run = async (action: PlanAction, key: string, say: string) => {
     if (busy) return;
     setBusy(key);
-    gus.flash(say);
+    setStep(say);
+    gus.flash(say, 60_000);
     const before = plan?.stops ?? [];
     try {
       const constraints = plan?.constraints ?? defaults();
-      const out = await api.post<{ plan: TourPlan }>(path, { constraints, action });
+      // Streamed so the island can say each step of a ~15 s change instead of a bare "On it".
+      let out: TourPlan | null = null;
+      let failed: string | null = null;
+      await streamNdjson<{ type: 'step'; words: string } | { type: 'plan'; plan: TourPlan } | { type: 'error'; error: string }>(path, { constraints, action, stream: true }, (e) => {
+        if (e.type === 'step') {
+          setStep(e.words);
+          gus.flash(e.words, 60_000);
+        } else if (e.type === 'plan') out = e.plan;
+        else failed = e.error;
+      });
+      const next = out as TourPlan | null;
+      if (failed || !next) throw new ApiError(500, failed ?? 'No plan came back.');
       // Mark the stops that changed city or room, so the diff is visible at a glance.
       const was = new Map(before.map((s) => [s.date, `${s.metroId}|${s.room?.id ?? ''}`]));
-      setMoved(new Set(before.length ? out.plan.stops.filter((s) => was.get(s.date) !== `${s.metroId}|${s.room?.id ?? ''}`).map((s) => s.date) : []));
-      mutate(path, out);
+      const changed = before.length ? next.stops.filter((s) => was.get(s.date) !== `${s.metroId}|${s.room?.id ?? ''}`).map((s) => s.date) : [];
+      setMoved(new Set(changed));
+      mutate(path, { plan: next });
+      gus.flash(action.kind === 'lock' ? 'Done' : changed.length ? `Moved ${changed.length} ${changed.length === 1 ? 'date' : 'dates'}` : 'Done. Nothing needed moving');
     } catch {
       gus.flash('Couldn’t change the plan');
     } finally {
       setBusy(null);
+      setStep(null);
     }
   };
 
@@ -141,7 +157,7 @@ export default function TourPage() {
             <h2>Gus would change</h2>
           </div>
           {fixes.map((r, i) => (
-            <Fix key={r.id} r={r} i={i} busy={busy === r.id} disabled={!!busy} onTake={() => run({ kind: 'fix', fix: r.fix! }, r.id, r.card!.action)} onSkip={() => setSkipped((s) => new Set(s).add(r.id))} />
+            <Fix key={r.id} r={r} i={i} step={busy === r.id ? step : null} busy={busy === r.id} disabled={!!busy} onTake={() => run({ kind: 'fix', fix: r.fix! }, r.id, r.card!.action)} onSkip={() => setSkipped((s) => new Set(s).add(r.id))} />
           ))}
         </div>
       )}
@@ -187,7 +203,7 @@ export default function TourPage() {
   );
 }
 
-function Fix({ r, i, busy, disabled, onTake, onSkip }: { r: Roast; i: number; busy: boolean; disabled: boolean; onTake: () => void; onSkip: () => void }) {
+function Fix({ r, i, step, busy, disabled, onTake, onSkip }: { r: Roast; i: number; step: string | null; busy: boolean; disabled: boolean; onTake: () => void; onSkip: () => void }) {
   const c = r.card!;
   return (
     <article className="tr-fix card" style={{ ['--i' as string]: i }}>
@@ -208,6 +224,12 @@ function Fix({ r, i, busy, disabled, onTake, onSkip }: { r: Roast; i: number; bu
           Keep it
         </button>
       </div>
+      {step && (
+        <p className="tr-live" aria-live="polite">
+          <i />
+          {step}…
+        </p>
+      )}
     </article>
   );
 }
