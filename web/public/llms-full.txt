@@ -82,7 +82,7 @@ Every city sheet has "Ask a chatbot instead?". It puts the same question (where'
 - `ask_gus`: a question for Gus; he runs his own lookups and answers with what he checked. Read-only.
 - `ask_rooms`: sends Gus to ask a room in a city. Starts a negotiation, never pays.
 
-In Claude, every tool answers as a card in the chat (an MCP App, `ui://wanted/gus-card-v2.html`): the ranked cities, one city with its neighborhoods and the rooms' open nights, the deals, or Gus's reply with what he checked. Tapping a city opens it and "Send Gus to ask" calls `ask_rooms`, all without leaving the conversation. Other clients get the same answer as text and structured content. The server also lists starter prompts: `where_am_i_wanted`, `plan_a_night` and `whats_waiting`.
+In Claude, every tool answers as a card in the chat (an MCP App, `ui://wanted/gus-card-v3.html`): the ranked cities, one city with its neighborhoods and the rooms' open nights, the deals, or Gus's reply with what he checked. Tapping a city opens it and "Send Gus to ask" calls `ask_rooms`, all without leaving the conversation. Other clients get the same answer as text and structured content. The server also lists starter prompts: `where_am_i_wanted`, `plan_a_night` and `whats_waiting`.
 
 There's no tool that approves or pays. That happens in the app, by the artist, against the exact offer.
 

@@ -323,7 +323,7 @@ export async function renderPoster(d: PosterData, format: 'story' | 'wide' | 'po
   const art = await artFor(d);
   if (format === 'poster') return render(<Poster d={d} s={1} art={art} />, POSTER_W, POSTER_H);
   const first = d.artistName.split(' ')[0];
-  const sentence = d.count >= 50 ? `${d.count} signed. Gus is asking the rooms.` : `${d.count} signed. At fifty, Gus asks the rooms.`;
+  const sentence = d.count >= 50 ? `${d.count} signed. Gus is asking venues for a date.` : `${d.count} signed. At fifty, Gus asks venues for a date.`;
   if (format === 'story') {
     const s = 820 / POSTER_W;
     return render(

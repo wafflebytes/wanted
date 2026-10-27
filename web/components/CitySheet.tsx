@@ -31,13 +31,13 @@ export function CitySheet({ slug, d, opened, posting, onPost, onClose }: { slug:
   const hoodCount = Object.fromEntries((d.proof?.neighborhoods ?? []).map((n) => [n.name, n.count]));
   const asking = live.asking === d.metro.id || (live.deal?.city === d.metro.id && live.deal.status === 'talking');
   const ask = (roomId: string | null = null, name?: string) => {
-    gus.flash(name ? `Asking ${name}` : `Asking rooms`, 2200);
+    gus.flash(name ? `Asking ${name}` : `Asking venues`, 2200);
     deals.ask(slug, d.metro.id, roomId).then(() => gus.open('room')).catch(() => gus.flash('Couldn’t reach them'));
   };
   return (
     <div className="city">
       <div className="city-top">
-        <span className={`kicker ${s?.sleeper ? 'k-gold' : ''}`}>{s?.sleeper ? '★ Sleeper city' : s?.rank ? `#${s.rank} for your sound` : d.metro.stateName}</span>
+        <span className={`kicker ${s?.sleeper ? 'k-gold' : ''}`}>{s?.sleeper ? '★ Overlooked city' : s?.rank ? `#${s.rank} for your sound` : d.metro.stateName}</span>
         <button className="icon-btn flat" onClick={onClose} aria-label="Back to the country">
           <Icon name="close" size={18} />
         </button>
@@ -61,14 +61,14 @@ export function CitySheet({ slug, d, opened, posting, onPost, onClose }: { slug:
         ) : null}
         <div className="stat">
           <b>{d.rooms.length}</b>
-          <span>rooms</span>
+          <span>venues</span>
         </div>
       </div>
       <div className="city-acts">
         {opened ? (
           <>
             <button className="btn hot" onClick={() => ask()} disabled={asking}>
-              {asking ? 'Gus is asking…' : 'Ask rooms for a date'}
+              {asking ? 'Gus is asking…' : 'Ask venues for a date'}
             </button>
             <Link className="btn light" href={`/a/${slug}/posters?city=${d.metro.id}`}>
               Poster
@@ -101,7 +101,7 @@ export function CitySheet({ slug, d, opened, posting, onPost, onClose }: { slug:
       {d.rooms.length > 0 && (
         <>
           <div className="section-h">
-            <h2>Rooms worth playing</h2>
+            <h2>Venues that fit you</h2>
           </div>
           <div className="rooms" data-nodrag>
             {d.rooms.slice(0, 6).map((r) => (
@@ -110,7 +110,7 @@ export function CitySheet({ slug, d, opened, posting, onPost, onClose }: { slug:
                 <div className="room-txt">
                   <b>{r.name}</b>
                   <span>
-                    {[r.neighborhood, r.sizeGuess ? `${r.sizeGuess === 'intimate' ? 'Tiny' : r.sizeGuess[0].toUpperCase() + r.sizeGuess.slice(1)} room` : null].filter(Boolean).join(' · ')}
+                    {[r.neighborhood, r.sizeGuess ? `${r.sizeGuess === 'intimate' ? 'Tiny' : r.sizeGuess[0].toUpperCase() + r.sizeGuess.slice(1)} venue` : null].filter(Boolean).join(' · ')}
                   </span>
                   {r.pulledBy?.[0] && <em>Fans of {r.pulledBy[0].name} go here</em>}
                 </div>

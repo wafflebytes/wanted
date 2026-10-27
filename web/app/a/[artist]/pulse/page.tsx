@@ -23,6 +23,7 @@ import { deals } from '@web/lib/deals';
 import { gus } from '@web/lib/gus';
 import { mutate, useApi } from '@web/lib/hooks';
 import '../../../mail.css';
+import { plainWords } from '@/lib/plain';
 
 const PROOF = 50;
 const DAY = 86_400_000;
@@ -46,7 +47,7 @@ function feel(v: number) {
 
 /** Older notes were written before Gus stopped naming his sources. Say it the way he would now. */
 const plain = (s: string) =>
-  s
+  plainWords(s)
     .replace(/than Qloo expected for a city this size/gi, 'than a city that size usually gives')
     .replace(/\bQloo\b/g, 'Gus')
     .replace(/\s*\(Demo data\.?\)/gi, '')
@@ -151,7 +152,7 @@ export default function FanMail() {
         <div className="fm-airmail" aria-hidden />
         <div className="fm-letter-in">
           <span className="kicker">This week</span>
-          <h1 className="fm-feel">{feel(p.meter.value)}</h1>
+          <h1 className="fm-feel">{s.week === 0 ? 'Quiet so far this week.' : diff < 0 ? 'A little quieter than last week.' : feel(p.meter.value)}</h1>
           <div className="fm-big">
             <b>
               <Reel value={s.week} />
@@ -251,7 +252,7 @@ export default function FanMail() {
       {talk.length > 0 && (
         <section>
           <div className="section-h">
-            <h2>{aboutMe ? 'People are talking' : 'What your crowd is saying'}</h2>
+            <h2>{aboutMe ? 'People are talking about you' : 'What fans of your sound are saying'}</h2>
           </div>
           {!aboutMe && <p className="fm-about ink-2">Nobody’s posting about you by name yet. Here’s what fans of {p.chatter.about.slice(0, 2).join(' and ')} are saying.</p>}
           <div className="fm-cards">

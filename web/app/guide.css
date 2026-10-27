@@ -190,6 +190,10 @@ html.guide-on .gus-btn {
   transform: scale(0.5);
   pointer-events: none;
 }
+/* One Gus at a time: the drawings of him on the screens step aside while he's out guiding. */
+html.guide-on .th-obj {
+  visibility: hidden;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .guide-gus,

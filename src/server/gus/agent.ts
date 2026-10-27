@@ -196,7 +196,7 @@ export async function scoutAgent(input: {
           violations.push(`findRooms with unknown id ${city}`);
           return done(false, { error: `Unknown metro id ${city}.` });
         }
-        emit({ type: 'tool', tool: name, text: `Checking rooms in ${city}` });
+        emit({ type: 'tool', tool: name, text: `Checking venues in ${city}` });
         const d = await cityDetail(r.sound, city, { kind: input.kind, band: (args.sizeBand as 'small') ?? input.roomBand, scope: input.scope });
         const rooms = d.rooms.map((x) => ({
           name: untrusted(x.name),
@@ -404,7 +404,9 @@ Reply with only JSON: {"planLine": "...", "blurbs": ["..."], "roasts": [{"id": "
     const fallback = lite();
     // Musicians read these: anything that sounds like a dashboard falls back to the plain line.
     const jargon = /\b(data|dataset|metrics?|signals?|scores?|null|empty|gaps?)\b/i;
-    const ok = (t: string | undefined, max: number) => !!t && wordCount(t) <= max && !jargon.test(t) && checkGrounded(t, evidence, METRO_NAMES).ok;
+    // A lowercase weekday is the tell of a list read back ("tuesday night, Boston Center for the Arts").
+    const listy = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/;
+    const ok = (t: string | undefined, max: number) => !!t && wordCount(t) <= max && !jargon.test(t) && !listy.test(t) && checkGrounded(t, evidence, METRO_NAMES).ok;
     // A verdict, not a readout: lines that recite the score or the calendar fall back.
     const recites = /tour score|\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(parsed.planLine);
     return {

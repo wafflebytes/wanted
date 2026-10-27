@@ -20,6 +20,7 @@ import { Art } from './Art';
 import { Gus } from './Gus';
 import { Icon } from './Icon';
 import '../app/dealroom.css';
+import { plainWords } from '@/lib/plain';
 
 type Terms = { split: number; deposit: number };
 const lastTerms = (thread: DealLetter[], from: 'gus' | 'house'): Terms | null => [...thread].reverse().find((l) => l.from === from && l.terms)?.terms ?? null;
@@ -73,7 +74,7 @@ export function DealRoom({ open, slug }: { open: boolean; slug: string }) {
   const waiting = d.status === 'waiting';
   const held = d.status === 'held';
   const mood = held ? 'proud' : waiting ? 'waiting' : live.paused ? 'sleeping' : talking ? 'phone' : 'idle';
-  const kicker = held ? 'Held' : waiting ? 'They agreed. Your call' : live.paused ? 'Paused' : talking ? 'Gus is on the phone' : d.status === 'declined' ? 'You passed' : 'Let go';
+  const kicker = held ? 'Booked' : waiting ? 'They agreed. Your call' : live.paused ? 'Paused' : talking ? 'Gus is on the phone' : d.status === 'declined' ? 'You passed' : 'Let go';
   const background = () => {
     haptic('tap');
     setAway(true);
@@ -172,18 +173,18 @@ function Lines({ deal, lim }: { deal: Deal; lim: DealLimits | null }) {
   const gap = ask && offer && !done ? { split: Math.max(0, ask.split - offer.split), deposit: Math.max(0, offer.deposit - ask.deposit) } : null;
   let gist: string;
   if (done) {
-    const short = lim && done.split < lim.minSplit ? `${done.split}% of the door, under your ${lim.minSplit}%` : null;
+    const short = lim && done.split < lim.minSplit ? `${done.split}% of ticket sales, under your ${lim.minSplit}%` : null;
     const over = lim && done.deposit > lim.maxDeposit ? `$${done.deposit} up front, over your $${lim.maxDeposit}` : null;
-    gist = short || over ? `Their last word is ${[short, over].filter(Boolean).join(', and ')}. Your call.` : `They came inside both your lines: ${done.split}% of the door to you, $${done.deposit} to hold it.`;
+    gist = short || over ? `Their last word is ${[short, over].filter(Boolean).join(', and ')}. Your call.` : `They’re inside both your limits: you keep ${done.split}% of ticket sales, with a $${done.deposit} deposit.`;
   }
-  else if (!offer) gist = ask ? `Gus opened at ${ask.split}% of the door and $${ask.deposit} to hold it. Waiting on them.` : 'Gus is getting the room on the line.';
+  else if (!offer) gist = ask ? `Gus asked for ${ask.split}% of ticket sales and a $${ask.deposit} deposit. Waiting on them.` : 'Gus is getting the venue on the line.';
   else if (gap && gap.split + gap.deposit === 0) gist = 'They’re meeting in the middle.';
   else
-    gist = [gap && gap.split ? `${words(gap.split)} ${gap.split === 1 ? 'point' : 'points'} apart on the door` : null, gap && gap.deposit ? `$${gap.deposit} apart on the deposit` : null].filter(Boolean).join(', and ') + '.';
+    gist = [gap && gap.split ? `${words(gap.split)} ${gap.split === 1 ? 'point' : 'points'} apart on ticket sales` : null, gap && gap.deposit ? `$${gap.deposit} apart on the deposit` : null].filter(Boolean).join(', and ') + '.';
   return (
-    <section className="dr-lines" aria-label="Where the deal stands">
+    <section className="dr-lines" aria-label="Where the deal stands" data-tour="room">
       <Tug
-        label="Your cut of the door"
+        label="Your cut of ticket sales"
         min={40}
         max={100}
         show={(v) => `${v}%`}
@@ -194,7 +195,7 @@ function Lines({ deal, lim }: { deal: Deal; lim: DealLimits | null }) {
         met={done?.split ?? null}
       />
       <Tug
-        label="Deposit to hold the night"
+        label="Deposit to lock in the date"
         min={0}
         max={depMax}
         show={(v) => `$${v}`}
@@ -220,7 +221,7 @@ function Tug({ label, min, max, show, line, good, ask, offer, met }: { label: st
   // When the two pucks sit close, their labels split up and down instead of colliding.
   const close = ask !== null && offer !== null && Math.abs(ask - offer) / (max - min) < 0.16;
   return (
-    <div className="tug" data-tour="room">
+    <div className="tug">
       <div className="tug-h">
         <span>{label}</span>
         {met !== null && <b className={inside(met) ? 'ok' : 'no'}>{show(met)}</b>}
@@ -230,7 +231,7 @@ function Tug({ label, min, max, show, line, good, ask, offer, met }: { label: st
         {lo !== null && hi !== null && <i className="tug-gap" style={{ left: pct(lo), width: `calc(${pct(hi)} - ${pct(lo)})` }} />}
         {line !== null && (
           <span className={`tug-line ${past ? 'past' : ''}`} style={{ left: pct(line) }}>
-            <em>{past ? `You: up to ${show(line)}` : `You: ${show(line)}`}</em>
+            <em>{good === 'above' ? `Your lowest: ${show(line)}` : past ? `Your most: up to ${show(line)}` : `Your most: ${show(line)}`}</em>
           </span>
         )}
         {offer !== null && (
@@ -304,7 +305,7 @@ function Beats({ deal, talking }: { deal: Deal; talking: boolean }) {
             {l.kind === 'letter' && (
               <button className={`beat-l ${openAt === i ? 'open' : ''}`} onClick={() => (haptic('tick'), setOpenAt(openAt === i ? null : i))} aria-expanded={openAt === i}>
                 <span className="beat-who">{l.from === 'gus' ? 'Gus' : l.from === 'you' ? 'You' : 'Venue'}</span>
-                <span className="beat-t">{l.text}</span>
+                <span className="beat-t">{plainWords(l.text)}</span>
                 {l.terms && (
                   <span className="beat-n">
                     {l.terms.split}% · ${l.terms.deposit}

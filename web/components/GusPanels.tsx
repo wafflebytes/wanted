@@ -18,6 +18,7 @@ import { DealRoom } from './DealRoom';
 import { Art, type ArtName } from './Art';
 import { Gus } from './Gus';
 import { Icon } from './Icon';
+import { plainWords } from '@/lib/plain';
 
 type Tile = { art: ArtName; title: string; sub: string; tint: string; run: () => void };
 
@@ -40,13 +41,13 @@ export function GusPanels({ slug, artist, waiting, entries }: { slug: string; ar
   const tiles: Tile[] = [
     {
       art: 'room',
-      title: 'Ask rooms',
+      title: 'Ask venues',
       sub: `in ${city}`,
       tint: 'var(--t-orange)',
       run: () => {
         if (!top) return go('')();
         gus.close();
-        gus.flash(`Asking rooms in ${top.name}`, 2200);
+        gus.flash(`Asking venues in ${top.name}`, 2200);
         deals.ask(slug, top.city).then(() => gus.open('room')).catch(() => {});
       },
     },
@@ -72,7 +73,7 @@ export function GusPanels({ slug, artist, waiting, entries }: { slug: string; ar
     <>
       <div className={`gp-scrim ${g.panel !== 'none' ? 'on' : ''} p-${g.panel}`} onClick={() => gus.close()} aria-hidden />
       <Tiles open={g.panel === 'tiles'} tiles={tiles} />
-      <VoiceCard open={g.panel === 'voice'} suggest={tiles.filter((t) => ['Ask rooms', 'Plan the tour', 'Find an opener', 'Catch me up'].includes(t.title))} />
+      <VoiceCard open={g.panel === 'voice'} suggest={tiles.filter((t) => ['Ask venues', 'Plan the tour', 'Find an opener', 'Catch me up'].includes(t.title))} />
       <Tray open={g.panel === 'tray'} slug={slug} waiting={waiting} entries={entries} />
       <DealRoom open={g.panel === 'room'} slug={slug} />
     </>
@@ -204,7 +205,7 @@ function VoiceCard({ open, suggest }: { open: boolean; suggest: Tile[] }) {
               {g.intro ? (
                 <div className="vc-meet">
                   <h3>I’m Gus, your tour manager.</h3>
-                  <p>I find the cities that want you and ask the rooms. Pick a job, or talk to me.</p>
+                  <p>I find the cities that want you and ask the venues there. Pick a job, or talk to me.</p>
                 </div>
               ) : (
                 <p className="vc-hint">{g.noMic ? 'Your mic is off here, so type to me. Or pick one:' : 'Say it like you’d say it to your tour manager.'}</p>
@@ -418,14 +419,14 @@ function LimitProposal({ action }: { action: Extract<GusAction, { type: 'limit' 
   return (
     <div className="pc lp">
       <span className="pc-k">Want me to</span>
-      <p className="pc-line">{dep ? <>Put down up to <b className="tok">{show(v)}</b> to hold a night</> : <>Never take less than <b className="tok">{show(v)}</b> of the door</>}</p>
+      <p className="pc-line">{dep ? <>Put down a deposit of up to <b className="tok">{show(v)}</b> to book a night</> : <>Never take less than <b className="tok">{show(v)}</b> of ticket sales</>}</p>
       <div className="lp-slide">
         {now !== null && now !== v && (
           <i className="lp-was" style={{ left: `${pct(now)}%` }}>
             <em>Now {show(now)}</em>
           </i>
         )}
-        <input type="range" className="range" min={min} max={max} step={step} value={v} aria-label={dep ? 'Biggest deposit' : 'Your cut of the door'} aria-valuetext={show(v)} style={{ ['--p' as string]: `${pct(v)}%` }} onChange={(e) => (haptic('tick'), setV(Number(e.target.value)))} />
+        <input type="range" className="range" min={min} max={max} step={step} value={v} aria-label={dep ? 'Biggest deposit' : 'Your cut of ticket sales'} aria-valuetext={show(v)} style={{ ['--p' as string]: `${pct(v)}%` }} onChange={(e) => (haptic('tick'), setV(Number(e.target.value)))} />
       </div>
       <span className="lp-where">This lives in Settings, under What Gus can do.</span>
       <button className="btn hot block" onClick={() => (haptic('tap'), gus.act({ ...action, value: v }))} disabled={now === v}>
@@ -557,7 +558,7 @@ function Cities({ reply, delay }: { reply: string; delay: number }) {
                 {m.name}
                 <em>{m.state}</em>
               </b>
-              <span>{signed ? `${signed} fans signed` : m.sleeper ? 'A sleeper city' : `#${m.rank} for your sound`}</span>
+              <span>{signed ? `${signed} fans signed` : m.sleeper ? 'An overlooked city' : `#${m.rank} for your sound`}</span>
             </span>
             <Icon name="chevron" size={16} className="ink-3" />
           </button>
@@ -606,7 +607,7 @@ function Tray({ open, slug, waiting, entries }: { open: boolean; slug: string; w
           <Gus mood={g.ambient.mood === 'sleeping' ? 'sleeping' : talking ? 'thinking' : ask ? 'worried' : 'idle'} size={48} sticker={false} />
           <div>
             <b className="d-20">Gus</b>
-            <span className="ink-2 b-13">{g.ambient.words}</span>
+            <span className="ink-2 b-13">{plainWords(g.ambient.words)}</span>
           </div>
           <button className="icon-btn flat" onClick={() => gus.close()} aria-label="Close">
             <Icon name="close" size={18} />
@@ -624,7 +625,7 @@ function Tray({ open, slug, waiting, entries }: { open: boolean; slug: string; w
               {talking.thread.slice(-3).map((l, i) => (
                 <li key={`${talking.thread.length}-${i}`} className={l.from}>
                   <span className="job-who">{l.from === 'gus' ? 'Gus' : 'Venue'}</span>
-                  <span>{l.text}</span>
+                  <span>{plainWords(l.text)}</span>
                 </li>
               ))}
             </ol>
@@ -665,13 +666,13 @@ function Tray({ open, slug, waiting, entries }: { open: boolean; slug: string; w
           <section className="job done">
             <Art name="seal" size={44} />
             <div>
-              <b>{d.roomName} is held</b>
+              <b>{d.roomName} is booked</b>
               <span className="ink-2 b-13">{d.cityName}. The fans who signed hear first.</span>
             </div>
           </section>
         )}
 
-        {!talking && !ask && d?.status !== 'held' && <p className="tray-calm ink-2">Nothing needs you right now. I’ll say so in the island when something does.</p>}
+        {!talking && !ask && d?.status !== 'held' && <p className="tray-calm ink-2">Nothing needs you right now. I’ll say so at the top of the screen when something does.</p>}
 
         <div className="tray-sec">
           <span className="kicker">Lately</span>
@@ -689,7 +690,7 @@ function Tray({ open, slug, waiting, entries }: { open: boolean; slug: string; w
           {entries.slice(0, 4).map((e) => (
             <li key={e.id}>
               <i className={`dot ${WHO[e.source].cls}`} />
-              <span>{e.title}</span>
+              <span>{plainWords(e.title)}</span>
               <em>{ago(e.createdAt)}</em>
             </li>
           ))}

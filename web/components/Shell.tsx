@@ -21,6 +21,7 @@ import { Guide } from './Guide';
 import { MapStage } from './map/MapStage';
 import { ProgressiveBlur } from './ProgressiveBlur';
 import { Icon, type IconName } from './Icon';
+import { plainWords } from '@/lib/plain';
 
 const TABS: { key: string; href: string; label: string; icon: IconName }[] = [
   { key: 'map', href: '', label: 'Map', icon: 'map' },
@@ -59,6 +60,17 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
     if (on && cur?.id !== on.id && cur?.status !== 'talking' && gus.get().panel !== 'room') deals.show(on);
   }, [dealList.data]);
 
+  // A link can open Gus with a question already asked: /a/<act>?ask=<words>.
+  useEffect(() => {
+    const u = new URL(location.href);
+    const q = u.searchParams.get('ask')?.trim();
+    if (!q) return;
+    u.searchParams.delete('ask');
+    history.replaceState(null, '', u);
+    gus.open('voice');
+    gus.ask(q.slice(0, 300));
+  }, []);
+
   // A link can open the deal room: /a/<act>?deal=<id> (from Fan Mail, a notification, a share).
   useEffect(() => {
     const id = new URLSearchParams(location.search).get('deal');
@@ -91,7 +103,7 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
             await api.post(book, { mandate: { [key]: a.value } });
             mutate(book).catch(() => {});
             haptic('commit');
-            const say = key === 'maxDeposit' ? `Deposit up to $${a.value}` : `At least ${a.value}% of the door`;
+            const say = key === 'maxDeposit' ? `Deposit up to $${a.value}` : `At least ${a.value}% of ticket sales`;
             gus.did(say, () => {
               api.post(book, { mandate: { [key]: was } }).then(() => mutate(book)).catch(() => {});
               haptic('tap');
@@ -195,7 +207,7 @@ function useDealActivity(d: Deal | null, waiting: Deal | null, paused: boolean) 
       progress: Math.min(1, talking.thread.length / 14),
       kicker: paused ? 'Call paused' : 'Gus is on the phone',
       head: talking.roomName,
-      line: !theirs ? `Gus opened at ${ours?.split ?? '…'}% of the door. Waiting on them.` : apart ? `${apart} ${apart === 1 ? 'point' : 'points'} apart on the door.` : 'They’re meeting in the middle.',
+      line: !theirs ? `Gus asked for ${ours?.split ?? '…'}% of ticket sales. Waiting on them.` : apart ? `${apart} ${apart === 1 ? 'point' : 'points'} apart on ticket sales.` : 'They’re meeting in the middle.',
       nums: [
         ...(ours ? [{ k: 'Gus asks', v: `${ours.split}% · $${ours.deposit}`, tone: 'hot' as const }] : []),
         ...(theirs ? [{ k: 'They offer', v: `${theirs.split}% · $${theirs.deposit}` }] : []),
@@ -217,14 +229,14 @@ function useDealActivity(d: Deal | null, waiting: Deal | null, paused: boolean) 
       tone: 'ask',
       lead: 'gus',
       title: 'Needs your OK',
-      trail: `${t.split}%`,
-      kicker: 'They agreed. Your call',
+      trail: new Date(`${t.date}T12:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      kicker: 'They said yes. Your call',
       head: ask.roomName,
       line: `${ask.cityName}, ${new Date(`${t.date}T12:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}.`,
       nums: [
         { k: 'Your cut', v: `${t.split}%`, tone: 'ok' },
-        { k: 'To hold it', v: `$${t.deposit}` },
-        ...(t.capacity ? [{ k: 'Room', v: `${t.capacity}` }] : []),
+        { k: 'Deposit', v: `$${t.deposit}` },
+        ...(t.capacity ? [{ k: 'Fits', v: `${t.capacity} people` }] : []),
       ],
       keys: [
         {
@@ -309,7 +321,7 @@ function UndoChip() {
   }, [g.undo]);
   return (
     <div className={`undo-chip ${g.undo ? 'on' : ''}`} aria-live="polite" inert={!g.undo}>
-      <span>{last?.words}</span>
+      <span>{plainWords(last?.words)}</span>
       <button onClick={() => gus.undo()}>Undo</button>
     </div>
   );
@@ -433,7 +445,7 @@ function IslandCard() {
               </div>
               {x.trail && <span className="isl-trail">{x.trail}</span>}
             </div>
-            <p className="isl-line">{x.line}</p>
+            <p className="isl-line">{plainWords(x.line)}</p>
             {x.nums && x.nums.length > 0 && (
               <dl className="isl-nums">
                 {x.nums.map((n) => (

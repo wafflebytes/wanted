@@ -44,7 +44,7 @@ export function settleFor(deal: Deal): Settle {
     price,
     split: t.split,
     counts: [
-      { id: 'room', label: 'The room’s door sheet', who: contact, n: roomPaid, sub: 'paid at the door and online' },
+      { id: 'room', label: 'The venue’s count', who: contact, n: roomPaid, sub: 'tickets sold at the door and online' },
       { id: 'scan', label: 'The ticket scanner', who: 'Scanner', n: scans, sub: 'tickets scanned in' },
       { id: 'list', label: 'Your guest list', who: 'You', n: guests, sub: 'names you put on the list' },
     ],
@@ -53,7 +53,7 @@ export function settleFor(deal: Deal): Settle {
     yours: cut(paid),
     roomSays: cut(roomPaid),
     missing,
-    late: '10:05 to 10:40',
+    late: 'between 10:05 and 10:40',
     note: `Hi ${contact}, thanks for tonight! The scanner logged ${scans} tickets and ${guests} were my guest list, so ${paid} paid. The sheet says ${roomPaid}. Looks like the ${missing} who came in between 10:05 and 10:40 didn’t get added. Scan log attached. Could you take a look?`,
     reply: `Ah, you’re right. The late door never got added. Fixed it, sending $${cut(paid).toLocaleString()} tonight.`,
   };

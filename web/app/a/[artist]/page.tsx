@@ -72,22 +72,22 @@ function Home() {
     const opened = art.data?.opened ?? [];
     const waiting = dl.data?.deals.find((d) => d.status === 'waiting');
     if (waiting?.terms)
-      return { kicker: 'Needs your OK', title: `${waiting.roomName} will hold ${new Date(`${waiting.terms.date}T12:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`, line: `$${waiting.terms.deposit} deposit, ${waiting.terms.split}% of the door is yours.`, action: 'Review', art: 'coin', go: () => (deals.show(waiting), gus.open('room')), progress: null };
+      return { kicker: 'Needs your OK', title: `${waiting.roomName} wants you ${new Date(`${waiting.terms.date}T12:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`, line: `You keep ${waiting.terms.split}% of ticket sales. A $${waiting.terms.deposit} deposit locks in the date.`, action: 'Review', art: 'coin', go: () => (deals.show(waiting), gus.open('room')), progress: null };
     const held = new Set((dl.data?.deals ?? []).filter((d) => d.status === 'held').map((d) => d.city));
     const proven = opened.find((o) => o.proof?.crossed && !held.has(o.city));
-    if (proven) return { kicker: 'Your next move', title: `${proven.name} proved it.`, line: `${proven.proof!.signatures} people signed. I can ask three rooms to hold a date.`, action: 'Ask rooms', art: 'room', go: () => (gus.flash(`Asking rooms in ${proven.name}`, 2200), deals.ask(slug, proven.city).then(() => gus.open('room')).catch(() => {})), progress: null };
+    if (proven) return { kicker: 'Your next move', title: `${proven.name} wants you.`, line: `${proven.proof!.signatures} fans signed. I can ask three venues there for a date.`, action: 'Ask venues', art: 'room', go: () => (gus.flash(`Asking venues in ${proven.name}`, 2200), deals.ask(slug, proven.city).then(() => gus.open('room')).catch(() => {})), progress: null };
     // A held date is the next thing to look after: Gus is advancing it with the room.
     const next = (dl.data?.deals ?? []).filter((d) => d.status === 'held' && d.terms && d.terms.date >= new Date().toISOString().slice(0, 10)).sort((a, b) => a.terms!.date.localeCompare(b.terms!.date))[0];
     if (next?.terms) {
       const when = new Date(`${next.terms.date}T12:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      return { kicker: 'Your next show', title: `${next.roomName}, ${when}.`, line: `Gus is advancing it with the room: load-in, soundcheck, where you eat and sleep.`, action: 'Open show day', art: 'room', go: () => router.push(`/a/${slug}/show/${next.id}`), progress: null };
+      return { kicker: 'Your next show', title: `${next.roomName}, ${when}.`, line: `Gus is sorting the details with the venue: when to arrive, soundcheck, where you eat and sleep.`, action: 'Open show day', art: 'room', go: () => router.push(`/a/${slug}/show/${next.id}`), progress: null };
     }
     const warm = [...opened].filter((o) => !o.proof?.crossed).sort((a, b) => (b.proof?.signatures ?? 0) - (a.proof?.signatures ?? 0))[0];
     if (warm && (warm.proof?.signatures ?? 0) > 0) {
       const n = warm.proof!.signatures;
       const twin = ranked.some((m) => m.name === warm.name && m.id !== warm.city);
       const name = twin ? `${warm.name}, ${warm.city.slice(-2).toUpperCase()}` : warm.name;
-      return { kicker: 'Your next move', title: `${name} is warming up.`, line: `${Math.max(0, 50 - n)} more and I can ask rooms to hold a date. Share the poster where they hang out.`, action: 'Share the poster', art: 'poster', go: () => router.push(`/a/${slug}/posters?city=${warm.city}`), progress: Math.min(1, n / 50), count: { n, of: 50 } };
+      return { kicker: 'Your next move', title: `${name} is warming up.`, line: `${Math.max(0, 50 - n)} more signatures and I ask venues there for a date. Share the poster where your fans hang out.`, action: 'Share the poster', art: 'poster', go: () => router.push(`/a/${slug}/posters?city=${warm.city}`), progress: Math.min(1, n / 50), count: { n, of: 50 } };
     }
     const top = ranked[0];
     if (top) {

@@ -73,7 +73,7 @@ function LegView({ leg, plan, slug }: { leg: Leg; plan: TourPlan; slug: string }
   const say =
     best.id === 'way' && via
       ? `${leg.gap} nights without a show and ${hrsLabel(leg.hrs)} of road. ${via.name} is on the way and people there love your sound. Play it and the drive pays for itself.`
-      : `${hrsLabel(leg.hrs)} of road. Split it over two days and you load in rested.`;
+      : `${hrsLabel(leg.hrs)} of road. Split it over two days and you show up rested.`;
 
   const pick = (id: Lane['id']) => {
     if (id === at) return;
@@ -201,10 +201,10 @@ function LegView({ leg, plan, slug }: { leg: Leg; plan: TourPlan; slug: string }
               See what the rooms say
             </button>
           ) : (
-            <HoldKey label={`Hold to ask rooms in ${via.name}`} onDone={go} />
+            <HoldKey label={`Hold to ask venues in ${via.name}`} onDone={go} />
           )
         ) : lane.ok ? (
-          <button className="btn wide" onClick={() => (gus.flash(lane.id === 'drive' ? 'Gus will find a room halfway' : 'Gus will hold the seats', 2200), haptic('success'))}>
+          <button className="btn wide" onClick={() => (gus.flash(lane.id === 'drive' ? 'Gus will find a motel halfway' : 'Gus will save the seats', 2200), haptic('success'))}>
             {lane.id === 'drive' ? 'Plan the drive' : 'Hold three seats'}
           </button>
         ) : (
@@ -212,7 +212,7 @@ function LegView({ leg, plan, slug }: { leg: Leg; plan: TourPlan; slug: string }
             Go back to Gus’s pick
           </button>
         )}
-        <span className="rd-fine">Fares, gas and the door are Gus’s guesses until he checks.</span>
+        <span className="rd-fine">Fares, gas and ticket sales are Gus’s guesses until he checks.</span>
       </div>
     </main>
   );

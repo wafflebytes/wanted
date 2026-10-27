@@ -21,7 +21,7 @@ const origin = () => process.env.WANTED_PUBLIC_ORIGIN ?? 'https://trywanted.verc
 const UI_EXT = 'io.modelcontextprotocol/ui';
 const UI_MIME = 'text/html;profile=mcp-app';
 // Versioned: Claude keeps a card's HTML by its address, so a change needs a new one.
-const VIEW_URI = 'ui://wanted/gus-card-v2.html';
+const VIEW_URI = 'ui://wanted/gus-card-v3.html';
 const icons = () => [{ src: `${origin()}/icon.png`, mimeType: 'image/png', sizes: ['512x512'] }];
 
 type Args = Record<string, unknown>;
@@ -149,9 +149,9 @@ const TOOLS: Tool[] = [
         withinLimits: d.withinLimits,
         lastLetter: d.thread.filter((l) => l.kind === 'letter').at(-1)?.text ?? null,
       }));
-      const say = { talking: 'still talking', waiting: 'agreed, waiting on your yes in the app', held: 'held, deposit paid (test money)', declined: 'you said no' } as const;
+      const say = { talking: 'still talking', waiting: 'agreed, waiting on your yes in the app', held: 'booked, deposit paid (test money)', declined: 'you said no' } as const;
       const text = rows.length
-        ? rows.map((r) => `${r.room}, ${r.city}: ${say[r.status as keyof typeof say] ?? r.status}${r.split != null ? `. ${r.split}% of the door, $${r.deposit} to hold${r.date ? `, ${r.date}` : ''}` : ''}.`).join('\n')
+        ? rows.map((r) => `${r.room}, ${r.city}: ${say[r.status as keyof typeof say] ?? r.status}${r.split != null ? `. ${r.split}% of ticket sales, $${r.deposit} deposit${r.date ? `, ${r.date}` : ''}` : ''}.`).join('\n')
         : 'No dates in talks right now.';
       return { text: `${text}\nApprove or pass in the app: ${origin()}/a/${artist.slug}`, data: { view: 'deals', act: artist.slug, actName: artist.name, deals: rows } };
     },

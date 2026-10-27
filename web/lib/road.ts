@@ -104,14 +104,14 @@ export function legFor(plan: TourPlan, i: number, map: MapData | null): Leg | nu
   lanes.push({
     id: 'drive',
     name: 'Drive it',
-    line: split === 2 ? `Two days of ${hrsLabel(hrs / 2)}, a room halfway` : `One day, ${hrsLabel(hrs)}`,
+    line: split === 2 ? `Two days of ${hrsLabel(hrs / 2)}, a motel halfway` : `One day, ${hrsLabel(hrs)}`,
     net: -driveCost,
     nights: dates.map((d, k) =>
       k >= dates.length - split
-        ? { date: d, kind: 'drive', title: `Drive ${hrsLabel(hrs / split)}`, sub: k === dates.length - 1 ? `into ${to.city}` : 'room halfway' }
+        ? { date: d, kind: 'drive', title: `Drive ${hrsLabel(hrs / split)}`, sub: k === dates.length - 1 ? `into ${to.city}` : 'motel halfway' }
         : off(d, from.city),
     ),
-    arrive: `In ${to.city} the night before. You load in rested.`,
+    arrive: `In ${to.city} the night before. You show up rested.`,
     ok: true,
   });
 
@@ -131,7 +131,7 @@ export function legFor(plan: TourPlan, i: number, map: MapData | null): Leg | nu
       net: door - wayGas - (sameDay ? 0 : ROOM) - (two ? ROOM : 0),
       nights: dates.map((d, k) =>
         two && k === showAt - 2
-          ? { date: d, kind: 'drive', title: `Drive ${hrsLabel(via.hrs1 / 2)}`, sub: 'room halfway' }
+          ? { date: d, kind: 'drive', title: `Drive ${hrsLabel(via.hrs1 / 2)}`, sub: 'motel halfway' }
           : k === showAt - 1
           ? { date: d, kind: 'drive', title: `Drive ${hrsLabel(two ? via.hrs1 / 2 : via.hrs1)}`, sub: `to ${via.name}` }
           : k === showAt
@@ -140,7 +140,7 @@ export function legFor(plan: TourPlan, i: number, map: MapData | null): Leg | nu
               ? { date: d, kind: 'drive', title: `Drive ${hrsLabel(via.hrs2)}`, sub: `into ${to.city}` }
               : off(d, from.city),
       ),
-      arrive: sameDay ? `Leave ${via.name} at 9, in ${to.city} by ${hour(9 + via.hrs2)}, before the 4:30 load-in.` : `In ${to.city} the night before, after ${hrsLabel(via.hrs2)} from ${via.name}.`,
+      arrive: sameDay ? `Leave ${via.name} at 9, in ${to.city} by ${hour(9 + via.hrs2)}, before you load in at 4:30.` : `In ${to.city} the night before, after ${hrsLabel(via.hrs2)} from ${via.name}.`,
       ok: true,
     });
   }

@@ -18,6 +18,7 @@ import { Icon, type IconName } from '@web/components/Icon';
 import { haptic } from '@web/lib/haptics';
 import { useApi } from '@web/lib/hooks';
 import '../../../logbook.css';
+import { plainWords } from '@/lib/plain';
 
 type Who = 'you' | 'gus' | 'room' | 'fans';
 const WHO: Record<LogEntry['source'], Who> = { artist: 'you', gus: 'gus', qloo: 'gus', room: 'room', fans: 'fans' };
@@ -34,7 +35,7 @@ const dayOf = (t: number) => {
 };
 const hour = (h: number) => (h === 0 ? 'midnight' : h < 12 ? `${h} am` : h === 12 ? 'noon' : `${h - 12} pm`);
 /** Older lines were written before Gus stopped saying "Bounty" and "demo". */
-const plain = (s: string) => s.replace(/\s*\(Demo data\.?\)/gi, '').replace(/\bBounty\b/g, 'draw');
+const plain = (s: string) => plainWords(s).replace(/\s*\(Demo data\.?\)/gi, '').replace(/\bBounty\b/g, 'draw');
 
 export default function Logbook() {
   const slug = useParams<{ artist: string }>().artist;
@@ -150,8 +151,8 @@ export default function Logbook() {
           <p>
             {m.autoAsk ? (
               <>
-                When a city fills its poster, he asks up to <b>{m.roomsAtOnce}</b> {m.roomsAtOnce === 1 ? 'venue' : 'venues'} for a date. He won’t take less than <b>{m.minSplit}%</b> of the door or
-                agree to more than <b>${m.maxDeposit}</b> to hold it.
+                When 50 fans sign a city’s poster, he asks up to <b>{m.roomsAtOnce}</b> {m.roomsAtOnce === 1 ? 'venue' : 'venues'} for a date. He won’t take less than <b>{m.minSplit}%</b> of ticket sales or
+                put down a deposit of more than <b>${m.maxDeposit}</b>.
               </>
             ) : (
               <>He doesn’t talk to venues on his own. He tells you when a city fills its poster and waits.</>
@@ -188,8 +189,8 @@ function Shelf({ opened, deals }: { opened: ArtistState['opened']; deals: Deal[]
   const badges: Badge[] = [
     { art: 'poster', title: 'First poster', won: first ? `${first.name}, ${md(first.openedAt)}` : null, todo: 'Put a poster up' },
     { art: 'fifty', title: 'Fifty signed', won: fifty ? fifty.name : null, todo: 'Get 50 in one city' },
-    { art: 'booked', title: 'First date held', won: held ? `${held.roomName}, ${held.cityName}` : null, todo: 'Say yes to a room' },
-    { art: 'sold-out', title: 'Sold out', won: null, todo: 'Fill a room' },
+    { art: 'booked', title: 'First show booked', won: held ? `${held.roomName}, ${held.cityName}` : null, todo: 'Say yes to a venue’s offer' },
+    { art: 'sold-out', title: 'Sold out', won: null, todo: 'Sell out a show' },
     { art: 'back-again', title: 'Back again', won: back ? back.name : null, todo: 'Get asked back' },
   ];
   const won = badges.filter((b) => b.won);

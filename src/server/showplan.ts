@@ -80,7 +80,7 @@ export async function makeShowPlan(artist: ArtistRow, deal: Deal): Promise<ShowP
   steps.push({
     id: 'first-dibs',
     title: 'Prepared first-dibs announcement',
-    detail: `${deal.roomName}, ${nice(deal.terms.date)}. First-dibs copy is ready for the ${signers} signers. No ticket link or delivery channel is connected.`,
+    detail: `${deal.roomName}, ${nice(deal.terms.date)}. A first-dibs note is ready for the ${signers} fans who signed. It goes out when tickets are on sale.`,
     why: 'They asked for this show. They should hear first.',
     status: 'prepared',
     items: [],
@@ -91,7 +91,7 @@ export async function makeShowPlan(artist: ArtistRow, deal: Deal): Promise<ShowP
     steps.push({
       id: 'posters',
       title: `Picked ${spots.length} spots for posters`,
-      detail: `Cultural spot suggestions in ${listOf(hoods)}. Permission to place posters is unverified.${fromThere ? ` ${fromThere} of your signers live there.` : ''}`,
+      detail: `Spots where your fans hang out in ${listOf(hoods)}. Ask before you put posters up.${fromThere ? ` ${fromThere} of your signers live there.` : ''}`,
       why: `Qloo suggests culturally compatible places in ${cityName}. This does not verify local footfall or poster permission.`,
       status: 'prepared',
       items: spots,
@@ -127,7 +127,7 @@ export async function makeShowPlan(artist: ArtistRow, deal: Deal): Promise<ShowP
       id: 'ads',
       title: `Spend $${AD_BUDGET} on local ads?`,
       detail: `A sandbox budget for ${listOf(hoods)}. No ads will run. Cultural and demographic skews are not verified buyable targeting audiences.`,
-      why: 'A campaign hypothesis only. Placement, targeting options and permission remain unverified.',
+      why: 'An idea to try. Gus hasn’t set it up or checked the rules yet.',
       status: 'needs_ok',
       items: [],
       draft: null,
@@ -142,7 +142,7 @@ export async function makeShowPlan(artist: ArtistRow, deal: Deal): Promise<ShowP
   const asks = steps.filter((s) => s.status === 'needs_ok').length;
   await postInbox(artist.id, {
     kind: 'info',
-    body: `Simulated hold in ${cityName}. I prepared a promotion plan, not live outreach. ${signers ? `First-dibs copy for ${signers} signers is ready, ` : ''}${spots.length ? `${signers ? 'and ' : ''}picked ${spots.length} spots for posters. ` : ''}${asks ? `${asks === 1 ? 'One thing needs' : `${asks} things need`} your OK.` : ''}${artist.isDemo ? ' (Demo data.)' : ''}`,
+    body: `Test booking in ${cityName}. I made a plan to spread the word; nothing has gone out yet. ${signers ? `A first-dibs note for the ${signers} fans who signed is ready, ` : ''}${spots.length ? `${signers ? 'and ' : ''}picked ${spots.length} spots for posters. ` : ''}${asks ? `${asks === 1 ? 'One thing needs' : `${asks} things need`} your OK.` : ''}${artist.isDemo ? ' (Demo data.)' : ''}`,
     action: { label: 'See the plan', kind: 'show', city: deal.city, dealId: deal.id },
     evidence: { city: deal.city, dealId: deal.id, spots: spots.length, signers },
     createdAt: Date.now(),

@@ -13,30 +13,32 @@ export function posterLink(slug: string, city: string) {
   return `${env.publicOrigin}/w/${slug}/${city}`;
 }
 
-export async function posterPng(slug: string, city: string, format: 'story' | 'wide' | 'poster') {
+/** Everything a poster shows. Two calls with the same input draw the same poster. */
+export async function posterInput(slug: string, city: string) {
   const artist = await getArtist(slug);
   const metro = metroById(city);
   const opened = artist ? (await openedCities(artist.id)).find((c) => c.city === city) : null;
   if (!artist || !metro || !opened) throw new HttpError(404, 'No such poster.');
   const count = await cityCount(artist.id, city);
-  return renderPoster(
-    {
-      artistName: artist.name,
-      cityId: city,
-      cityName: metro.name,
-      state: metro.state,
-      count,
-      wear: wearLevel(count),
-      topNeighborhoods: opened.topNeighborhoods,
-      signatures: await recentSignatures(artist.id, city, 28),
-      played: !!opened.playedAt,
-      portrait: artist.portrait,
-      imageUrl: artist.imageUrl,
-      link: posterLink(artist.slug, city),
-      isDemo: artist.isDemo,
-    },
-    format,
-  );
+  return {
+    artistName: artist.name,
+    cityId: city,
+    cityName: metro.name,
+    state: metro.state,
+    count,
+    wear: wearLevel(count),
+    topNeighborhoods: opened.topNeighborhoods,
+    signatures: await recentSignatures(artist.id, city, 28),
+    played: !!opened.playedAt,
+    portrait: artist.portrait,
+    imageUrl: artist.imageUrl,
+    link: posterLink(artist.slug, city),
+    isDemo: artist.isDemo,
+  };
+}
+
+export async function posterPng(slug: string, city: string, format: 'story' | 'wide' | 'poster') {
+  return renderPoster(await posterInput(slug, city), format);
 }
 
 export async function cardPng(slug: string, city: string, n: number, format: 'story' | 'wide') {

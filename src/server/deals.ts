@@ -31,6 +31,7 @@ import { makeShowPlan } from './showplan';
 import { postInbox } from './inbox';
 
 import { limitsFor } from './deal-limits';
+import { plainWords } from '../lib/plain';
 export { DEFAULT_LIMITS, limitsFor, setLimits } from './deal-limits';
 const HOLD_MS = 48 * 60 * 60 * 1000;
 
@@ -120,8 +121,8 @@ type Talk = {
 };
 type Stored = Deal & { talk?: Talk };
 
-const tool = (name: string, text: string): DealLetter => ({ from: 'gus', kind: 'tool', tool: name, text, terms: null });
-const letter = (from: DealLetter['from'], text: string, terms: DealLetter['terms']): DealLetter => ({ from, kind: 'letter', text, terms });
+const tool = (name: string, text: string): DealLetter => ({ from: 'gus', kind: 'tool', tool: name, text: plainWords(text), terms: null });
+const letter = (from: DealLetter['from'], text: string, terms: DealLetter['terms']): DealLetter => ({ from, kind: 'letter', text: plainWords(text), terms });
 const pub = ({ talk, ...d }: Stored): Deal => ({ ...d, limits: d.limits ?? talk?.limits, review: dealReview(d) });
 
 /** Gus looks things up, then sends his opening letter. The room answers on the next turn. */
@@ -151,8 +152,8 @@ export async function startDeal(artist: ArtistRow, metroId: string, roomId: stri
 
   const thread: DealLetter[] = [
     tool('read_signatures', signatures ? `${signatures} signed in ${metro.name}${hoods.length ? `, most from ${hoods.join(' and ')}` : ''}` : `No signatures in ${metro.name} yet`),
-    tool('pick_room', `${room.name}${room.neighborhood ? `, ${room.neighborhood}` : ''}. Simulation capacity ${house.capacity}; actual capacity unverified`),
-    tool('check_calendar', date === asked ? `${nice(date)}: performance availability unverified; metadata is not a calendar` : `Closed ${DAY_NAME[dayOf(asked)]}s. ${nice(date)} instead`),
+    tool('pick_room', `${room.name}${room.neighborhood ? `, ${room.neighborhood}` : ''}. Fits about ${house.capacity}, a guess until they confirm`),
+    tool('check_calendar', date === asked ? `${nice(date)} looks open. They’ll confirm` : `Closed ${DAY_NAME[dayOf(asked)]}s. ${nice(date)} instead`),
     letter('gus', `Hi, Gus here. I book for ${artist.name}. ${crowd} Could you hold ${nice(asked)}? We'd ask ${gus.split}% of the door and a $${gus.deposit} deposit.`, gus),
   ];
   const now = Date.now();
@@ -264,8 +265,8 @@ async function finish(artist: ArtistRow, deal: Stored, t: Talk): Promise<Deal> {
   await postInbox(artist.id, {
     kind: 'deal',
     body: withinLimits
-      ? `${deal.roomName} will hold ${nice(t.date)} for you. $${terms.deposit} to hold it, and you keep ${terms.split}% of the door. Want me to pay the deposit?`
-      : `${deal.roomName} will hold ${nice(t.date)}, but they want ${terms.deposit > t.limits.maxDeposit ? `$${terms.deposit} up front, over your $${t.limits.maxDeposit} limit` : `${100 - terms.split}% of the door`}. Your call.`,
+      ? `${deal.roomName} can book you for ${nice(t.date)}. You keep ${terms.split}% of ticket sales, and a $${terms.deposit} deposit locks it in. Want me to pay the deposit?`
+      : `${deal.roomName} can book you for ${nice(t.date)}, but they want ${terms.deposit > t.limits.maxDeposit ? `$${terms.deposit} up front, over your $${t.limits.maxDeposit} limit` : `${100 - terms.split}% of ticket sales`}. Your call.`,
     action: { label: 'See the deal', kind: 'deal', city: deal.city, dealId: deal.id },
     evidence: { city: deal.city, dealId: deal.id },
     createdAt: Date.now(),
@@ -351,7 +352,7 @@ export async function decideDeal(artist: ArtistRow, dealId: string, yes: boolean
     next.updatedAt = Date.now();
     await tx.execute({ sql: 'update deals set body=?,updated_at=? where artist_id=? and id=?', args: [JSON.stringify(next), next.updatedAt, artist.id, dealId] });
     await tx.execute({ sql: "update gus_inbox set read=1 where artist_id=? and kind='deal' and evidence like ?", args: [artist.id, `%${dealId}%`] });
-    await tx.execute({ sql: "insert into gus_log(id,artist_id,kind,city,title,detail,source,level,ref,created_at) values(?,?,'payment',?,?,?,'artist',3,?,?) on conflict(id) do nothing", args: [`decision-log:${claimed.decisionId}`, artist.id, deal.city, paid ? `Recorded exact $${paid.amount} test deposit for ${deal.roomName}` : `Passed on ${deal.roomName}`, 'Simulated offer only. No venue transfer, agreement or settlement.', JSON.stringify({ dealId }), next.updatedAt] });
+    await tx.execute({ sql: "insert into gus_log(id,artist_id,kind,city,title,detail,source,level,ref,created_at) values(?,?,'payment',?,?,?,'artist',3,?,?) on conflict(id) do nothing", args: [`decision-log:${claimed.decisionId}`, artist.id, deal.city, paid ? `Paid the $${paid.amount} test deposit to ${deal.roomName}` : `Passed on ${deal.roomName}`, 'Test mode, so no real money moved.', JSON.stringify({ dealId }), next.updatedAt] });
     if (paid) await tx.execute({ sql: "insert into deal_followups(id,artist_id,deal_id,scope_hash,state,updated_at) values(?,?,?,?,'queued',?) on conflict(id) do nothing", args: [`followup:${claimed.decisionId}`, artist.id, dealId, review!.hash, next.updatedAt] });
     return next;
   });

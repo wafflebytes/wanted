@@ -24,7 +24,7 @@ import '../../../../showday.css';
 
 const nice = (iso: string) => new Date(`${iso}T12:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 const daysTo = (iso: string) => Math.max(0, Math.round((new Date(`${iso}T12:00`).getTime() - Date.now()) / 86_400_000));
-const WHO_LABEL: Record<Row['who'], string> = { room: 'The room', gus: 'Gus', road: 'Road', fans: 'Fans' };
+const WHO_LABEL: Record<Row['who'], string> = { room: 'The venue', gus: 'Gus', road: 'Road', fans: 'Fans' };
 
 export default function ShowDay() {
   const { artist: slug, deal: dealId } = useParams<{ artist: string; deal: string }>();
@@ -125,7 +125,7 @@ function Sheet0({ day, setDay, slug, deal }: { day: Day; setDay: (d: Day) => voi
         <div className="sd-sec-h">
           <h2>The day</h2>
           <span className="sd-legend">
-            <i className="w-room" /> the room set it <i className="w-gus" /> Gus picked
+            <i className="w-room" /> the venue set it <i className="w-gus" /> Gus picked
           </span>
         </div>
         <ol className="sd-day">
@@ -143,14 +143,14 @@ function Sheet0({ day, setDay, slug, deal }: { day: Day; setDay: (d: Day) => voi
                     {moved.has(r.id) && <span className="sd-tag">Moved</span>}
                   </b>
                   <span>
-                    {r.state === 'asked' ? 'Asked, waiting on the room' : r.id === 'dinner' ? `${meal.walk} min walk · ${window} min to eat` : r.sub}
+                    {r.state === 'asked' ? 'Asked, waiting on the venue' : r.id === 'dinner' ? `${meal.walk} min walk · ${window} min to eat` : r.sub}
                   </span>
                 </span>
               </button>
               {open === r.id && r.id === 'dinner' && <Dinner day={day} window={window} />}
               {open === r.id && r.id === 'settle' && (
                 <div className="sd-why">
-                  Gus checks the room’s number against the ticket scanner and your guest list before you shake on it.
+                  Gus checks the venue’s count against the ticket scanner and your guest list, so you’re paid for everyone who came.
                   <button className="sd-more sd-go" onClick={() => router.push(`/a/${slug}/show/${deal.id}/settle`)}>
                     See it on a night
                   </button>
@@ -158,7 +158,7 @@ function Sheet0({ day, setDay, slug, deal }: { day: Day; setDay: (d: Day) => voi
               )}
               {open === r.id && r.id !== 'dinner' && r.id !== 'settle' && (
                 <p className="sd-why">
-                  {r.src ? `${WHO_LABEL[r.who] === 'The room' ? day.room : WHO_LABEL[r.who]} said so · ${r.src}` : r.who === 'road' ? `Leaves time for a stop and the border-free route. ${day.road.drive} door to door.` : r.id === 'hang' ? 'Your crowd here already goes there. Gus will invite the signers.' : 'Gus will do this one for you.'}
+                  {r.src ? `${WHO_LABEL[r.who] === 'The venue' ? day.room : WHO_LABEL[r.who]} said so · ${r.src}` : r.who === 'road' ? `Leaves time for a stop and the border-free route. ${day.road.drive} door to door.` : r.id === 'hang' ? 'Your crowd here already goes there. Gus will invite the signers.' : 'Gus will do this one for you.'}
                 </p>
               )}
             </li>
@@ -217,7 +217,7 @@ function Advance({ day }: { day: Day }) {
   return (
     <section className="sd-sec">
       <div className="sd-sec-h">
-        <h2>The advance</h2>
+        <h2>Sorted with the venue</h2>
         <button className="sd-more" onClick={() => setOpen(!open)}>
           {open ? 'Less' : 'Read the emails'}
         </button>
@@ -294,11 +294,11 @@ function Opener({ day }: { day: Day }) {
     <section className="sd-sec">
       <div className="sd-sec-h">
         <h2>Who opens</h2>
-        <span className="ink-3 b-13">The room asked for ideas</span>
+        <span className="ink-3 b-13">The venue asked for ideas</span>
       </div>
       <div className="sd-ops">
         {day.openers.map((o) => (
-          <button key={o.name} className={`sd-op ${asked === o.name ? 'on' : ''}`} onClick={() => (setAsked(o.name), haptic('tick'), gus.flash(`Suggesting ${o.name} to the room`, 2000))}>
+          <button key={o.name} className={`sd-op ${asked === o.name ? 'on' : ''}`} onClick={() => (setAsked(o.name), haptic('tick'), gus.flash(`Suggesting ${o.name} to the venue`, 2000))}>
             <Icon name="music" size={20} />
             <span>
               <b>{o.name}</b>
@@ -348,7 +348,7 @@ function Money({ day }: { day: Day }) {
           style={{ ['--p' as string]: `${((n - 20) / (day.cap - 20)) * 100}%` }}
         />
         <p className="sd-even">
-          You keep {day.split}% of the door, ${take.toLocaleString()}. The day costs ${cost} ({day.costs.map((c) => c.label.toLowerCase()).join(', ')}). <b>You’re even at {even} people.</b>
+          You keep {day.split}% of ticket sales, ${take.toLocaleString()}. The day costs ${cost} ({day.costs.map((c) => c.label.toLowerCase()).join(', ')}). <b>You’re even at {even} people.</b>
         </p>
       </div>
     </section>

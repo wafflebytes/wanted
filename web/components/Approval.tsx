@@ -26,7 +26,7 @@ export function Approval({ deal, busy, compact, slim }: { deal: Deal; busy?: boo
     <div className={`approve ${voided ? 'is-void' : ''} ${compact ? 'compact' : ''} ${slim ? 'slim' : ''}`}>
       {slim ? (
         <p className="approve-line">
-          Pay <b>{money(t.deposit)}</b> to hold {fmtDate(t.date)}. Then the date is yours{left !== null && left < 6 * 3600_000 ? `; the hold lapses in ${Math.max(1, Math.round(left / 3600_000))} h` : ''}.
+          Pay the <b>{money(t.deposit)}</b> deposit to lock in {fmtDate(t.date)}. Then the date is yours{left !== null && left < 6 * 3600_000 ? `; the offer ends in ${Math.max(1, Math.round(left / 3600_000))} h` : ''}.
         </p>
       ) : (
       <>
@@ -35,7 +35,7 @@ export function Approval({ deal, busy, compact, slim }: { deal: Deal; busy?: boo
         <div>
           <div className="kicker">Needs your OK</div>
           <div className="approve-amt num">{money(t.deposit)}</div>
-          <div className="approve-to">to hold the date at {deal.roomName}</div>
+          <div className="approve-to">deposit to lock in the date at {deal.roomName}</div>
         </div>
       </div>
       <dl className="approve-terms">
@@ -49,17 +49,17 @@ export function Approval({ deal, busy, compact, slim }: { deal: Deal; busy?: boo
         </div>
         <div>
           <dt>Your cut</dt>
-          <dd>{t.split}% of the door</dd>
+          <dd>{t.split}% of ticket sales</dd>
         </div>
         {t.capacity ? (
           <div>
-            <dt>Room</dt>
-            <dd>Fits about {t.capacity}</dd>
+            <dt>Venue size</dt>
+            <dd>About {t.capacity} people</dd>
           </div>
         ) : null}
       </dl>
       <p className="approve-next">
-        Then the date is yours, and everyone who signed in {deal.cityName} hears first.{left !== null && left < 6 * 3600_000 ? ` The hold lapses in ${Math.max(1, Math.round(left / 3600_000))} h.` : ''}
+        Then the date is yours, and everyone who signed in {deal.cityName} hears first.{left !== null && left < 6 * 3600_000 ? ` The offer ends in ${Math.max(1, Math.round(left / 3600_000))} h.` : ''}
       </p>
       </>
       )}

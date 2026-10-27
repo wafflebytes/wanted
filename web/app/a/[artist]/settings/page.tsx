@@ -168,7 +168,7 @@ export default function Settings() {
               <li className="st-row">
                 <span className="st-t">
                   <b>Talk to venues for you</b>
-                  <em>When a city fills its poster, he asks a few venues and brings you the best offer.</em>
+                  <em>When 50 fans sign a city’s poster, he asks a few venues and brings you the best offer.</em>
                 </span>
                 <Switch on={m.autoAsk} label="Talk to venues for you" onChange={(on) => change({ autoAsk: on })} />
               </li>
@@ -187,10 +187,10 @@ export default function Settings() {
                 </li>
               )}
               <li className={`st-row col ${hl === 'maxDeposit' ? 'st-hl' : ''}`}>
-                <Slide label="Biggest deposit" hint="He won’t agree to put down more to hold a date." value={m.maxDeposit} min={0} max={1000} step={25} show={(v) => (v ? `$${v}` : 'None')} onChange={(v) => change({ maxDeposit: v })} />
+                <Slide label="Biggest deposit" hint="The most he’ll put down to book a date." value={m.maxDeposit} min={0} max={1000} step={25} show={(v) => (v ? `$${v}` : 'None')} onChange={(v) => change({ maxDeposit: v })} />
               </li>
               <li className={`st-row col ${hl === 'minSplit' ? 'st-hl' : ''}`}>
-                <Slide label="Your cut of the door" hint="He won’t take a deal that leaves you less." value={m.minSplit} min={50} max={95} step={5} show={(v) => `${v}%`} onChange={(v) => change({ minSplit: v })} />
+                <Slide label="Your smallest cut of ticket sales" hint="He won’t take a deal that leaves you less." value={m.minSplit} min={50} max={95} step={5} show={(v) => `${v}%`} onChange={(v) => change({ minSplit: v })} />
               </li>
               <li className="st-row">
                 <span className="st-t">
@@ -281,7 +281,7 @@ function Connector() {
         <h2>Gus in Claude</h2>
       </div>
       <div className="st-group st-mcp">
-        <p>Ask Gus from Claude or ChatGPT: where you’re wanted, a city’s rooms, your deals. He can start asking rooms too. Paying always comes back here for your yes.</p>
+        <p>Ask Gus from Claude or ChatGPT: where you’re wanted, a city’s venues, your deals. He can start asking venues too. Paying always comes back here for your yes.</p>
         <button
           className="st-mcp-url"
           onClick={() => {

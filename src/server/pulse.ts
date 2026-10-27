@@ -86,6 +86,17 @@ function kindOf(p: Omit<ChatterPost, 'kind'>): ChatterPost['kind'] {
   return 'talk';
 }
 
+// Fan Mail is on screen in front of the act (and judges): no swearing, slurs or culture-war
+// takes, nothing that isn't in English, and no ranked lists that only name-drop the act.
+const ROUGH = /\b(fuck\w*|shit\w*|cunt|bitch\w*|dick|cock|pussy|buceta|porra|caralho|puta|merda|nsfw|porn\w*|nazi\w*|racis\w*|appropriation|slur|kill\w*|rape\w*|suicid\w*|drugs?|cocaine)\b/i;
+const ENGLISH = /\b(the|and|to|of|is|it|i|you|my|this|that|in|for|with|was|so|just|love|song|album)\b/gi;
+function decent(p: Omit<ChatterPost, 'kind'>) {
+  if (ROUGH.test(p.text) || ROUGH.test(p.author) || ROUGH.test(p.handle)) return false;
+  if ((p.text.match(ENGLISH) ?? []).length < 3) return false;
+  const listy = p.text.split('\n').filter((l) => /^\s*(\d+[.)]|#\w)/.test(l)).length;
+  return listy < 3;
+}
+
 const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 /** Who to listen for: the act itself when it has a real name, else the acts it sounds like. */
@@ -98,7 +109,7 @@ export function listenFor(artist: ArtistRow): string[] {
 
 export async function chatterFor(artist: ArtistRow): Promise<Pulse['chatter']> {
   const about = listenFor(artist);
-  const key = `chatter:v2:${about.join('|')}`;
+  const key = `chatter:v3:${about.join('|')}`;
   const hit = await kvGet<Pulse['chatter']>(key);
   if (hit && Date.now() - hit.fetchedAt < 15 * 60_000) return hit;
   const results = await Promise.allSettled(about.flatMap((n) => [blueskySearch(`"${n}"`), lemmySearch(n)]));
@@ -106,7 +117,7 @@ export async function chatterFor(artist: ArtistRow): Promise<Pulse['chatter']> {
   const posts = results
     .flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
     // Keep posts that actually name the act, have words in them, and aren't link spam.
-    .filter((p) => p.text.length > 24 && fold(p.text).includes(fold(p.about)) && !seen.has(p.id) && (seen.add(p.id), true))
+    .filter((p) => p.text.length > 24 && fold(p.text).includes(fold(p.about)) && decent(p) && !seen.has(p.id) && (seen.add(p.id), true))
     .map((p) => ({ ...p, kind: kindOf(p) }))
     .sort((a, b) => b.at - a.at);
   const recent = posts.filter((p) => Date.now() - p.at < 7 * DAY);

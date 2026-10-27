@@ -18,12 +18,12 @@ const fonts = resolve('web/public/fonts');
 const cards = [
   {
     name: '0-cover', kicker: 'Wanted', title: 'Gus finds the cities that want your band.',
-    body: 'An AI tour manager for independent musicians, on Qloo’s taste graph. Fans sign the poster, then he books the room.',
+    body: 'An AI tour manager for independent musicians, on Qloo’s taste graph. Fans sign the poster, then he books the venue.',
     screens: ['home', 'fan-dark'],
   },
   {
     name: '1-already-working', kicker: 'Open the app', title: 'He’s already working.',
-    body: 'Gus has been calling rooms on his own. The Basement in Columbus said yes to Nov 20, and the offer is waiting for your OK.',
+    body: 'Gus has been calling venues on his own. The Basement in Columbus said yes to Nov 20, and the offer is waiting for your OK.',
     screens: ['home-dark'],
   },
   {
@@ -33,12 +33,12 @@ const cards = [
   },
   {
     name: '3-wanted-poster', kicker: 'Proof', title: 'Fans sign the WANTED poster.',
-    body: '26 signed in Burlington so far. At fifty, Gus writes to the rooms that fit you and skips the ones that are dark that night.',
+    body: '26 signed in Burlington so far. At fifty, Gus writes to the venues that fit you and skips the ones that are closed that night.',
     screens: ['fan-dark'],
   },
   {
     name: '4-one-decision', kicker: 'The deal', title: 'You make one decision.',
-    body: 'He haggled inside your limits: 71% of the door and $110 to hold the night. Slide to pay against that exact offer. Test mode, so no real money moves.',
+    body: 'He haggled inside your limits: you keep 71% of ticket sales, and a $110 deposit locks in the date. Slide to pay against that exact offer. Test mode, so no real money moves.',
     screens: ['deal'],
   },
   {
@@ -48,7 +48,7 @@ const cards = [
   },
   {
     name: '6-ask-gus', kicker: 'Ask anything', title: 'He checks before he answers.',
-    body: 'Ask which Burlington rooms are open on a Tuesday. He names The Flynn, skips Monkey House because it’s dark that night, and offers to ask for the date.',
+    body: 'Ask which Burlington venues are open on a Tuesday. He names The Flynn, skips Monkey House because it’s closed that night, and offers to ask for the date.',
     screens: ['gus'],
   },
   {
@@ -62,18 +62,18 @@ const cards = [
     theme: 'light', visual: 'how',
   },
   {
-    name: '9-with-qloo', kicker: 'Why taste data', title: 'A plain chatbot gets most rooms wrong.',
-    body: 'We asked one for rooms in 8 cities and checked each. 46% held up. In Ithaca it was 1 of 8, and one was in Illinois.',
+    name: '9-with-qloo', kicker: 'Why taste data', title: 'A plain chatbot gets most venues wrong.',
+    body: 'We asked one for venues in 8 cities and checked each. 46% held up. In Ithaca it was 1 of 8, and one was in Illinois.',
     theme: 'dark', visual: 'versus',
   },
   {
     name: '10-loop', kicker: 'Why build all this', title: 'Every show makes the next one easier.',
-    body: 'Signers fill the room, the room pays the band, and the crowd that came signs the next poster. Venues get nights that sell, and fans get the show in their own town.',
+    body: 'Signers fill the venue, the venue pays the band, and the crowd that came signs the next poster. Venues get nights that sell, and fans get the show in their own town.',
     theme: 'light', visual: 'loop',
   },
   {
     name: '11-in-claude', kicker: 'Gus in Claude', title: 'Ask him from Claude too.',
-    body: 'Add Gus as a connector and he answers as a card: 26 of 50 signed in Burlington, where your crowd lives, the rooms that fit. Paying always comes back to Wanted for your yes.',
+    body: 'Add Gus as a connector and he answers as a card: 26 of 50 signed in Burlington, where your crowd lives, the venues that fit. Paying always comes back to Wanted for your yes.',
     screens: ['claude'], optional: true,
   },
   {
@@ -134,7 +134,7 @@ const visuals = {
       ['obj-cassette', 'Your sound', 'Paste a Spotify, Apple Music or Bandcamp link.'],
       ['pin-sleeper', 'Qloo’s taste graph', 'Every US city and neighborhood scored for it.'],
       ['act-staple', 'The WANTED poster', 'Fans sign with their neighborhood. Fifty opens the city.'],
-      ['act-phone', 'Gus asks the rooms', 'Only rooms a lookup returned, never past your limits.'],
+      ['act-phone', 'Gus asks the venues', 'Only venues a lookup returned, never past your limits.'],
       ['act-deposit', 'Your yes', 'The deposit is tied to that exact offer.'],
     ];
     return `<div class="how">${steps.map(([a, t, d], k) => `
@@ -143,19 +143,19 @@ const visuals = {
   versus: () => {
     return `<div class="vs">
       <div class="rcpt"><div class="rh">A plain chatbot<span>Ithaca</span></div>
-        <div class="big bad">1 <i>of</i> 8</div><div class="cap">rooms held up</div>
+        <div class="big bad">1 <i>of</i> 8</div><div class="cap">venues checked out</div>
         <div class="dots"><b class="ok">✓</b>${'<b>✕</b>'.repeat(7)}</div>
         <p>Some were closed for good, some were dark that night, and one was in Illinois.</p></div>
       <div class="rcpt good"><div class="rh">Gus on Qloo<span>Ithaca</span></div>
-        <div class="big">Every</div><div class="cap">room came from a lookup</div>
-        <p>If Qloo didn’t return a place, Gus doesn’t say it. He checks the hours too, so he never pitches a room that’s dark that night.</p>
+        <div class="big">Every</div><div class="cap">venue came from a lookup</div>
+        <p>If Qloo didn’t return a place, Gus doesn’t say it. He checks the hours too, so he never pitches a venue that’s closed that night.</p>
         <img class="stamp" src="${art('self-approved')}"></div>
     </div>`;
   },
   loop: () => {
     const nodes = [
       ['act-staple', 'Fans sign'],
-      ['act-phone', 'Gus asks rooms'],
+      ['act-phone', 'Gus asks venues'],
       ['obj-ticket', 'The show sells'],
       ['act-deposit', 'The band gets paid'],
       ['act-megaphone', 'The crowd spreads it'],

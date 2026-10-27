@@ -233,7 +233,7 @@ h1 { font: 800 21px/1.15 var(--display); letter-spacing: -0.01em; margin: 2px 2p
     if (d.rooms[0]) $('#ask').onclick = () => call('ask_rooms', { city: d.city, room: d.rooms[0].id }, 'Calling ' + d.rooms[0].name);
   }
 
-  const STAMP = { waiting: 'Needs your yes', held: 'Held', talking: 'Talking', declined: 'You passed' };
+  const STAMP = { waiting: 'Needs your yes', held: 'Booked', talking: 'Talking', declined: 'You passed' };
   const when = (iso) => { const t = new Date(iso + 'T12:00:00'); return isNaN(t) ? iso : t.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); };
   const ORDER = { waiting: 0, talking: 1, held: 2, declined: 3 };
   function deals(d) {
@@ -242,7 +242,7 @@ h1 { font: 800 21px/1.15 var(--display); letter-spacing: -0.01em; margin: 2px 2p
     d = { ...d, deals: all.slice(0, 4) };
     if (!d.deals.length) return paint('<h1>No dates in talks</h1><p class="note">Ask Gus to try a room in one of your cities.</p>');
     const cards = d.deals.map((x) => {
-      const terms = [x.split != null ? x.split + '% of the door' : null, x.deposit != null ? '$' + x.deposit + ' to hold' : null, x.date ? when(x.date) : null].filter(Boolean).map((t) => '<span>' + esc(t) + '</span>').join('');
+      const terms = [x.split != null ? x.split + '% of ticket sales' : null, x.deposit != null ? '$' + x.deposit + ' deposit' : null, x.date ? when(x.date) : null].filter(Boolean).map((t) => '<span>' + esc(t) + '</span>').join('');
       return '<div class="card deal"><span class="stamp st-' + esc(x.status) + '">' + esc(STAMP[x.status] || x.status) + '</span><b>' + esc(x.room) + '</b><span class="city">' + esc(x.city) + '</span>' + (terms ? '<div class="terms">' + terms + '</div>' : '') + (x.status === 'talking' && x.lastLetter ? '<p class="letter">“' + esc(x.lastLetter) + '”</p>' : '') + '</div>';
     }).join('');
     const yes = d.deals.some((x) => x.status === 'waiting');

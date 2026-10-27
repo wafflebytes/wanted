@@ -41,12 +41,12 @@ function standing(o: OpenedCity, live: Deal | null, p: PosterState | undefined):
   if (o.playedAt) return { tone: 'live', big: String(n), unit: 'signed', line: `You played ${o.name}${o.playedVenue ? ` at ${o.playedVenue}` : ''}. Every fan’s card has the stamp.`, cta: share };
   // A booked city is news: the post that says so is the next city's poster.
   const booked = { label: `Post that ${o.name} is booked`, icon: 'share' as const, run: 'booked' as const };
-  if (live?.status === 'held' && live.terms) return { tone: 'good', big: nightOf(live.terms.date), unit: '', line: `Held at ${live.roomName}. You keep ${live.terms.split}% of the door. Signers hear first.`, cta: booked };
+  if (live?.status === 'held' && live.terms) return { tone: 'good', big: nightOf(live.terms.date), unit: '', line: `Booked at ${live.roomName}. You keep ${live.terms.split}% of ticket sales. Everyone who signed hears first.`, cta: booked };
   if (p?.show) return { tone: 'good', big: nightOf(p.show.date), unit: '', line: `You’re on at ${p.show.room}. Everyone who signed hears first.`, cta: booked };
   if (live?.status === 'waiting') return { tone: 'good', big: 'Yes', unit: `from ${live.roomName}`, line: `They offered ${live.terms ? nightOf(live.terms.date) : 'a night'}. It’s waiting on your OK.`, cta: { label: 'Look at the offer', icon: 'check', run: 'offer' } };
   if (live?.status === 'talking') return { tone: 'fans', big: String(n), unit: 'signed', line: `Gus is talking to ${live.roomName} now. He’ll bring you the best offer.`, cta: share };
-  if (n >= PROOF || o.proof?.crossed) return { tone: 'good', big: String(n), unit: 'signed', line: `That’s enough for a booker to take you seriously. Time to ask rooms.`, cta: { label: `Ask rooms in ${o.name}`, icon: 'building', run: 'rooms' } };
-  return { tone: 'fans', big: String(n), unit: `/ ${PROOF} signed`, line: `${PROOF - n} more and Gus can ask rooms to hold a date. Put the poster where they hang out.`, cta: share };
+  if (n >= PROOF || o.proof?.crossed) return { tone: 'good', big: String(n), unit: 'signed', line: `That’s enough for venues to take you seriously. Time to ask them for a date.`, cta: { label: `Ask venues in ${o.name}`, icon: 'building', run: 'rooms' } };
+  return { tone: 'fans', big: String(n), unit: `/ ${PROOF} signed`, line: `${PROOF - n} more and Gus asks venues here for a date. Put the poster where your fans hang out.`, cta: share };
 }
 
 export default function PostersPage() {
@@ -136,11 +136,11 @@ export default function PostersPage() {
             </button>
             <button className="pw-key" onClick={() => shareStory(img(slug, o.city, 1080) + '&format=story&type=jpg', `wanted-${o.city}`, { text: `${o.name}, sign this and I’ll come play.`, url })}>
               <Icon name="layers" size={20} />
-              Story size
+              For a story
             </button>
             <a className="pw-key" href={`/w/${slug}/${o.city}`} target="_blank" rel="noreferrer">
               <Icon name="eye" size={20} />
-              Fan page
+              What fans see
             </a>
           </div>
         </section>
@@ -300,7 +300,7 @@ function Bounty({ slug, city, artist, b, booked }: { slug: string; city: string;
       <div className="pw-ticket-sh">
         <div className="pw-ticket">
           <div className="pw-bounty">
-            <span className="kicker">The draw</span>
+            <span className="kicker">A prize for one fan</span>
             <b className="pw-prize">{b.prize}</b>
             {w ? (
               <p>

@@ -74,7 +74,7 @@ function Sheet({ s, slug, dealId }: { s: Settle; slug: string; dealId: string })
         ? `All three match now. ${usd(s.yours)} is yours, and ${s.contact} is sending it tonight.`
         : phase === 'sent'
           ? `Sent ${s.contact} the scan log. Waiting on the room.`
-          : `${s.missing} people paid and weren’t counted. That’s ${usd(s.yours - s.roomSays)} of yours. They came in between ${s.late}.`;
+          : `${s.missing} people paid and weren’t counted. That’s ${usd(s.yours - s.roomSays)} of yours. They came in ${s.late}.`;
 
   return (
     <main className="sd stl">
@@ -82,7 +82,7 @@ function Sheet({ s, slug, dealId }: { s: Settle; slug: string; dealId: string })
         <button className="rd-back" onClick={() => router.push(`/a/${slug}/show/${dealId}`)} aria-label="Back to show day">
           <Icon name="back" size={20} />
         </button>
-        <span className="kicker k-hot">Settle up · {nice(s.date)}</span>
+        <span className="kicker k-hot">Getting paid · {nice(s.date)}</span>
         <h1>{s.room}</h1>
         <p className="sd-say" key={phase} aria-live="polite">
           {say}
@@ -136,7 +136,7 @@ function Sheet({ s, slug, dealId }: { s: Settle; slug: string; dealId: string })
               <dd>{usd(s.yours)}</dd>
             </div>
             <div className={phase === 'fixed' ? 'gone' : 'warn'}>
-              <dt>{s.room}’s sheet says</dt>
+              <dt>{s.room} counted</dt>
               <dd>{usd(s.roomSays)}</dd>
             </div>
           </dl>
@@ -181,7 +181,7 @@ function Sheet({ s, slug, dealId }: { s: Settle; slug: string; dealId: string })
           Back to show day
         </button>
       )}
-      <span className="rd-fine">The door sheet, scans and guest list are a sample until the room’s scanner is connected.</span>
+      <span className="rd-fine">The venue’s count, the scans and the guest list are a sample until the venue’s ticket scanner is connected.</span>
     </main>
   );
 }

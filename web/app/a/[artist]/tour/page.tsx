@@ -120,7 +120,7 @@ export default function TourPage() {
       </button>
       <div className="th" data-tour="run" ref={heroRef}>
         <Gus mood={busy ? 'working' : fixes.length ? 'thinking' : 'proud'} size={124} className="th-obj" />
-        <span className="kicker k-hot">Your run</span>
+        <span className="kicker k-hot">Your tour</span>
         <h2 className="th-title">
           {md(first!.date)}
           <span className="th-arrow">→</span>
@@ -142,6 +142,7 @@ export default function TourPage() {
         <div className="th-score">
           <Ring value={plan.total} gain={gain} />
           <p>
+            <span className="ink-3">How well this route works, out of 100. </span>
             {plan.gusLine}
             {gain >= 1 && <b> Gus can get it to {Math.round(plan.total + gain)}.</b>}
           </p>
@@ -153,7 +154,7 @@ export default function TourPage() {
           </button>
         ) : (
           <button className="btn block" onClick={() => router.push(`/a/${slug}`)}>
-            Ask rooms on the map
+            Ask venues on the map
             <Icon name="forward" size={18} />
           </button>
         )}
@@ -172,7 +173,7 @@ export default function TourPage() {
       <Art name="stage" size={132} />
       <h2 className="d-24">No run yet.</h2>
       <p className="ink-2">Gus strings your best cities into ten nights, short drives, good nights of the week.</p>
-      <button className="btn hot" disabled={!!busy} onClick={() => run({ kind: 'new' }, 'new', 'Planning your run')}>
+      <button className="btn hot" disabled={!!busy} onClick={() => run({ kind: 'new' }, 'new', 'Planning your tour')}>
         {busy ? 'Planning…' : 'Plan my run'}
       </button>
     </div>
@@ -190,8 +191,8 @@ export default function TourPage() {
       )}
 
       <div className="section-h">
-        <h2>The run</h2>
-        <span className="ink-3 b-13">Lock what you love</span>
+        <h2>Night by night</h2>
+        <span className="ink-3 b-13">Tap the lock to keep a night</span>
       </div>
       <ol className="tr-stops card">
         {plan.stops.map((s, i) => (
@@ -208,11 +209,11 @@ export default function TourPage() {
           />
         ))}
       </ol>
-      <button className="btn light block tr-replan" disabled={!!busy} onClick={() => run({ kind: 'replan' }, 'replan', 'Replanning around your locks')}>
+      <button className="btn light block tr-replan" disabled={!!busy} onClick={() => run({ kind: 'replan' }, 'replan', 'Replanning around the nights you kept')}>
         <Icon name="refresh" size={18} />
-        {busy === 'replan' ? 'Replanning…' : 'Replan around my locks'}
+        {busy === 'replan' ? 'Replanning…' : 'Replan, keep my locked nights'}
       </button>
-      <p className="fine ink-3 b-13">Locked nights stay put. Nothing is booked until a room says yes and you approve it.</p>
+      <p className="fine ink-3 b-13">Locked nights stay put. Nothing is booked until a venue says yes and you approve it.</p>
     </div>
   );
 
@@ -307,7 +308,7 @@ function Stop({ s, i, isNew, busy, held, onLock, onOpen, onRoad }: { s: TourStop
                 {s.city}
                 {isNew && <i className="tag hot">New</i>}
               </b>
-              <span>{held ? <><b className="tr-held">Held</b> {held} · show day</> : s.room?.name ?? 'Room to find'}</span>
+              <span>{held ? <><b className="tr-held">Booked</b> {held} · show day</> : s.room?.name ?? 'Venue to find'}</span>
             </span>
           </button>
           <button className={`tr-lock ${s.locked ? 'on' : ''}`} onClick={onLock} disabled={busy} aria-pressed={s.locked} aria-label={s.locked ? `Unlock ${s.city}` : `Lock ${s.city}`}>

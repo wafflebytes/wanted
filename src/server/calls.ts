@@ -16,7 +16,7 @@ const spokenDate = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateS
 export function callScript(artist: ArtistRow, d: Deal, hoursLeft: number): string {
   const t = d.terms!;
   const left = hoursLeft < 1 ? 'less than an hour' : `about ${Math.ceil(hoursLeft)} hour${Math.ceil(hoursLeft) === 1 ? '' : 's'}`;
-  return `${artist.name.split(' ')[0]}, it's Gus. This is a simulated hold, not a venue agreement. ${d.roomName}, ${spokenDate(t.date)}. You keep ${t.split} percent of the door. The artist-to-venue deposit is ${t.deposit} US dollars, test mode only. This exact offer expires in ${left}. Review the room, date and amount. Want me to record that test deposit?`;
+  return `${artist.name.split(' ')[0]}, it's Gus. This is a test booking, not a real one. ${d.roomName}, ${spokenDate(t.date)}. You keep ${t.split} percent of ticket sales. The deposit to lock in the date is ${t.deposit} dollars, test money only. This offer ends in ${left}. Check the venue, date and amount. Want me to pay that test deposit?`;
 }
 type Row = { id: string; deal_id: string; city: string; script: string; status: GusCall['status']; outcome: 'yes' | 'no' | null; created_at: number };
 type Scope = { review: DealReview; expiresAt: number; decision?: 'yes' | 'no' };
