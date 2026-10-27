@@ -106,11 +106,11 @@ const RAMP_LIGHT: [number, RGB][] = [
   [1, [0xa8, 0x24, 0x04]],
 ];
 const RAMP_DARK: [number, RGB][] = [
-  [0, [0x3b, 0x2a, 0x24]],
-  [0.35, [0xb4, 0x4a, 0x2a]],
-  [0.65, [0xff, 0x8a, 0x2c]],
-  [0.88, [0xff, 0xc2, 0x6a]],
-  [1, [0xff, 0xf1, 0xd0]],
+  [0, [0x33, 0x25, 0x1f]],
+  [0.35, [0x8f, 0x3c, 0x22]],
+  [0.65, [0xe8, 0x66, 0x2a]],
+  [0.88, [0xff, 0x9a, 0x45]],
+  [1, [0xff, 0xbf, 0x73]],
 ];
 function ramp(stops: [number, RGB][], t: number): RGB {
   const x = Math.max(0, Math.min(1, t));
@@ -174,6 +174,13 @@ function halftone<T extends { h3: string }>(hexes: T[], value: (h: T) => number,
 const PIN = (name: 'pin-city' | 'pin-sleeper' | 'pin-booked') => ({ url: `/art/${name}.webp`, id: name, width: 256, height: 256, anchorY: 250, mask: false });
 
 const ORANGE: RGB = [255, 90, 31];
+
+/** A soft disc in the map's own ground colour, laid under each pin so it lifts off the heat. */
+const halo = (dark: boolean) => {
+  const c = dark ? '18,17,14' : '246,244,239';
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96'><defs><radialGradient id='g'><stop offset='0' stop-color='rgb(${c})' stop-opacity='${dark ? 0.9 : 0.85}'/><stop offset='0.55' stop-color='rgb(${c})' stop-opacity='${dark ? 0.6 : 0.5}'/><stop offset='1' stop-color='rgb(${c})' stop-opacity='0'/></radialGradient></defs><circle cx='48' cy='48' r='48' fill='url(#g)'/></svg>`;
+  return { url: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, id: dark ? 'halo-dark' : 'halo-light', width: 96, height: 96, anchorY: 48, mask: false };
+};
 
 export default function CrowdMap(props: CrowdMapProps) {
   const el = useRef<HTMLDivElement>(null);
@@ -362,7 +369,8 @@ export default function CrowdMap(props: CrowdMapProps) {
           getPosition: (d: Dot) => d.pos,
           getRadius: (d: Dot) => d.r,
           radiusUnits: 'meters',
-          getFillColor: (d: Dot) => [...ramp(R, d.v), d.strong ? 255 : dark ? 120 : 150] as [number, number, number, number],
+          // Opacity follows heat, so neighbouring cells blend instead of patching.
+          getFillColor: (d: Dot) => [...ramp(R, d.v), Math.round((d.strong ? 1 : 0.55) * (90 + 165 * Math.sqrt(Math.max(0, Math.min(1, d.v)))))] as [number, number, number, number],
           updateTriggers: { getFillColor: dark },
           transitions: props.reduceMotion ? undefined : { getRadius: { duration: 1100, enter: () => [0] } },
         }),
@@ -381,6 +389,16 @@ export default function CrowdMap(props: CrowdMapProps) {
           getLineColor: [226, 160, 6, Math.round(255 * (1 - phase * 0.7))],
           lineWidthMinPixels: 2.5,
           updateTriggers: { getRadius: phase, getLineColor: phase },
+        }),
+        new IconLayer({
+          id: 'pin-halo',
+          data: [...sleepers.filter((m) => !opened.has(m.id)), ...scored.filter((m) => opened.has(m.id))],
+          getPosition: (d: MapMetro) => [d.lon, d.lat],
+          getIcon: () => halo(dark),
+          getSize: narrow ? 60 : 70,
+          getPixelOffset: [0, narrow ? -15 : -18],
+          sizeUnits: 'pixels',
+          updateTriggers: { getIcon: dark, data: props.opened.join() },
         }),
         new IconLayer({
           id: 'sleeper-pin',
