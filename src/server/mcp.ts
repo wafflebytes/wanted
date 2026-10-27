@@ -15,7 +15,7 @@ import { cityData, mapData, requireArtist } from './service';
 
 const DEMO = 'maya-ortiz';
 const PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05'];
-const origin = () => process.env.WANTED_PUBLIC_ORIGIN ?? 'https://wanted-qloo.vercel.app';
+const origin = () => process.env.WANTED_PUBLIC_ORIGIN ?? 'https://trywanted.vercel.app';
 
 type Args = Record<string, unknown>;
 type Tool = {

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-const origin = process.env.WANTED_PUBLIC_ORIGIN?.startsWith('https') ? process.env.WANTED_PUBLIC_ORIGIN : 'https://wanted-qloo.vercel.app';
+const origin = process.env.WANTED_PUBLIC_ORIGIN?.startsWith('https') ? process.env.WANTED_PUBLIC_ORIGIN : 'https://trywanted.vercel.app';
 const act = 'maya-ortiz';
 
 export default function sitemap(): MetadataRoute.Sitemap {
