@@ -6,9 +6,10 @@
  * Every image carries "Made with Wanted. Find out where you're wanted."
  */
 import type { ReactNode } from 'react';
-import { MADE_WITH, POSTER_H, POSTER_W, SIGNATURE_FONTS } from '../lib/poster';
+import { MADE_WITH, POSTER_H, POSTER_W, SIGNATURE_FONTS, regionFor } from '../lib/poster';
 import type { ClaimView } from '../lib/types';
 import { nodeRequire } from './node-require';
+import { SCENE_H, SCENE_W, sceneFor, type SceneTheme } from './scenes';
 
 type FontDef = { name: string; data: Buffer; weight: 400 | 500 | 600 | 700 | 800 | 900; style: 'normal' };
 
@@ -71,16 +72,28 @@ const C = {
   paperOrange: '#E2470F',
 };
 
-/** The warm dark ground, lit from where the card sits like a hot city on the map. */
-const ground = (w: number, h: number, at = '50% 36%') => ({
+/**
+ * The warm dark ground, lit from where the card sits like a hot city on the map. Given a city,
+ * the ground takes that city's night: its ink, lit in its own color.
+ */
+const ground = (w: number, h: number, at = '50% 36%', city?: SceneTheme) => ({
   display: 'flex' as const,
   width: w,
   height: h,
-  backgroundColor: C.ground,
-  backgroundImage: `radial-gradient(circle at ${at}, rgba(255,106,26,0.36), rgba(214,84,30,0.12) 36%, rgba(18,17,14,0) 64%)`,
+  backgroundColor: city ? mix(city.ink, '#000000', 0.35) : C.ground,
+  backgroundImage: city
+    ? `radial-gradient(circle at ${at}, ${alpha(city.accent, 0.42)}, ${alpha(city.accent, 0.12)} 38%, ${alpha(city.accent, 0)} 66%)`
+    : `radial-gradient(circle at ${at}, rgba(255,106,26,0.36), rgba(214,84,30,0.12) 36%, rgba(18,17,14,0) 64%)`,
   fontFamily: FACE,
   color: C.ink,
 });
+
+const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+const alpha = (hex: string, a: number) => `rgba(${rgb(hex).join(',')},${a})`;
+const mix = (a: string, b: string, k: number) => {
+  const [x, y] = [rgb(a), rgb(b)];
+  return `#${x.map((v, i) => Math.round(v + (y[i] - v) * k).toString(16).padStart(2, '0')).join('')}`;
+};
 
 const bare = (link: string) => link.replace(/^https?:\/\//, '');
 
@@ -127,61 +140,52 @@ function MadeWith({ size = 24 }: { size?: number }) {
   return <div style={{ display: 'flex', fontWeight: 600, fontSize: size, color: C.ink3 }}>{MADE_WITH}</div>;
 }
 
-// ---------- portrait print ----------
+// ---------- the artist and their city ----------
 
 /**
- * The artist as a two-tone print in our inks: shadows in poster ink, mids in Wanted orange,
- * highlights in the paper. Same treatment for our own portraits and for Qloo photos.
+ * What a poster is made of: the city's painted scene and its palette, and the artist. Our demo
+ * act stands in the scene in full; any other act is their photo, round, pinned up in it.
  */
-const printCache = new Map<string, string | null>();
-async function printFor(artist: { portrait: string | null; imageUrl: string | null }): Promise<string | null> {
-  const key = artist.portrait ?? artist.imageUrl;
-  if (!key) return null;
-  if (printCache.has(key)) return printCache.get(key)!;
+type Art = { scene: string; theme: SceneTheme; figure: string | null; face: string | null };
+
+const sceneCache = new Map<string, string>();
+function scenePng(cityId: string | undefined, state: string): { uri: string; theme: SceneTheme } {
+  const sc = sceneFor(cityId, regionFor(state));
+  const key = sc.svg.length + (cityId ?? state);
+  let uri = sceneCache.get(key);
+  if (!uri) {
+    const { Resvg } = nodeRequire<typeof import('@resvg/resvg-js')>('@resvg/resvg-js');
+    uri = `data:image/png;base64,${Buffer.from(new Resvg(sc.svg, { fitTo: { mode: 'width', value: SCENE_W } }).render().asPng()).toString('base64')}`;
+    sceneCache.set(key, uri);
+  }
+  return { uri, theme: sc.theme };
+}
+
+const OUR_ACT = new Set(['maya-engraving', 'maya-mugshot']);
+const photoCache = new Map<string, string | null>();
+async function photo(url: string): Promise<string | null> {
+  if (photoCache.has(url)) return photoCache.get(url)!;
   try {
-    let src: Buffer;
-    if (artist.portrait) {
-      const f = assetFile(artist.portrait);
-      if (!f) throw new Error('missing portrait');
-      src = fs().readFileSync(f);
-    } else {
-      const res = await fetch(artist.imageUrl!);
-      if (!res.ok) throw new Error(String(res.status));
-      src = Buffer.from(await res.arrayBuffer());
-    }
-    const W = 840;
-    const H = 700;
-    const { data } = await sharpLib()(src).flatten({ background: C.paper }).resize(W, H, { fit: 'cover', position: 'attention' }).greyscale().normalise().raw().toBuffer({ resolveWithObject: true });
-    const stops: [number, [number, number, number]][] = [
-      [0, [27, 23, 18]],
-      [0.5, [226, 71, 15]],
-      [0.78, [244, 160, 110]],
-      [1, [246, 239, 227]],
-    ];
-    const lut = Array.from({ length: 256 }, (_, v) => {
-      const t = v / 255;
-      const i = Math.max(0, stops.findIndex(([at]) => at >= t) - 1);
-      const [a, ca] = stops[i];
-      const [b, cb] = stops[Math.min(i + 1, stops.length - 1)];
-      const k = b === a ? 0 : (t - a) / (b - a);
-      return ca.map((x, j) => Math.round(x + (cb[j] - x) * k));
-    });
-    const out = Buffer.alloc(W * H * 3);
-    for (let p = 0; p < W * H; p++) {
-      const c = lut[data[p]];
-      out[p * 3] = c[0];
-      out[p * 3 + 1] = c[1];
-      out[p * 3 + 2] = c[2];
-    }
-    const png = await sharpLib()(out, { raw: { width: W, height: H, channels: 3 } }).png().toBuffer();
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(String(res.status));
+    const png = await sharpLib()(Buffer.from(await res.arrayBuffer())).resize(600, 600, { fit: 'cover', position: 'attention' }).png().toBuffer();
     const uri = `data:image/png;base64,${png.toString('base64')}`;
-    printCache.set(key, uri);
+    photoCache.set(url, uri);
     return uri;
   } catch {
-    printCache.set(key, null);
+    photoCache.set(url, null);
     return null;
   }
 }
+
+async function artFor(d: { cityId?: string; state: string; portrait: string | null; imageUrl: string | null }): Promise<Art> {
+  const { uri, theme } = scenePng(d.cityId, d.state);
+  if (d.portrait && OUR_ACT.has(d.portrait)) return { scene: uri, theme, figure: img('maya-full'), face: img('maya-avatar') };
+  return { scene: uri, theme, figure: null, face: d.imageUrl ? await photo(d.imageUrl) : null };
+}
+
+/** The full-length figure's width over its height. */
+const FIGURE_RATIO = 728 / 1503;
 
 async function render(node: ReactNode, width: number, height: number): Promise<Buffer> {
   const satori = nodeRequire<{ default: (n: ReactNode, o: unknown) => Promise<string> }>('satori').default;
@@ -219,63 +223,48 @@ const rand = (n: number, k: number) => {
 };
 
 /**
- * The poster itself at scale s (1 = 1024 x 1536): cream paper inside an orange rule, WANTED
- * up top, the artist as a two-tone print with the count on a seal, who and where, the
- * reward, and the fans' signatures piling up along the bottom.
+ * The poster itself at scale s (1 = 1024 x 1536). The city fills the top, painted, with WANTED
+ * across its sky and the artist standing in it, hair over the letters. Below, a paper panel in
+ * the city's own colors: who, the reward, where they're most wanted, and the fans' signatures.
+ * The count sits on a seal where the two meet.
  */
-function Poster({ d, s, print }: { d: PosterData; s: number; print: string | null }) {
-  const city = `in ${d.cityName}, ${d.state}`;
+const PANEL_Y = 1010;
+function Poster({ d, s, art }: { d: PosterData; s: number; art: Art }) {
+  const t = art.theme;
   const hoods = d.topNeighborhoods.slice(0, 3);
   const most = hoods.length ? `Most wanted in ${hoods.join(', ')}` : null;
-  const inner = POSTER_W - 80;
+  const cx = t.standAt * POSTER_W;
+  const figH = 1060;
+  const figW = figH * FIGURE_RATIO;
+  const name = d.artistName;
   return (
-    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: POSTER_W * s, height: POSTER_H * s, borderRadius: 36 * s, backgroundColor: C.paper, fontFamily: FACE, color: C.paperInk }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: (inner - 12) * s, height: (POSTER_H - 92) * s, borderRadius: 22 * s, border: `${6 * s}px solid ${C.paperOrange}`, paddingTop: 34 * s }}>
-        <div style={{ display: 'flex', fontWeight: 900, fontSize: 206 * s, lineHeight: 1, letterSpacing: -6 * s }}>WANTED</div>
-        <div style={{ display: 'flex', marginTop: 8 * s, fontWeight: 800, fontSize: fit(city, inner - 80, 56, 0.56) * s, color: C.paperOrange }}>{city}</div>
+    <div style={{ position: 'relative', display: 'flex', width: POSTER_W * s, height: POSTER_H * s, borderRadius: 40 * s, overflow: 'hidden', backgroundColor: t.paper, fontFamily: FACE, color: t.ink }}>
+      <img src={art.scene} width={SCENE_W * s} height={SCENE_H * s} style={{ position: 'absolute', left: 0, top: 0 }} />
+      <div style={{ position: 'absolute', left: 0, top: 56 * s, width: POSTER_W * s, display: 'flex', justifyContent: 'center', fontWeight: 800, fontSize: 30 * s, letterSpacing: 7 * s, color: t.word }}>
+        {`${d.cityName}, ${d.state}`.toUpperCase()}
+      </div>
+      <div style={{ position: 'absolute', left: 0, top: 96 * s, width: POSTER_W * s, display: 'flex', justifyContent: 'center', fontWeight: 900, fontSize: 212 * s, lineHeight: 1, letterSpacing: -7 * s, color: t.word, textShadow: `0 ${6 * s}px ${30 * s}px rgba(30,10,40,0.22)` }}>
+        WANTED
+      </div>
 
-        <div style={{ position: 'relative', display: 'flex', marginTop: 34 * s, width: 840 * s, height: 700 * s, borderRadius: 28 * s, overflow: 'hidden', backgroundColor: '#E9DCC8' }}>
-          {print ? (
-            <img src={print} width={840 * s} height={700 * s} />
-          ) : (
-            <div style={{ display: 'flex', width: 840 * s, height: 700 * s, alignItems: 'center', justifyContent: 'center', backgroundColor: C.paperOrange }}>
-              <div style={{ display: 'flex', fontWeight: 900, fontSize: 300 * s, color: C.paper }}>{d.artistName.slice(0, 1).toUpperCase()}</div>
-            </div>
-          )}
+      {art.figure ? (
+        <img src={art.figure} width={figW * s} height={figH * s} style={{ position: 'absolute', left: (cx - figW / 2) * s, top: 236 * s, transform: t.flip ? 'scaleX(-1)' : 'none' }} />
+      ) : (
+        <div style={{ position: 'absolute', left: (cx - 270) * s, top: 400 * s, width: 540 * s, height: 540 * s, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 999, overflow: 'hidden', border: `${14 * s}px solid ${t.paper}`, backgroundColor: t.accent, boxShadow: `0 ${24 * s}px ${60 * s}px rgba(20,10,30,0.4)` }}>
+          {art.face ? <img src={art.face} width={512 * s} height={512 * s} /> : <div style={{ display: 'flex', fontWeight: 900, fontSize: 260 * s, color: t.paper }}>{name.slice(0, 1).toUpperCase()}</div>}
         </div>
+      )}
 
-        <div style={{ display: 'flex', marginTop: 30 * s, fontWeight: 900, fontSize: fit(d.artistName, inner - 80, 104, 0.6) * s, lineHeight: 1, letterSpacing: -2 * s }}>{d.artistName}</div>
-        <div style={{ display: 'flex', marginTop: 18 * s, fontWeight: 800, fontSize: 42 * s, color: C.paperInk }}>Reward: one sold-out show.</div>
-        {most ? <div style={{ display: 'flex', marginTop: 10 * s, fontWeight: 700, fontSize: fit(most, inner - 100, 28, 0.5) * s, color: C.paperInk2 }}>{most}</div> : null}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: PANEL_Y * s, bottom: 0, display: 'flex', flexDirection: 'column', padding: `${58 * s}px ${72 * s}px 0`, backgroundColor: t.paper, borderRadius: `${48 * s}px ${48 * s}px 0 0`, boxShadow: `0 ${-18 * s}px ${50 * s}px rgba(20,10,30,0.25)` }}>
+        <div style={{ display: 'flex', fontWeight: 900, fontSize: fit(name, 640, 112, 0.6) * s, lineHeight: 1, letterSpacing: -3 * s }}>{name}</div>
+        <div style={{ display: 'flex', marginTop: 16 * s, fontWeight: 800, fontSize: 42 * s, color: t.accent }}>Reward: one sold-out show.</div>
+        {most ? <div style={{ display: 'flex', marginTop: 10 * s, fontWeight: 700, fontSize: fit(most, 880, 28, 0.5) * s, color: t.ink2 }}>{most}</div> : null}
+        <div style={{ display: 'flex', height: 2 * s, marginTop: 30 * s, backgroundColor: t.ink, opacity: 0.1 }} />
       </div>
 
-      {/* The seal: how many have signed, lifted off the corner of the print. */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 760 * s,
-          top: 830 * s,
-          width: 200 * s,
-          height: 200 * s,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: 999,
-          backgroundColor: C.wanted,
-          border: `${8 * s}px solid ${C.paper}`,
-          boxShadow: `0 ${10 * s}px ${24 * s}px rgba(60,20,4,0.35)`,
-          transform: 'rotate(-8deg)',
-          color: '#fff',
-        }}
-      >
-        <div style={{ display: 'flex', fontWeight: 900, fontSize: (d.count > 999 ? 56 : 76) * s, lineHeight: 1 }}>{String(d.count)}</div>
-        <div style={{ display: 'flex', fontWeight: 800, fontSize: 24 * s, marginTop: 2 * s }}>signed</div>
-      </div>
-
-      {d.signatures.slice(0, 15).map((c, i) => {
-        const x = 96 + (i % 5) * 166 + rand(c.number, 2) * 40 + (Math.floor(i / 5) % 2) * 60;
-        const y = 1384 + Math.floor(i / 5) * 38 + rand(c.number, 4) * 10;
+      {d.signatures.slice(0, 10).map((c, i) => {
+        const x = 84 + (i % 5) * 172 + rand(c.number, 2) * 30 + (Math.floor(i / 5) % 2) * 50;
+        const y = 1400 + Math.floor(i / 5) * 54 + rand(c.number, 4) * 10;
         return (
           <div
             key={c.number}
@@ -286,9 +275,9 @@ function Poster({ d, s, print }: { d: PosterData; s: number; print: string | nul
               display: 'flex',
               transform: `rotate(${-7 + rand(c.number, 3) * 14}deg)`,
               fontFamily: SIGNATURE_FONTS[c.font % 3],
-              fontSize: (22 + rand(c.number, 1) * 6) * s,
-              color: c.number % 5 === 0 ? '#1D3A6B' : C.paperInk,
-              opacity: 0.78,
+              fontSize: (26 + rand(c.number, 1) * 6) * s,
+              color: c.number % 4 === 0 ? t.accent : t.ink,
+              opacity: 0.82,
             }}
           >
             {`${c.initials} #${c.number}`}
@@ -296,46 +285,54 @@ function Poster({ d, s, print }: { d: PosterData; s: number; print: string | nul
         );
       })}
 
+      {/* The seal: how many have signed, where the city meets the paper. */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 772 * s,
+          top: 896 * s,
+          width: 206 * s,
+          height: 206 * s,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 999,
+          backgroundColor: t.accent,
+          border: `${9 * s}px solid ${t.paper}`,
+          boxShadow: `0 ${12 * s}px ${28 * s}px rgba(20,10,30,0.35)`,
+          transform: 'rotate(-8deg)',
+          color: '#fff',
+        }}
+      >
+        <div style={{ display: 'flex', fontWeight: 900, fontSize: (d.count > 999 ? 56 : 78) * s, lineHeight: 1 }}>{String(d.count)}</div>
+        <div style={{ display: 'flex', fontWeight: 800, fontSize: 25 * s, marginTop: 2 * s }}>signed</div>
+      </div>
+
       {d.played ? (
-        <div
-          style={{
-            position: 'absolute',
-            left: 170 * s,
-            top: 600 * s,
-            display: 'flex',
-            padding: `${18 * s}px ${44 * s}px`,
-            borderRadius: 30 * s,
-            border: `${10 * s}px solid ${C.paperOrange}`,
-            color: C.paperOrange,
-            backgroundColor: 'rgba(246,239,227,0.82)',
-            fontWeight: 900,
-            fontSize: 120 * s,
-            letterSpacing: -2 * s,
-            transform: 'rotate(-12deg)',
-          }}
-        >
+        <div style={{ position: 'absolute', left: 120 * s, top: 640 * s, display: 'flex', padding: `${16 * s}px ${44 * s}px`, borderRadius: 30 * s, border: `${10 * s}px solid ${t.accent}`, color: t.accent, backgroundColor: t.paper, fontWeight: 900, fontSize: 116 * s, letterSpacing: -2 * s, transform: 'rotate(-12deg)', boxShadow: `0 ${16 * s}px ${40 * s}px rgba(20,10,30,0.3)` }}>
           Caught live
         </div>
       ) : null}
-      {d.isDemo ? <div style={{ position: 'absolute', right: 64 * s, top: 54 * s, display: 'flex', fontWeight: 700, fontSize: 18 * s, color: C.paperInk2 }}>Demo</div> : null}
+      {d.isDemo ? <div style={{ position: 'absolute', right: 40 * s, top: 24 * s, display: 'flex', fontWeight: 700, fontSize: 18 * s, color: t.word, opacity: 0.8 }}>Demo</div> : null}
     </div>
   );
 }
 
 export async function renderPoster(d: PosterData, format: 'story' | 'wide' | 'poster'): Promise<Buffer> {
-  const print = await printFor({ portrait: d.portrait, imageUrl: d.imageUrl });
-  if (format === 'poster') return render(<Poster d={d} s={1} print={print} />, POSTER_W, POSTER_H);
+  const art = await artFor(d);
+  if (format === 'poster') return render(<Poster d={d} s={1} art={art} />, POSTER_W, POSTER_H);
   const first = d.artistName.split(' ')[0];
   const sentence = d.count >= 50 ? `${d.count} signed. Gus is asking the rooms.` : `${d.count} signed. At fifty, Gus asks the rooms.`;
   if (format === 'story') {
     const s = 820 / POSTER_W;
     return render(
-      <div style={{ ...ground(1080, 1920, '50% 34%'), flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ ...ground(1080, 1920, '50% 34%', art.theme), flexDirection: 'column', alignItems: 'center' }}>
         <div style={{ display: 'flex', marginTop: 96 }}>
           <Island text={`${d.artistName} · ${d.cityName}`} />
         </div>
         <div style={{ display: 'flex', marginTop: 56, transform: 'rotate(-2deg)', boxShadow: '0 40px 80px rgba(0,0,0,0.55)', borderRadius: 30 }}>
-          <Poster d={d} s={s} print={print} />
+          <Poster d={d} s={s} art={art} />
         </div>
         <div style={{ display: 'flex', marginTop: 64, fontWeight: 800, fontSize: 76, lineHeight: 1.05, letterSpacing: -1.5 }}>{`${d.cityName} wants ${first}.`}</div>
         <div style={{ display: 'flex', marginTop: 16, fontWeight: 600, fontSize: 34, color: C.ink2 }}>{sentence}</div>
@@ -350,9 +347,9 @@ export async function renderPoster(d: PosterData, format: 'story' | 'wide' | 'po
   // 1200 x 630 link preview.
   const s = 560 / POSTER_H;
   return render(
-    <div style={{ ...ground(1200, 630, '24% 50%'), alignItems: 'center' }}>
+    <div style={{ ...ground(1200, 630, '24% 50%', art.theme), alignItems: 'center' }}>
       <div style={{ display: 'flex', marginLeft: 76, transform: 'rotate(-2deg)', boxShadow: '0 30px 60px rgba(0,0,0,0.55)', borderRadius: 14 }}>
-        <Poster d={d} s={s} print={print} />
+        <Poster d={d} s={s} art={art} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 64, width: 640 }}>
         <Kicker>{`Wanted in ${d.cityName}`}</Kicker>
@@ -389,23 +386,33 @@ export type AnnounceData = PosterData &
 
 export async function renderAnnounce(d: AnnounceData): Promise<Buffer> {
   const first = d.artistName.split(' ')[0];
+  const art = await artFor(d);
+  const t = art.theme;
+  const figH = 660;
+  const figW = figH * FIGURE_RATIO;
   const booked = d.kind === 'booked';
   const [day, md] = booked ? (d.date.includes(', ') ? d.date.split(', ') : ['', d.date]) : ['', ''];
   return render(
-    <div style={{ ...ground(1080, 1920, '50% 40%'), flexDirection: 'column', alignItems: 'center' }}>
-      <div style={{ display: 'flex', marginTop: 120 }}>
+    <div style={{ ...ground(1080, 1920, '50% 40%', t), flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ display: 'flex', marginTop: 96, marginBottom: 120 }}>
         <Island text={`${d.artistName} · ${d.cityName}, ${d.state}`} />
       </div>
       <div style={{ display: 'flex', flexGrow: 1 }} />
 
       <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', width: 796, padding: '84px 72px 72px', borderRadius: 64, backgroundImage: C.raise, boxShadow: 'inset 0 2px 0 rgba(255,248,230,0.08), 0 40px 90px rgba(0,0,0,0.6)' }}>
-        <img
-          src={img(booked ? 'art-door' : 'art-ticket')}
-          width={booked ? 330 : 360}
-          height={booked ? 330 : 360}
-          style={{ position: 'absolute', right: booked ? -10 : -40, top: booked ? -210 : -200, transform: booked ? 'rotate(6deg)' : 'rotate(-10deg)' }}
-        />
-        <Kicker size={28}>{booked ? `Booked · ${d.cityName}` : `The ${d.cityName} draw`}</Kicker>
+        {/* The city, painted, with the artist stepping up out of it. */}
+        <div style={{ display: 'flex', width: 796, height: 330, borderRadius: 40, overflow: 'hidden', marginBottom: 44 }}>
+          <img src={art.scene} width={796} height={(796 * SCENE_H) / SCENE_W} style={{ marginTop: -330 }} />
+        </div>
+        <div style={{ position: 'absolute', left: 72, top: -110, width: 796, height: 524, display: 'flex', overflow: 'hidden' }}>
+          {art.figure ? (
+            <img src={art.figure} width={figW} height={figH} style={{ position: 'absolute', left: 398 - figW / 2 + (t.standAt - 0.5) * 300, top: 50, transform: t.flip ? 'scaleX(-1)' : 'none' }} />
+          ) : art.face ? (
+            <img src={art.face} width={300} height={300} style={{ position: 'absolute', left: 248, top: 260, borderRadius: 999, border: `10px solid ${C.ink}` }} />
+          ) : null}
+        </div>
+        {booked ? null : <img src={img('art-ticket')} width={260} height={260} style={{ position: 'absolute', right: -60, top: 270, transform: 'rotate(-10deg)' }} />}
+        <Kicker size={28} color={mix(t.accent, '#FFFFFF', 0.35)}>{booked ? `Booked · ${d.cityName}` : `The ${d.cityName} draw`}</Kicker>
         {booked ? (
           <div style={{ display: 'flex', flexDirection: 'column', marginTop: 20 }}>
             <div style={{ display: 'flex', fontWeight: 800, fontSize: 112, lineHeight: 1.02, letterSpacing: -3 }}>{md}</div>
@@ -423,12 +430,12 @@ export async function renderAnnounce(d: AnnounceData): Promise<Buffer> {
         <div style={{ display: 'flex', height: 2, marginTop: 56, marginBottom: 48, backgroundColor: 'rgba(255,248,230,0.08)' }} />
 
         <div style={{ display: 'flex', alignItems: 'baseline' }}>
-          <div style={{ display: 'flex', fontWeight: 900, fontSize: 112, lineHeight: 1, letterSpacing: -3, color: C.wantedText }}>{String(booked ? d.count : d.entries)}</div>
+          <div style={{ display: 'flex', fontWeight: 900, fontSize: 112, lineHeight: 1, letterSpacing: -3, color: mix(t.accent, '#FFFFFF', 0.35) }}>{String(booked ? d.count : d.entries)}</div>
           <div style={{ display: 'flex', marginLeft: 20, fontWeight: 700, fontSize: 38, color: C.ink2 }}>{booked ? 'fans signed for this' : 'chances in the hat'}</div>
         </div>
         {booked ? (
           <div style={{ display: 'flex', marginTop: 24 }}>
-            <Meter count={d.count} width={796} height={30} />
+            <Meter count={d.count} width={796} height={30} on={t.accent} />
           </div>
         ) : null}
         <div style={{ display: 'flex', marginTop: 24, fontWeight: 600, fontSize: 32, lineHeight: 1.3, color: C.ink2 }}>
@@ -437,9 +444,9 @@ export async function renderAnnounce(d: AnnounceData): Promise<Buffer> {
       </div>
 
       <div style={{ display: 'flex', flexGrow: 1 }} />
-      <div style={{ display: 'flex', marginBottom: 54, fontWeight: 800, fontSize: 52, letterSpacing: -1 }}>{booked ? 'Want your city next?' : 'Your city next?'}</div>
+      <div style={{ display: 'flex', marginTop: 56, marginBottom: 44, fontWeight: 800, fontSize: 52, letterSpacing: -1 }}>{booked ? 'Want your city next?' : 'Your city next?'}</div>
       <Key label="Sign a poster" link={d.link} />
-      <div style={{ display: 'flex', marginTop: 44, marginBottom: 90 }}>
+      <div style={{ display: 'flex', marginTop: 40, marginBottom: 72 }}>
         <MadeWith />
       </div>
     </div>,
@@ -468,7 +475,7 @@ export type CardData = {
 const fmtDate = (t: number) => new Date(t).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 
 export async function renderCard(d: CardData, format: 'story' | 'wide'): Promise<Buffer> {
-  const print = await printFor({ portrait: d.portrait, imageUrl: d.imageUrl });
+  const art = await artFor(d);
   const where = d.claim.neighborhood ? `${d.claim.neighborhood}, ${d.cityName}` : d.cityName;
   const when = `Signed ${fmtDate(d.claim.createdAt)}`;
   const first = d.artistName.split(' ')[0];
@@ -493,9 +500,9 @@ export async function renderCard(d: CardData, format: 'story' | 'wide'): Promise
   if (format === 'wide') {
     const s = 560 / POSTER_H;
     return render(
-      <div style={{ ...ground(1200, 630, '24% 50%'), alignItems: 'center' }}>
+      <div style={{ ...ground(1200, 630, '24% 50%', art.theme), alignItems: 'center' }}>
         <div style={{ display: 'flex', marginLeft: 76, transform: 'rotate(-3deg)', boxShadow: '0 30px 60px rgba(0,0,0,0.55)', borderRadius: 14 }}>
-          <Poster d={poster} s={s} print={print} />
+          <Poster d={poster} s={s} art={art} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 64, width: 640 }}>
           <Kicker>{kicker}</Kicker>
@@ -516,13 +523,13 @@ export async function renderCard(d: CardData, format: 'story' | 'wide'): Promise
 
   const s = 700 / POSTER_W;
   return render(
-    <div style={{ ...ground(1080, 1920, '50% 32%'), flexDirection: 'column', alignItems: 'center' }}>
+    <div style={{ ...ground(1080, 1920, '50% 32%', art.theme), flexDirection: 'column', alignItems: 'center' }}>
       <div style={{ display: 'flex', marginTop: 96 }}>
         <Island text={`${d.artistName} · ${d.cityName}`} />
       </div>
       <div style={{ position: 'relative', display: 'flex', marginTop: 56 }}>
         <div style={{ display: 'flex', transform: 'rotate(-2deg)', boxShadow: '0 40px 80px rgba(0,0,0,0.55)', borderRadius: 26 }}>
-          <Poster d={poster} s={s} print={print} />
+          <Poster d={poster} s={s} art={art} />
         </div>
         {d.claim.deputy ? <img src={img('art-seal')} width={220} height={220} style={{ position: 'absolute', right: -90, top: 640, transform: 'rotate(12deg)' }} /> : null}
       </div>
@@ -555,9 +562,9 @@ export type RapSheetData = {
   headline: string;
 };
 
-/** The whole run on one page: the artist's print, two numbers, then every stop. */
+/** The whole run on one page: the artist, two numbers, then every stop. */
 export async function renderRapSheet(d: RapSheetData): Promise<Buffer> {
-  const print = await printFor({ portrait: d.mugshot, imageUrl: d.imageUrl });
+  const face = d.mugshot && OUR_ACT.has(d.mugshot) ? img('maya-avatar') : d.imageUrl ? await photo(d.imageUrl) : null;
   const rows = d.stops.slice(0, 10);
   return render(
     <div style={{ ...ground(1080, 1920, '30% 12%') }}>
@@ -567,8 +574,8 @@ export async function renderRapSheet(d: RapSheetData): Promise<Buffer> {
         <div style={{ display: 'flex', fontWeight: 700, fontSize: 24, color: C.ink3 }}>{d.isDemo ? 'Demo' : 'The run so far'}</div>
       </div>
       <div style={{ display: 'flex', marginTop: 48 }}>
-        <div style={{ display: 'flex', width: 360, height: 420, borderRadius: 40, overflow: 'hidden', backgroundColor: C.paperOrange }}>
-          {print ? <img src={print} width={504} height={420} style={{ marginLeft: -72 }} /> : null}
+        <div style={{ display: 'flex', width: 360, height: 360, borderRadius: 999, overflow: 'hidden', backgroundColor: C.paperOrange, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
+          {face ? <img src={face} width={360} height={360} /> : null}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 44, width: 548 }}>
           <Kicker>Wanted</Kicker>
