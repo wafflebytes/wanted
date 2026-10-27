@@ -18,7 +18,7 @@ export const POST = handler(async (req: Request, { id }: Record<string, string>)
   const plain = !input.regions?.length && !input.focusDay && !input.dates && !input.startDate;
   const key = `wq:${artist.id}:${input.focusCity}`;
   const kept = plain ? await kvGet<{ at: number; report: WithoutQlooReport }>(key) : null;
-  if (kept && Date.now() - kept.at < DAY) return json({ ...kept.report, cachedAt: kept.at });
+  if (kept?.report.llm.samples.length && Date.now() - kept.at < DAY) return json({ ...kept.report, cachedAt: kept.at });
   const scout = await scoutFor(artist);
   const report = await withoutQloo({
     artist,
@@ -29,6 +29,7 @@ export const POST = handler(async (req: Request, { id }: Record<string, string>)
     dates: input.dates ?? 10,
     startDate: input.startDate ?? new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10),
   });
-  if (plain) await kvSet(key, { at: Date.now(), report });
+  // Only a comparison the chatbot actually answered; an empty one would replay "0 of 0" all day.
+  if (plain && report.llm.samples.length) await kvSet(key, { at: Date.now(), report });
   return json(report);
 });
