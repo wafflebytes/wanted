@@ -167,6 +167,12 @@ against the door count.
 
 Real: tour dates, km and hours, the city pick and its score, hang spots, openers, the ask. Fixture until wired (labelled on screen as Gus's guesses): fares and flight times, gas price, room rate, the door guess. Tech pass: a fares API for the fly lane, a room-booking hold for the drive lane, door guess from the room's real capacity and the city's signers.
 
+### 3.6c Settle up (built)
+
+`/a/[artist]/show/[deal]/settle`, from the "Settle up" row on Show day. After the set Gus reads three counts, one by one: the room's door sheet, the ticket scanner, your guest list. If they agree it's one line and the money. If not, an amber card: how many people paid and weren't counted ("11 people paid and weren't counted. That's $142 of yours. They came in between 10:05 and 10:40"), the receipt (scanned, minus your guests, paid at $18, your 72%, the room's sheet), and the note to the room already written with the scan log attached. Hold to send. When the room fixes it the room's count turns to 123, the total rolls to $1,594 and the sheet gets a Settled stamp.
+
+Real: the deal (room, date, your split). Fixture until wired, and labelled on screen: door sheet, scan log, guest list, the room's reply. Tech pass: scanner export (Eventbrite / DICE / Square check-ins), the room's sheet parsed from the settlement email, the note sent on the deal thread, payout tracked in the ledger.
+
 ### 3.7 Next jobs for Gus, by demo value
 
 Ranked by how much real friction they remove times how well they show in two minutes.
@@ -174,7 +180,7 @@ Ranked by how much real friction they remove times how well they show in two min
 | Job | What it looks like | Qloo's part | Rung |
 |---|---|---|---|
 | ~~Fly or drive~~ (built as 3.6b, with a third lane: play the city on the way) | A long leg shows two lanes: 11 h in the van vs $214 flight + van shuttle, with what each does to the next day's load-in | none; honest | 0, then 3 to buy |
-| Settle up | After the set: the room's count vs the ticket scanner vs your split, one line if it matches, an amber card if not | none | 0 |
+| ~~Settle up~~ (built, 3.6c) | After the set: the room's count vs the ticket scanner vs your split, one line if it matches, an amber card if not | none | 0 |
 | Guest list and rider | The four names and the rider go to the room; "sent" is not "acknowledged" until the room says so | none | 2 |
 | Conflict radar | "A Sour Widows show is two blocks away that night": same-night shows that share your crowd, not every show | taste similarity of the other bill | 0 |
 | Merch that fits the city | Which shirt to bring more of, from what this crowd also loves | cross-domain brands | 1 |

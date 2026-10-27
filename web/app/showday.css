@@ -126,3 +126,4 @@
 @media (prefers-reduced-motion: reduce) {
   .sd-row.moved .sd-row-b, .sd-row.moved .sd-what { animation: none; }
 }
+.sd-go { display: block; margin-top: 6px; }

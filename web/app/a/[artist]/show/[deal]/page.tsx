@@ -64,6 +64,7 @@ export default function ShowDay() {
 }
 
 function Sheet0({ day, setDay, slug, deal }: { day: Day; setDay: (d: Day) => void; slug: string; deal: Deal }) {
+  const router = useRouter();
   const [moved, setMoved] = useState<Set<string>>(new Set());
   const [line, setLine] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -147,7 +148,15 @@ function Sheet0({ day, setDay, slug, deal }: { day: Day; setDay: (d: Day) => voi
                 </span>
               </button>
               {open === r.id && r.id === 'dinner' && <Dinner day={day} window={window} />}
-              {open === r.id && r.id !== 'dinner' && (
+              {open === r.id && r.id === 'settle' && (
+                <div className="sd-why">
+                  Gus checks the room’s number against the ticket scanner and your guest list before you shake on it.
+                  <button className="sd-more sd-go" onClick={() => router.push(`/a/${slug}/show/${deal.id}/settle`)}>
+                    See it on a night
+                  </button>
+                </div>
+              )}
+              {open === r.id && r.id !== 'dinner' && r.id !== 'settle' && (
                 <p className="sd-why">
                   {r.src ? `${WHO_LABEL[r.who] === 'The room' ? day.room : WHO_LABEL[r.who]} said so · ${r.src}` : r.who === 'road' ? `Leaves time for a stop and the border-free route. ${day.road.drive} door to door.` : r.id === 'hang' ? 'Your crowd here already goes there. Gus will invite the signers.' : 'Gus will do this one for you.'}
                 </p>
