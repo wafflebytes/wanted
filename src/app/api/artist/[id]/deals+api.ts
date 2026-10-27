@@ -2,10 +2,12 @@ import { body, handler, HttpError, json, limit } from '@/server/http';
 import { advanceDeal, decideDeal, dealsFor, limitsFor, setLimits, startDeal, steerDeal } from '@/server/deals';
 import { requireArtist } from '@/server/service';
 import { env } from '@/server/env';
+import { tick } from '@/server/ambient';
 
 /** Date holds Gus negotiated with rooms' booking agents, and the limits he works within. */
 export const GET = handler(async (_req: Request, { id }: Record<string, string>) => {
   const artist = await requireArtist(id);
+  await tick(artist);
   const [deals, limits] = await Promise.all([dealsFor(artist.id), limitsFor(artist.id)]);
   return json({ deals, limits, rail: env.stripeTestKey ? 'stripe-test' : 'sandbox' });
 });

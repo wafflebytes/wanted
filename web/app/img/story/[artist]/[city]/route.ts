@@ -16,7 +16,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ artist: string;
   const kind = new URL(req.url).searchParams.get('kind') === 'booked' ? 'booked' : 'winner';
   try {
     const buf = await sharp(Buffer.from(await announcePng(artist, city, kind))).jpeg({ quality: 86, mozjpeg: true }).toBuffer();
-    return new Response(new Uint8Array(buf), { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=60' } });
+    return new Response(new Uint8Array(buf), { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400' } });
   } catch {
     return new Response('Not found', { status: 404 });
   }

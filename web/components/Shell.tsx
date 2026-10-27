@@ -51,6 +51,13 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
     deals.resume(slug);
   }, [slug]);
 
+  // Gus starts calls on his own (server tick): the island picks up a new one when you're not in a room.
+  useEffect(() => {
+    const on = dealList.data?.deals.find((x) => x.status === 'talking');
+    const cur = deals.get().deal;
+    if (on && cur?.id !== on.id && cur?.status !== 'talking' && gus.get().panel !== 'room') deals.show(on);
+  }, [dealList.data]);
+
   // A link can open the deal room: /a/<act>?deal=<id> (from Fan Mail, a notification, a share).
   useEffect(() => {
     const id = new URLSearchParams(location.search).get('deal');

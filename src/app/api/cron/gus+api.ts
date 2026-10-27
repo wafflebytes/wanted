@@ -6,6 +6,9 @@ import { drainBookingJobs } from '@/server/jobs';
 import { drainDepositFollowups } from '@/server/deals';
 import { drainTaskAttention } from '@/server/operations/attention';
 import { drainAgentTasks } from '@/server/operations/task-runner';
+import { tick } from '@/server/ambient';
+import { all } from '@/server/db';
+import { getArtist } from '@/server/artists';
 export function schedulerAuthorized(req: Request, secret = process.env.CRON_SECRET): boolean {
   if (!secret || secret.length < 32) return false;
   const expected = Buffer.from(`Bearer ${secret}`);
@@ -17,5 +20,9 @@ export const GET = handler(async (req: Request) => {
   const [booking, agent] = await Promise.all([drainBookingJobs(5), drainAgentTasks(5)]);
   const attention = await drainTaskAttention();
   const commerce = await drainDepositFollowups(1);
-  return json({ booking, agent, attention, commerce });
+  // Calls in progress keep going for every act, watched or not.
+  const acts = await all<{ artist_id: string }>("select distinct artist_id from deals where body like '%\"status\":\"talking\"%' limit 20");
+  const ambient = [];
+  for (const a of acts) { const artist = await getArtist(a.artist_id); if (artist) ambient.push(await tick(artist, Date.now(), { force: true })); }
+  return json({ booking, agent, attention, commerce, ambient });
 });

@@ -1,0 +1,44 @@
+# Wanted
+
+> Wanted is an agent-native tour manager for independent musicians. Its agent, Gus, uses Qloo's taste graph to predict which US cities (and which neighborhoods in them) love an act's sound. He puts up a WANTED poster in those cities that fans sign as proof. Once a city proves itself, he negotiates a date with the room inside limits the artist sets, and brings back one decision to approve. Built for the Qloo Agentic Hackathon ("Agents, but with taste").
+
+- Live app (works on a phone): https://wanted-qloo.vercel.app
+- Demo act: https://wanted-qloo.vercel.app/a/maya-ortiz
+- A fan's view of a poster: https://wanted-qloo.vercel.app/w/maya-ortiz/burlington-vt
+- Source (MIT): https://github.com/wafflebytes/wanted
+- Full detail for agents: https://wanted-qloo.vercel.app/llms-full.txt
+
+## What a judge or agent should know first
+
+- Gus is ambient. Calls to venues advance on the server whether or not a screen is open (`src/server/ambient.ts`). When you arrive, the Dynamic Island already shows a call in progress, an offer waiting on you, and a date already held.
+- Qloo decides where and to whom; the LLM only writes and plans. Money and terms are enforced by server policy (`src/server/deals.ts`, `src/server/deal-scope.ts`). Payments are test-mode only, each against an exact reviewed hash.
+- Fan data (signatures, neighborhoods, contacts) never goes to Qloo or to any model.
+- What's simulated is labeled: venue booking agents are stand-ins, deposits are sandbox/Stripe test, and demo signatures are flagged as demo.
+
+## How Wanted uses Qloo (`src/server/qloo/api.ts`)
+
+- Sound to entities: `/search` and entities by ID or Spotify ID.
+- Every US city ranked for the crowd: `/v2/insights` with `filter.type=urn:heatmap`, normalized against a panel of other acts (`src/server/score.ts`).
+- Neighborhoods inside a city: `urn:heatmap` scoped to the city.
+- Rooms ranked for the act's taste, with the reason: `urn:entity:place` with explainability.
+- Poster spots where the crowd hangs out: `urn:entity:place` in the top neighborhoods.
+- Who the fans are: `urn:demographics`; cross-domain `podcast`, `tv_show`, `movie`, `brand`; `urn:tag`.
+- An opener who shares the crowd: `urn:entity:artist` / `person`, then `/v2/analysis/compare`.
+- Without Qloo: every city sheet has a switch that shows what a plain LLM guesses for the same question (`src/server/without-qloo.ts`, `src/server/gus/baseline.ts`).
+
+## Public JSON API (read-only for the demo act)
+
+- `GET /api/artist/maya-ortiz`: the act, its sound, opened cities.
+- `GET /api/artist/maya-ortiz/map`: city heat, proof (signatures by city), sleepers.
+- `GET /api/artist/maya-ortiz/city/{metroId}`: neighborhoods, rooms, crowd for one city.
+- `GET /api/artist/maya-ortiz/deals`: deals Gus is negotiating, with full letter threads.
+- `GET /api/artist/maya-ortiz/plan`: the tour plan and Gus's suggested changes.
+- `GET /api/artist/maya-ortiz/logbook`: everything Gus did, in plain words, and his mandate.
+- `GET /api/health`: which providers are live.
+
+## Docs
+
+- [README](https://github.com/wafflebytes/wanted#readme): the pitch, try-it path, architecture, evals.
+- [Agent UX spec](https://github.com/wafflebytes/wanted/blob/main/docs/design/AGENT-UX.md): approvals ladder, surfaces, loops.
+- [Evals](https://github.com/wafflebytes/wanted/blob/main/evals/report.md): agent, voice, and Qloo vs plain-LLM results.
+- [Research](https://github.com/wafflebytes/wanted/tree/main/docs/research): customers, touring operating model, voice of customer, market.

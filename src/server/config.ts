@@ -110,8 +110,8 @@ export const config = {
   },
 
   voice: {
-    /** Fish Audio voice "Verity" (8d21b053...): middle-aged male character voice. */
-    referenceId: '8d21b053e2804e2a890e1cf62f267b6f',
+    /** Gus's Fish Audio voice (picked by the team): a warm, gravelly tour-manager read. */
+    referenceId: '5fcadcafba014c62b2e73cc5f338bb63',
     /** Drama 3 first; S2.1 Pro takes the same bracket directions if Drama 3 is unavailable. */
     models: ['drama-3', 's2.1-pro', 's2.1-pro-free'],
   },

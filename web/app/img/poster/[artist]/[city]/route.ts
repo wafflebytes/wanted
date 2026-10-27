@@ -34,5 +34,5 @@ export async function GET(req: Request, ctx: { params: Promise<{ artist: string;
       return new Response('Not found', { status: 404 });
     }
   }
-  return new Response(new Uint8Array(buf), { headers: { 'Content-Type': jpg ? 'image/jpeg' : 'image/webp', 'Cache-Control': 'public, max-age=60, stale-while-revalidate=600' } });
+  return new Response(new Uint8Array(buf), { headers: { 'Content-Type': jpg ? 'image/jpeg' : 'image/webp', 'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400' } });
 }

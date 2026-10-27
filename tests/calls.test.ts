@@ -59,7 +59,7 @@ test('declined or canceled speech cannot complete successfully, including a cach
 test('late decline or conflicting no cannot hide a pending exact yes payment',async()=>{
  const {a}=await setup();const c=(await checkIn(a,12))!;await answerCall(a,c.id,'pickup');const original=globalThis.fetch,oldKey=process.env.STRIPE_SECRET_KEY;process.env.STRIPE_SECRET_KEY='sk_test_synthetic_calls';
  let entered!:()=>void,release!:()=>void;const started=new Promise<void>(r=>{entered=r;}),gate=new Promise<void>(r=>{release=r;});let payments=0;
- globalThis.fetch=async()=>{payments++;entered();await gate;return new Response(JSON.stringify({id:'pi_synthetic_pending_call',status:'succeeded',livemode:false,amount:14000,currency:'usd'}),{status:200});};
+ globalThis.fetch=async(u:unknown)=>{if(!String(u).includes('api.stripe.com'))return new Response('{}',{status:503});payments++;entered();await gate;return new Response(JSON.stringify({id:'pi_synthetic_pending_call',status:'succeeded',livemode:false,amount:14000,currency:'usd'}),{status:200});};
  try{
   const yes=answerCall(a,c.id,'yes');await started;
   await assert.rejects(answerCall(a,c.id,'decline'),/already recorded or executing/);await assert.rejects(answerCall(a,c.id,'no'),/different decision/);
