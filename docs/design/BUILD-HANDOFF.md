@@ -66,7 +66,7 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 ## Known issues to fix first
 
 1. Map load time is unverified: the in-app browser pane was hidden (background tab throttling) and the dev server recompiles after edits. Measure with the pane visible or a production build.
-2. Gus sometimes runs ~27 lookups and falls back to "Ask me about a city…" (server agent hitting its step cap). Fix in `src/server/gus/agent.ts`: answer from what it found.
+2. ~~Gus fallback after many lookups~~ (fixed, session 5): `src/server/gus/ask.ts` caps 4 lookups a turn, then forces a final answer with `toolChoice: 'none'`; the lite fallback says what the lookups found instead of "Ask me about a city…".
 3. Tour fix takes ~15 s with only "On it…": show Gus's step in the island while it runs.
 4. Desktop panel layout not checked; Posters has no wide layout yet.
 5. The saved demo tour still carries the old jargon `gusLine` until the plan is next changed.
@@ -78,5 +78,5 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 1. ~~Fan Mail~~ (landed, session 5): airmail letter with how the week felt + reel number + scrubbable 14-day trace on a recessed screen; "For you" notes (deduped, one key each); Almost there; latest signatures with wax seals; posts as a postcard row; Earlier folded. `plain()` rewrites old stored copy (Qloo, Bounty, "(Demo data.)").
 2. ~~Logbook and Settings~~ (landed, session 5): ruled diary by day with who-dots (You, Gus, A venue, Fans) and an Everything / Needed you switch; the mandate as one paragraph with a key to Settings. Settings: acts, autoAsk switch, venues-at-once segment, deposit and door-cut sliders (debounced POST `/logbook {mandate}`), calls switch, quiet hours, theme, iOS note. Shared `.seg`, `.switch`, `.range` controls live in `globals.css`. "Add an act" is hidden until Welcome exists; `/` redirects to the last act (or the demo act).
 3. Known issues above.
-4. Splash (`/`), Welcome (port `src/app/welcome.tsx`), fan poster page `/w/[artist]/[city]` (sign + receipt).
+4. ~~Welcome~~ (landed, session 5): `/` sends a returning device to its last act; a new one gets "Find the cities that want you" (I make music / I'm a fan / demo act), then link → who you sound like → room size → the run streaming picks, then the map. `/?new=1` is Add an act. The full run (`/scout/run`) wasn't exercised from the web yet. Still to do: splash, fan poster page `/w/[artist]/[city]` (sign + receipt).
 5. Verify every screen at 375 px dark + light; delete `/lab`. Vercel: `vercel.json` now builds `next build web` and main deploys fine, but the project's production branch is `ui-overhaul-iphone16`, so main lands as a protected Preview until the user switches it.

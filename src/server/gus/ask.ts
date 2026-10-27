@@ -387,6 +387,9 @@ async function liteAgent(ctx: Ctx, heard: string): Promise<Omit<GusAnswer, 'hear
     await runTool(ctx, 'top_cities', { list: 'best' });
     if (ranked[0]) return { reply: `Start with ${ranked[0].name}. That’s where ${name}’s crowd is thickest.`, mood: 'proud', action: { type: 'city', id: ranked[0].id, name: ranked[0].name, label: `Go to ${ranked[0].name}` } };
   }
+  // Lookups ran but none of the shortcuts fit: say what they turned up rather than shrugging.
+  const found = ctx.steps.map((s) => s.found).filter((f): f is string => !!f).slice(-2);
+  if (found.length) return { reply: `Here’s what I’ve got. ${found.map((f) => f.replace(/\.$/, '')).join('. ')}.`, mood: 'idle', action: null };
   return { reply: 'Ask me about a city, a room, an opener or who’s signing. I’ll look it up.', mood: 'unimpressed', action: null };
 }
 
@@ -442,17 +445,19 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
   let model = 'gus-lite';
   const deadline = Date.now() + 30_000;
   try {
-    for (let turn = 0; turn < 5 && Date.now() < deadline; turn++) {
+    for (let turn = 0; turn < 4 && Date.now() < deadline - 6000; turn++) {
       const res = await chat({ messages, tools: TOOLS, temperature: 0.4, maxTokens: 500 });
       model = res.model;
       if (!res.toolCalls.length) {
         finalText = res.content;
         break;
       }
-      messages.push({ role: 'assistant', content: res.content, tool_calls: res.toolCalls });
+      // A few lookups a turn is plenty; a model that fans out to twenty never gets to answering.
+      const calls = res.toolCalls.slice(0, 4);
+      messages.push({ role: 'assistant', content: res.content, tool_calls: calls });
       // Independent lookups run side by side, the way a person opens three tabs.
       const outs = await Promise.all(
-        res.toolCalls.map(async (call) => {
+        calls.map(async (call) => {
           let args: Record<string, string> = {};
           try {
             args = JSON.parse(call.function.arguments || '{}');
@@ -460,7 +465,14 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
           return runTool(ctx, call.function.name, args);
         }),
       );
-      res.toolCalls.forEach((call, i) => messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(outs[i]).slice(0, 5000) }));
+      calls.forEach((call, i) => messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(outs[i]).slice(0, 5000) }));
+    }
+    // Out of turns or time with lookups done: answer from what came back instead of giving up.
+    if (finalText === null && ctx.steps.length) {
+      messages.push({ role: 'user', content: 'That’s enough looking. Answer now from what you found, as the JSON.' });
+      const res = await chat({ messages, tools: TOOLS, toolChoice: 'none', temperature: 0.3, maxTokens: 300 });
+      model = res.model;
+      finalText = res.content;
     }
   } catch (err) {
     if (!(err instanceof LlmUnavailable)) console.warn('[gus] agent failed, using lite', redact(String(err)));

@@ -1,0 +1,87 @@
+/* Welcome: night on the road. A warm lamp over dark tarmac, the van parked in the light, then
+   one card at a time. Dark is the main room; light is the same scene at dawn. */
+.wl { --page: #0E0D0B; position: relative; min-height: 100dvh; width: 100%; max-width: var(--col); margin: 0 auto; display: flex; flex-direction: column; justify-content: flex-end; padding: calc(var(--safe-t) + 24px) var(--gutter) calc(var(--safe-b) + 24px); }
+:root[data-theme="light"] .wl { --page: #EFE9DD; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .wl { --page: #EFE9DD; } }
+.wl > * { position: relative; z-index: 1; }
+.wl > .wl-ground { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(70% 42% at 50% 30%, rgba(255, 170, 90, 0.16), transparent 70%),
+    radial-gradient(120% 60% at 50% 110%, rgba(255, 90, 31, 0.10), transparent 60%),
+    var(--page);
+}
+
+/* ---------- the first screen */
+.wl-hero { display: flex; flex-direction: column; animation: rise var(--t-enter) var(--ease) both; }
+.wl-van { align-self: center; margin-bottom: 8px; filter: drop-shadow(0 20px 18px rgba(0, 0, 0, 0.45)); animation: van-park 900ms var(--ease) both; }
+@keyframes van-park { from { opacity: 0; transform: translateX(-60px); } }
+.wl-hero h1 { font: 800 40px/1.02 var(--display); letter-spacing: -0.04em; text-wrap: balance; }
+.wl-hero > p { margin-top: 12px; font-size: 16.5px; line-height: 1.45; color: var(--ink-2); max-width: 34ch; }
+.wl-acts { display: flex; flex-direction: column; gap: 10px; margin-top: 28px; }
+.wl-demo { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 44px; font: 600 15px var(--body); color: var(--ink-2); }
+.wl-demo:active { color: var(--ink); }
+
+/* ---------- the card: one question at a time */
+.wl-card { display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 14px 18px 18px; border-radius: 30px; background: var(--raise); box-shadow: var(--bevel), var(--drop), 0 30px 60px -30px rgba(0, 0, 0, 0.7); animation: card-up var(--t-hero) var(--ease) both; }
+@keyframes card-up { from { opacity: 0; transform: translateY(40px); } }
+.wl-card > h2 { margin-top: 12px; font: 800 28px/1.08 var(--display); letter-spacing: -0.03em; text-wrap: balance; }
+.wl-card > p { margin-top: 8px; font-size: 15.5px; line-height: 1.45; color: var(--ink-2); }
+.wl-card > .btn.block { margin-top: 18px; }
+.wl-card > .gus { margin-top: 4px; }
+.wl-top { width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.wl-top .icon-btn { width: 44px; height: 44px; }
+.wl-top .icon-btn[disabled] { visibility: hidden; }
+.wl-dots { display: flex; gap: 6px; }
+.wl-dots i { width: 6px; height: 6px; border-radius: 3px; background: var(--ink-4); transition: width var(--t-move) var(--ease), background-color var(--t-fade); }
+.wl-dots i.on { width: 18px; background: var(--wanted); }
+.wl-err { margin-top: 10px !important; font-size: 14px !important; color: var(--no-text, #E5484D) !important; }
+
+/* The link field: a well with a Paste key inside it. */
+.wl-field { width: 100%; display: flex; align-items: center; gap: 8px; margin-top: 18px; padding: 0 8px 0 16px; height: 56px; border-radius: 18px; background: var(--well-bg); box-shadow: var(--well); }
+.wl-field input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; font: 500 17px var(--body); color: var(--ink); outline: none; }
+.wl-field input::placeholder { color: var(--ink-3); }
+.wl-field:focus-within { box-shadow: var(--well), 0 0 0 2px color-mix(in srgb, var(--wanted) 55%, transparent); }
+
+/* Found you. */
+.wl-me { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 10px; border-radius: 20px; background: var(--well-bg); box-shadow: var(--well); }
+.wl-me img, .wl-me > span { width: 52px; height: 52px; flex: none; border-radius: 14px; object-fit: cover; display: grid; place-items: center; font: 800 22px var(--display); background: var(--veil-2); }
+.wl-me div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.wl-me b { font: 700 18px/1.2 var(--display); letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wl-me em { font-style: normal; font-size: 13.5px; color: var(--ink-2); }
+.wl-ok { color: var(--ok-text); flex: none; }
+
+/* Lookalikes as keys you press in and out. */
+.wl-sims { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.wl-sim { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px 0 4px; border-radius: 20px; font: 600 14.5px var(--body); color: var(--ink-2); background: var(--well-bg); box-shadow: var(--well); transition: color var(--t-fade), background-color var(--t-fade), box-shadow var(--t-fade), transform var(--t-tap) var(--ease); }
+.wl-sim img, .wl-sim > span { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; display: grid; place-items: center; font: 800 13px var(--display); background: var(--veil-2); opacity: 0.6; transition: opacity var(--t-fade); }
+.wl-sim.on { color: var(--key-fg); background: var(--key); box-shadow: var(--key-bevel), var(--drop); }
+.wl-sim.on img, .wl-sim.on > span { opacity: 1; }
+.wl-sim:active { transform: scale(0.96); }
+
+/* Room size: three raised plates, the chosen one pressed in and lit. */
+.wl-rooms { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.wl-room { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 10px 16px; border-radius: 18px; text-align: left; background: var(--raise); box-shadow: var(--bevel), var(--drop); transition: box-shadow var(--t-fade), transform var(--t-tap) var(--ease); }
+.wl-room span { display: flex; flex-direction: column; gap: 2px; }
+.wl-room b { font: 700 16.5px/1.2 var(--display); }
+.wl-room em { font-style: normal; font-size: 13.5px; color: var(--ink-2); }
+.wl-room small { flex: none; font: 600 13px var(--body); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.wl-room.on { background: var(--well-bg); box-shadow: var(--well), inset 0 0 0 1.5px var(--wanted); }
+.wl-room.on small { color: var(--wanted-text); }
+.wl-room:active { transform: scale(0.985); }
+
+/* The run: Gus reading, then the cities arriving one by one. */
+.wl-run { width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 12px 0 4px; }
+.wl-run h2 { margin-top: 12px; font: 800 26px/1.1 var(--display); letter-spacing: -0.03em; }
+.wl-run p { margin-top: 8px; font-size: 15.5px; line-height: 1.45; color: var(--ink-2); max-width: 32ch; }
+.wl-wait { display: flex; gap: 6px; margin: 22px 0 8px; }
+.wl-wait i { width: 8px; height: 8px; border-radius: 50%; background: var(--wanted); animation: wait 1.2s var(--ease) infinite; }
+.wl-wait i:nth-child(2) { animation-delay: 160ms; } .wl-wait i:nth-child(3) { animation-delay: 320ms; }
+@keyframes wait { 0%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-4px); } }
+.wl-picks { list-style: none; counter-reset: pick; width: 100%; margin-top: 18px; text-align: left; border-radius: 20px; overflow: hidden; background: var(--well-bg); box-shadow: var(--well); }
+.wl-picks li { counter-increment: pick; display: grid; grid-template-columns: 26px 1fr auto; align-items: baseline; column-gap: 10px; padding: 12px 14px; animation: rise var(--t-enter) var(--ease) both; animation-delay: calc(var(--i) * 220ms); }
+.wl-picks li + li { border-top: 1px solid var(--line); }
+.wl-picks li::before { content: counter(pick); font: 800 15px var(--display); color: var(--wanted-text); }
+.wl-picks b { font: 700 17px var(--display); letter-spacing: -0.01em; }
+.wl-picks span { font-size: 13px; color: var(--ink-3); }
+.wl-picks em { grid-column: 2 / -1; font-style: normal; font-size: 13px; color: var(--ok-text); }
+.wl-van-top { margin-bottom: -18px; z-index: 2; animation: none; }

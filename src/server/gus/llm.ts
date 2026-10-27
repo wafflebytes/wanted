@@ -27,6 +27,8 @@ export type ChatOptions = {
   tools?: ToolDef[];
   /** Ask the provider for sequential tool use; server guards remain authoritative. */
   parallelToolCalls?: boolean;
+  /** "none" makes the model answer from what it already has instead of looking more up. */
+  toolChoice?: 'auto' | 'none';
   /** JSON schema for structured output. */
   schema?: { name: string; schema: Record<string, unknown> };
   temperature?: number;
@@ -74,7 +76,7 @@ async function callModel(model: string, opts: ChatOptions, key: string): Promise
     // Gus writes short lines; reasoning tokens only add latency on the free tier.
     reasoning: { enabled: false },
   };
-  if (opts.tools?.length) { body.tools = opts.tools; if (opts.parallelToolCalls !== undefined) body.parallel_tool_calls = opts.parallelToolCalls; }
+  if (opts.tools?.length) { body.tools = opts.tools; if (opts.parallelToolCalls !== undefined) body.parallel_tool_calls = opts.parallelToolCalls; if (opts.toolChoice) body.tool_choice = opts.toolChoice; }
   if (opts.schema) {
     body.response_format = { type: 'json_schema', json_schema: { name: opts.schema.name, strict: true, schema: opts.schema.schema } };
   }
@@ -137,6 +139,7 @@ export async function chat(opts: ChatOptions): Promise<ChatResult> {
     m: opts.messages,
     t: opts.tools ?? null,
     parallel: opts.parallelToolCalls ?? null,
+    choice: opts.toolChoice ?? null,
     s: opts.schema ?? null,
     temp: opts.temperature ?? 0.7,
     salt: opts.salt ?? null,

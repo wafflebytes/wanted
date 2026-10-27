@@ -109,6 +109,17 @@ export default function Settings() {
               </Link>
             </li>
           ))}
+          <li>
+            <Link href="/?new=1" className="st-row">
+              <span className="st-av add">
+                <Icon name="add" bold size={18} />
+              </span>
+              <span className="st-t">
+                <b>Add an act</b>
+                <em>Another band, a side project, a solo set</em>
+              </span>
+            </Link>
+          </li>
         </ul>
       </section>
 
