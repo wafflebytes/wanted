@@ -337,7 +337,7 @@ function Welcome() {
 
           {step === 'rooms' && (
             <>
-              <h2>How big are your rooms?</h2>
+              <h2>How big are the venues you play?</h2>
               <p>Be honest. Nobody fills a theater on hope.</p>
               <div className="wl-rooms" role="radiogroup">
                 {ROOMS.map((r) => (

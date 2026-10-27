@@ -83,7 +83,7 @@ function LegView({ leg, plan, slug }: { leg: Leg; plan: TourPlan; slug: string }
   const go = async () => {
     if (!via) return;
     setSent(true);
-    gus.flash(`Asking rooms in ${via.name}`, 2200);
+    gus.flash(`Asking venues in ${via.name}`, 2200);
     try {
       await deals.ask(slug, via.id);
       gus.open('room');
@@ -167,7 +167,7 @@ function LegView({ leg, plan, slug }: { leg: Leg; plan: TourPlan; slug: string }
               <Icon name="heart" size={22} />
               <span>
                 <b>One of your top {Math.max(10, Math.ceil(via.top / 10) * 10)} cities</b>
-                <em>{via.signers ? `${via.signers} people already signed there` : 'Nobody has signed yet. Gus puts a poster up the day a room says yes.'}</em>
+                <em>{via.signers ? `${via.signers} people already signed there` : 'Nobody has signed yet. Gus puts a poster up the day a venue says yes.'}</em>
               </span>
             </div>
             {spot ? (

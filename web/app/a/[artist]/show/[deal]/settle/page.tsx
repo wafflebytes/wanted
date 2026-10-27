@@ -73,7 +73,7 @@ function Sheet({ s, slug, dealId }: { s: Settle; slug: string; dealId: string })
       : phase === 'fixed'
         ? `All three match now. ${usd(s.yours)} is yours, and ${s.contact} is sending it tonight.`
         : phase === 'sent'
-          ? `Sent ${s.contact} the scan log. Waiting on the room.`
+          ? `Sent ${s.contact} the scan log. Waiting on the venue.`
           : `${s.missing} people paid and weren’t counted. That’s ${usd(s.yours - s.roomSays)} of yours. They came in ${s.late}.`;
 
   return (

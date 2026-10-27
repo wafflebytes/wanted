@@ -52,7 +52,7 @@ export default function ShowDay() {
         <div className="sd-empty">
           <Gus mood="waiting" size={96} />
           <h1>No show here yet</h1>
-          <p>Once a room holds a date, its day lives here.</p>
+          <p>Once a venue books you, the show day lives here.</p>
           <button className="btn light" onClick={() => router.push(`/a/${slug}/tour`)}>
             See your tour
           </button>
@@ -269,7 +269,7 @@ function Fans({ day, slug, deal }: { day: Day; slug: string; deal: Deal }) {
       </div>
       <div className="sd-fans card">
         <p>
-          {day.signers ? 'They got first dibs on tickets. ' : ''}{day.hang ? <>After the show, invite them to <b>{day.hang.name}</b>, where your crowd here already goes.</> : 'After the show, Gus can invite them somewhere near the room.'}
+          {day.signers ? 'They got first dibs on tickets. ' : ''}{day.hang ? <>After the show, invite them to <b>{day.hang.name}</b>, where your crowd here already goes.</> : 'After the show, Gus can invite them somewhere near the venue.'}
         </p>
         {sent ? (
           <p className="sd-done">

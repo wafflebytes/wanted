@@ -114,6 +114,15 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 - `llms.txt`, `llms-full.txt`, robots, sitemap; `npm run smoke:prod`.
 - Limits Gus changes stay in place with Undo (no jump to Settings).
 
+## Session 12 (landed): plain words, tour polish
+
+- **Vocabulary for a first tour** (whole app, server text and the Gus prompt): venue not room, your cut of ticket sales not the door, book / lock in the date not hold, your tour not your run, test mode spelled out. `src/lib/plain.ts` `plainWords()` rewrites older stored lines on screen (logbook, Fan Mail, deal letters, island, Gus panels). Hotel rooms are left alone.
+- Tour: the deal spotlight covers both rows; the drawings of Gus hide while the real one guides (`html.guide-on .th-obj`).
+- Posters cache their render in kv (`LOOK` in `img/poster/.../route.ts`; bump it when the poster's look changes), so they show at once after a deploy.
+- Fan Mail drops rough, culture-war and non-English posts (`pulse.ts`, `chatter:v3`). Tour plan blurbs that are lists of weekdays fall back to the plain line (old demo plan on prod still has them).
+- `?ask=<question>` on any act page opens Gus and asks it. Gallery: `node scripts/gallery-refresh.mjs --wait /llms-full.txt <text>` waits for the deploy, then reshoots and rebuilds the cards with no taps.
+- Claude card view is `ui://wanted/gus-card-v3.html`.
+
 ## Next steps
 
 (Tour and Posters done. Dark is the main mode: design there first, then check light. Use the material system above for every new control. Judge product and copy as well as pixels: one job per screen, one primary key, plain musician words.)

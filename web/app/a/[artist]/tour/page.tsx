@@ -174,7 +174,7 @@ export default function TourPage() {
       <h2 className="d-24">No run yet.</h2>
       <p className="ink-2">Gus strings your best cities into ten nights, short drives, good nights of the week.</p>
       <button className="btn hot" disabled={!!busy} onClick={() => run({ kind: 'new' }, 'new', 'Planning your tour')}>
-        {busy ? 'Planning…' : 'Plan my run'}
+        {busy ? 'Planning…' : 'Plan my tour'}
       </button>
     </div>
   ) : (
