@@ -102,6 +102,16 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 - **Settle up** (`web/lib/settle.ts`, `show/[deal]/settle`, `app/settle.css`): three counts land as recessed screens, amber verdict with the missing people in money, receipt, drafted note + scan log, hold to send, room fixes it, total rolls, Settled stamp. Verified 375 px dark + light.
 - New spottedinprod sheet `.data/refs/spottedinprod/road_4.jpg` (Flighty alternate flights + passport, Transit trip summary, ride-trace timeline, Canopi trip). Borrowed: glowing trace with labelled points, big times, recap stat card (for a future tour recap story).
 
+## Session 11 (landed): agent-native last leg
+
+- **Ambient Gus** (`src/server/ambient.ts`): any deals read advances calls by the time that passed; the cron sweep ticks acts with calls in progress; the demo act keeps one held, one waiting and one talking deal in stock. The act read (`/api/artist/[id]`) no longer ticks, so it stays fast.
+- **Island live activities**: call in progress with a ring, offer waiting, bumps; the deal room folds into the island to keep a call running.
+- **The tour with Gus** (`web/lib/guide.ts`, `components/Guide.tsx`, `app/guide.css`): `?tour=1` (Welcome's "Take a quick tour with Gus first"). Gus leaves the dock (the tabs close the gap), one line beside him, a feathered blur over everything but the focus, presses off the path blocked, the thing to press glows and shines; a reload resumes (panel steps rewind to the island). Targets are `data-tour` attributes. Verified 375 dark + light.
+- **Gus in Claude** (`src/server/mcp.ts`, `/api/mcp`): remote MCP, five tools, nothing can pay; Settings card "Gus in Claude"; `tests/mcp.test.ts`.
+- **Ask a chatbot instead?** (`components/PlainChatbot.tsx`) at the bottom of every city sheet, cached a day per city.
+- `llms.txt`, `llms-full.txt`, robots, sitemap; `npm run smoke:prod`.
+- Limits Gus changes stay in place with Undo (no jump to Settings).
+
 ## Next steps
 
 (Tour and Posters done. Dark is the main mode: design there first, then check light. Use the material system above for every new control. Judge product and copy as well as pixels: one job per screen, one primary key, plain musician words.)
