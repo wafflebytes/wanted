@@ -293,15 +293,15 @@
   position: fixed; left: 50%; bottom: 0; z-index: 20; width: 100%; max-width: var(--col); margin-left: calc(var(--col) / -2);
   display: flex; flex-direction: column; border-radius: var(--r-xl) var(--r-xl) 0 0; background: var(--bg);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 -0.5px 0 var(--line-2), 0 -18px 50px -20px rgba(0, 0, 0, 0.45);
-  transition: transform var(--t-hero) var(--ease); touch-action: none; will-change: transform;
+  touch-action: none; will-change: transform; --p: 0; --q: 0;
 }
 @media (max-width: 480px) { .sheet { left: 0; margin-left: 0; } }
-.sheet.is-drag { transition: none; }
-.sheet.is-full { touch-action: pan-y; }
+.sheet[data-full] { touch-action: pan-y; }
+.sheet[data-full] .sheet-body { overflow-y: auto; }
 .sheet-grab { display: grid; place-items: center; height: 30px; margin-bottom: -8px; flex: none; cursor: grab; }
 .sheet-grab i { width: 38px; height: 5px; border-radius: 3px; background: var(--ink-4); }
 .sheet-head { padding: 2px var(--gutter) 12px; flex: none; }
-.sheet-body { flex: 1; min-height: 0; padding: 0 var(--gutter) calc(var(--safe-b) + var(--dock-h) + 40px); overscroll-behavior: contain; }
+.sheet-body { flex: 1; min-height: 0; overflow: hidden; padding: 0 var(--gutter) calc(var(--safe-b) + var(--dock-h) + 40px); overscroll-behavior: contain; }
 
 /* ---------- progressive blur at the edges: content melts under the dock and the header */
 .pblur { position: fixed; left: 0; right: 0; z-index: 22; pointer-events: none; }

@@ -26,7 +26,16 @@
 .k-ask { color: var(--ask-text); }
 .k-gold { color: var(--ask-text); }
 .nm-prog { display: none; }
-.nm-compact { width: 100%; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 7px 0 16px; border-radius: var(--r-pill); background: var(--card); box-shadow: var(--shadow-1), var(--rim); animation: fade var(--t-fade) var(--ease); text-align: left; }
+/* The morph. --p comes from the drawer (or the panel's scroll on a computer): the card fades,
+   lifts and shrinks a touch while the head folds to the pill's height; the pill fades in late.
+   The clip keeps the art breaking out above but trims what the folding head no longer holds. */
+.nm-wrap { --nm-h: 300px; --pp: var(--p, 0); position: relative; height: calc(var(--nm-h) - (var(--nm-h) - 52px) * var(--pp)); clip-path: inset(-140px -40px -8px -40px); }
+.nm-wrap .nm { opacity: calc(1 - var(--pp) * 1.9); transform: translateY(calc(var(--pp) * -18px)) scale(calc(1 - var(--pp) * 0.04)); transform-origin: 50% 0; }
+.nm-wrap .nm-obj { opacity: calc(1 - var(--pp) * 2.4); }
+.nm-wrap .nm-compact { position: absolute; left: 0; right: 0; top: 0; z-index: 3; opacity: calc((var(--pp) - 0.45) * 2.2); transform: translateY(calc((1 - var(--pp)) * 10px)); pointer-events: none; }
+[data-folded] .nm-wrap .nm-compact { pointer-events: auto; }
+[data-folded] .nm-wrap .nm { pointer-events: none; }
+.nm-compact { width: 100%; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 7px 0 16px; border-radius: var(--r-pill); background: var(--card); box-shadow: var(--shadow-1), var(--rim); text-align: left; }
 .nm-compact b { flex: 1; font: 700 15.5px var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nm-skel { padding: 6px 0 20px; }
 

@@ -5,7 +5,7 @@
  * dives in while the drawer becomes that city's sheet.
  */
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Deal } from '@/lib/types';
 import type { ArtistState, CityData, MapData, MapMetroRow } from '@/ui/types';
 import { Art } from '@web/components/Art';
@@ -46,7 +46,9 @@ function Home() {
   const dock = 10 + 62 + 12;
   const detents = useMemo(() => {
     const top = h - 64 - 8;
-    return cityId ? [400 + dock, Math.round(h * 0.6), top] : [340 + dock, Math.round(h * 0.62), top];
+    // Home has two rests, the card and the list, so the card folds about 1:1 with the finger over the
+    // whole travel (a middle rest made it fold three times faster than the hand). A city has three.
+    return cityId ? [400 + dock, Math.round(h * 0.6), top] : [340 + dock, top];
   }, [h, cityId]);
   const [at, setAt] = useState(0);
   useEffect(() => setAt(cityId ? 1 : 0), [cityId]);
@@ -84,7 +86,7 @@ function Home() {
     const top = ranked[0];
     if (top) {
       const s = sleepers[0];
-      return { kicker: 'Your next move', title: `Start in ${top.name}.`, line: s && s.id !== top.id ? `Your biggest crowd. Then try ${s.name}, your sleeper.` : 'Your biggest crowd. Put a poster up and see who signs.', action: `Open ${top.name}`, art: 'map', go: () => dive(top.id), progress: null };
+      return { kicker: 'Your next move', title: `Start in ${top.name}.`, line: s && s.id !== top.id ? `Your biggest crowd. Then try ${s.name}: more fans than its size.` : 'Your biggest crowd. Put a poster up and see who signs.', action: `Open ${top.name}`, art: 'map', go: () => dive(top.id), progress: null };
     }
     return null;
   }, [art.data, dl.data, ranked, sleepers, slug]);
@@ -115,7 +117,7 @@ function Home() {
 
   const signatures = art.data?.opened.reduce((n, o) => n + (o.proof?.signatures ?? 0), 0) ?? 0;
 
-  const head = cityId ? null : move ? <NextMove move={move} compact={at > 0} /> : <div className="nm-skel"><div className="sk" style={{ width: '40%', height: 12 }} /><div className="sk" style={{ width: '80%', height: 26, marginTop: 10 }} /><div className="sk" style={{ width: '60%', height: 14, marginTop: 10 }} /></div>;
+  const head = cityId ? null : move ? <NextMove move={move} /> : <div className="nm-skel"><div className="sk" style={{ width: '40%', height: 12 }} /><div className="sk" style={{ width: '80%', height: 26, marginTop: 10 }} /><div className="sk" style={{ width: '60%', height: 14, marginTop: 10 }} /></div>;
 
   const body = cityId ? (
     city.data && city.data.metro.id === cityId ? (
@@ -172,7 +174,7 @@ function Home() {
               <b>{m.name}</b>
               <em>
                 {m.state}
-                {m.sleeper ? ' · sleeper' : ''}
+                {m.sleeper ? ' · overlooked' : ''}
                 {proofBy[m.id] ? ` · ${proofBy[m.id].signatures} signed` : ''}
               </em>
             </span>
@@ -195,7 +197,15 @@ function Home() {
       {wide ? (
         <aside className="home-panel card">
           {head && <div className="sheet-head">{head}</div>}
-          <div className="home-panel-body">{body}</div>
+          {/* On a computer the panel's own scroll folds the card, the way the drawer does on a phone. */}
+          <div className="home-panel-body" onScroll={(e) => {
+              const p = Math.min(1, e.currentTarget.scrollTop / 140);
+              const panel = e.currentTarget.parentElement!;
+              panel.style.setProperty('--p', p.toFixed(3));
+              panel.toggleAttribute('data-folded', p > 0.5);
+            }}>
+            {body}
+          </div>
         </aside>
       ) : (
         <Sheet detents={detents} at={at} onAt={setAt} head={head} className={cityId ? 'sheet-city' : ''}>
@@ -212,18 +222,34 @@ function useSlug() {
   return slug;
 }
 
-function NextMove({ move, compact }: { move: Move; compact: boolean }) {
+function NextMove({ move }: { move: Move }) {
   const ask = move.kicker === 'Needs your OK';
-  if (compact)
-    return (
+  // Both faces are always there; the drawer's --p (0 at the peek, 1 at half) crossfades them and
+  // folds the head's height, so the card collapses under your finger instead of swapping.
+  const card = useRef<HTMLDivElement>(null);
+  const wrap = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const c = card.current;
+    if (!c) return;
+    const ro = new ResizeObserver(() => wrap.current?.style.setProperty('--nm-h', `${c.offsetHeight}px`));
+    ro.observe(c);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div className="nm-wrap" ref={wrap}>
       <button className="nm-compact" onClick={move.go}>
         <i className={`dot ${ask ? 'ask' : 'hot'}`} />
         <b>{move.title}</b>
         <span className="btn xs">{move.action}</span>
       </button>
-    );
+      <NextMoveCard move={move} ask={ask} r={card} />
+    </div>
+  );
+}
+
+function NextMoveCard({ move, ask, r }: { move: Move; ask: boolean; r: React.RefObject<HTMLDivElement | null> }) {
   return (
-    <div className={`nm ${ask ? 'is-ask' : ''}`}>
+    <div className={`nm ${ask ? 'is-ask' : ''}`} ref={r}>
       <Art name={move.art} size={124} className="nm-obj" />
       <span className={`kicker ${ask ? 'k-ask' : 'k-hot'}`}>{move.kicker}</span>
       <h2 className="nm-title">{move.title}</h2>
