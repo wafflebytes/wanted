@@ -14,7 +14,7 @@ import { METROS } from './score';
 import { cityData, mapData, requireArtist } from './service';
 
 const DEMO = 'maya-ortiz';
-const PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05'];
+const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const origin = () => process.env.WANTED_PUBLIC_ORIGIN ?? 'https://trywanted.vercel.app';
 
 type Args = Record<string, unknown>;
@@ -183,7 +183,17 @@ async function one(m: Rpc) {
       return ok(id, {
         protocolVersion: PROTOCOLS.includes(want) ? want : PROTOCOLS[0],
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'wanted-gus', title: 'Gus from Wanted', version: '1.0.0' },
+        serverInfo: {
+          name: 'wanted-gus',
+          title: 'Gus from Wanted',
+          version: '1.0.0',
+          websiteUrl: origin(),
+          // Gus's face, so the connector shows him in Claude's tool list instead of a blank tile.
+          icons: [
+            { src: `${origin()}/icon.png`, mimeType: 'image/png', sizes: ['512x512'] },
+            { src: `${origin()}/apple-icon.png`, mimeType: 'image/png', sizes: ['180x180'] },
+          ],
+        },
         instructions: `Gus is a tour manager for independent musicians. He knows where an act is wanted (Qloo's taste graph plus fan signatures), which rooms fit, and the dates he's negotiating. Every tool takes an optional act slug; the demo act is "${DEMO}". Money never moves from here: the artist approves deposits in the app.`,
       });
     }
