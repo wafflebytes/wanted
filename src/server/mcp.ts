@@ -271,7 +271,7 @@ async function one(m: Rpc) {
       return ok(id, { description: p.description, messages: [{ role: 'user', content: { type: 'text', text: p.text(a.act || DEMO, a.city) } }] });
     }
     case 'tools/list':
-      return ok(id, { tools: TOOLS.map(({ run: _run, ...t }) => ({ ...t, icons: icons(), _meta: { ui: { resourceUri: VIEW_URI, visibility: ['model', 'app'] } } })) });
+      return ok(id, { tools: TOOLS.map(({ run: _run, ...t }) => ({ ...t, icons: icons(), _meta: { ui: { resourceUri: VIEW_URI, visibility: ['model', 'app'] }, 'ui/resourceUri': VIEW_URI } })) });
     case 'tools/call': {
       const tool = TOOLS.find((t) => t.name === m.params?.name);
       if (!tool) return fail(id, -32602, `Unknown tool: ${String(m.params?.name)}`);
