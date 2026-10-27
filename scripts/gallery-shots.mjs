@@ -1,17 +1,18 @@
 /**
- * Real iPhone Safari screenshots of the app for the Devpost gallery, from a booted iOS Simulator
- * (Safari reaches the dev server at localhost). Each screen is taken in light and dark.
+ * Real iPhone Safari screenshots of the app for the Devpost gallery, from a booted iOS Simulator.
+ * Each screen is taken in light and dark.
  *
- *   DEVICE=<udid> BASE=http://localhost:3100 node scripts/gallery-shots.mjs <outDir>
+ *   DEVICE=<udid> BASE=https://trywanted.vercel.app node scripts/gallery-shots.mjs <outDir>
  *
- * Two screens need taps, so take them by hand in light mode and save them to <outDir>:
+ * Three need taps, so take them by hand in light mode and save them to <outDir>:
+ *   deal.png     /a/maya-ortiz, Review (deal ids differ between deployments)
  *   gus.png      Gus button, keyboard, "Which Burlington rooms are open on a Tuesday?"
- *   chatbot.png  /a/maya-ortiz?city=ithaca-ny, scroll to "Ask a chatbot instead?", Compare
+ *   claude.png   optional: a Claude chat with Gus as a connector
  */
 import { execFileSync } from 'node:child_process';
 
 const out = process.argv[2] ?? '.data/gallery';
-const BASE = process.env.BASE ?? 'http://localhost:3100';
+const BASE = process.env.BASE ?? 'https://trywanted.vercel.app';
 const dev = process.env.DEVICE ?? 'booted';
 const sim = (...a) => execFileSync('xcrun', ['simctl', ...a], { stdio: 'ignore' });
 const wait = (s) => execFileSync('sleep', [String(s)]);

@@ -74,9 +74,9 @@ qloo, typescript, next.js, react, expo, openrouter, libsql, turso, maplibre, dec
 
 ## Try it out
 
-- https://wanted-qloo.vercel.app/a/maya-ortiz?tour=1
+- https://trywanted.vercel.app/a/maya-ortiz?tour=1
 - https://github.com/wafflebytes/wanted
 
 ## Image gallery
 
-Upload [docs/gallery](gallery) in order: `0-cover.jpg` as the thumbnail, then cards 1 to 8. They're 3:2 and alternate light and dark. Each one is a real iPhone Safari screenshot from the iOS Simulator, shown without a device frame: just the screen and its rounded corners, sitting on the page's own colour so Safari's bars, the app and the card read as one surface (`node scripts/gallery-shots.mjs <dir>` for the screens, then `node scripts/gallery-cards.mjs <dir> docs/gallery`).
+Upload [docs/gallery](gallery) in order: `0-cover.jpg` as the thumbnail, then cards 1 to 12. They're 3:2 and alternate light and dark. Cards 0 to 7 are real iPhone Safari screenshots of trywanted.vercel.app from the iOS Simulator, shown without a device frame. Cards 8 to 10 explain how Gus works, why taste data matters and the loop that pays the band, drawn with the app's own art. Card 11 is Gus answering in Claude (drop `claude.png` into the shots folder to build it), and card 12 has a QR code for the live demo. Build with `node scripts/gallery-shots.mjs <dir>`, then `node scripts/gallery-cards.mjs <dir> docs/gallery`.

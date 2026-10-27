@@ -3,10 +3,10 @@
  * images links unfurl to, and the agent surfaces. Fails on a non-200, a slow answer, or a
  * demo act with nothing for Gus to show (no call, no offer, no held date), or the MCP connector down.
  *
- *   npm run smoke:prod                       # https://wanted-qloo.vercel.app
+ *   npm run smoke:prod                       # https://trywanted.vercel.app
  *   npm run smoke:prod -- http://localhost:3100
  */
-const base = (process.argv[2] ?? process.env.SMOKE_URL ?? 'https://wanted-qloo.vercel.app').replace(/\/$/, '');
+const base = (process.argv[2] ?? process.env.SMOKE_URL ?? 'https://trywanted.vercel.app').replace(/\/$/, '');
 const act = 'maya-ortiz';
 const city = 'burlington-vt';
 /** A city with a held date, read from the deals check; the booked story needs one. */
