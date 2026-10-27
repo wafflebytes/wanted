@@ -242,7 +242,7 @@ function Wall({ slug, cities, idx, onIdx, onLift }: { slug: string; cities: Open
   };
 
   return (
-    <section className="pw-wall" aria-label="Your posters">
+    <section className="pw-wall" aria-label="Your posters" data-tour="poster">
       <div className="pw-names" ref={names} aria-hidden>
         {cities.map((c, i) => (
           <button key={c.city} tabIndex={-1} onClick={() => goTo(i)}>

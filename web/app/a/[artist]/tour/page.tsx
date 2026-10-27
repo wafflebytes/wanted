@@ -106,7 +106,7 @@ export default function TourPage() {
       {fixes.length > 0 && <span className="btn xs hot">{fixes.length} changes</span>}
     </button>
   ) : (
-    <div className="th">
+    <div className="th" data-tour="run">
       <Gus mood={busy ? 'working' : fixes.length ? 'thinking' : 'proud'} size={124} className="th-obj" />
       <span className="kicker k-hot">Your run</span>
       <h2 className="th-title">
@@ -254,7 +254,7 @@ function Stop({ s, i, isNew, busy, held, onLock, onOpen, onRoad }: { s: TourStop
   const d = day(s.date);
   const long = s.driveHoursFromPrev >= 8;
   return (
-    <li className={`tr-stop ${isNew ? 'is-new' : ''} ${s.locked ? 'is-locked' : ''} ${long ? 'after-long' : ''}`} style={{ ['--i' as string]: i }}>
+    <li data-tour={held ? 'held' : undefined} className={`tr-stop ${isNew ? 'is-new' : ''} ${s.locked ? 'is-locked' : ''} ${long ? 'after-long' : ''}`} style={{ ['--i' as string]: i }}>
       <span className="tr-node" aria-hidden>
         {i + 1}
       </span>

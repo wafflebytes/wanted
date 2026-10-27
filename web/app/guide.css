@@ -1,0 +1,177 @@
+/* The tour with Gus (components/Guide.tsx). One Gus, one line, everything else soft. */
+.guide {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+
+/* The veil: a blur over the whole app with a cut-out for the one thing Gus means. Presses on
+   the veil go nowhere; the cut-out passes them through to the real element. */
+.guide-veil {
+  position: fixed;
+  inset: 0;
+  pointer-events: auto;
+  background: color-mix(in srgb, var(--bg) 34%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  backdrop-filter: blur(14px) saturate(1.1);
+  transition: clip-path 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: guide-in 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* No target: the map stays clear up top, the drawer below steps back. */
+.guide-veil.is-open {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, transparent 42%, #000 54%);
+  mask-image: linear-gradient(180deg, transparent 0%, transparent 42%, #000 54%);
+}
+.guide.is-landing .guide-veil,
+.guide.is-leaving .guide-veil {
+  opacity: 0;
+  pointer-events: none;
+}
+@keyframes guide-in {
+  from { opacity: 0; }
+}
+
+/* The thing to press: a band of light runs across it, left to right. */
+.guide-shine,
+.guide-next {
+  overflow: hidden;
+}
+.guide-shine {
+  position: fixed;
+  left: 0;
+  top: 0;
+}
+.guide-shine::before,
+.guide-next::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.5) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: guide-shine 2400ms cubic-bezier(0.22, 1, 0.36, 1) 600ms infinite;
+  pointer-events: none;
+}
+@keyframes guide-shine {
+  0% { transform: translateX(-100%); }
+  45%, 100% { transform: translateX(100%); }
+}
+
+/* The line and Gus sit side by side, the line toward the middle, Gus at the edge. */
+.guide-row {
+  position: fixed;
+  display: flex;
+  justify-content: flex-end;
+  transition: top 520ms cubic-bezier(0.22, 1, 0.36, 1), bottom 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.guide-row.is-top { align-items: flex-start; }
+.guide-row.is-bottom { align-items: flex-end; }
+.guide-line {
+  pointer-events: auto;
+  max-width: 100%;
+  padding: 12px 14px;
+  border-radius: 20px 20px 6px 20px;
+  background: var(--ink);
+  color: var(--bg);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  transform: translateX(10px) scale(0.96);
+  transform-origin: 100% 100%;
+  transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1), transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.guide-row.is-top .guide-line {
+  border-radius: 20px 6px 20px 20px;
+  transform-origin: 100% 0;
+}
+.guide-line.in {
+  opacity: 1;
+  transform: none;
+}
+.guide-line p {
+  margin: 0;
+  font: 600 15.5px/1.32 var(--display);
+  letter-spacing: -0.01em;
+}
+.guide-keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+}
+.guide-next {
+  position: relative;
+  height: 36px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--wanted);
+  color: #fff;
+  font: 700 15px var(--display);
+  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.guide-next:active {
+  transform: scale(0.97);
+}
+.guide-skip {
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: color-mix(in srgb, var(--bg) 60%, transparent);
+  font: 600 14px var(--display);
+}
+
+/* Gus: flies out of the dock and back into it. */
+.guide-gus {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 52px;
+  height: 52px;
+  transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms;
+}
+.guide-gus-in {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #15130f;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 10px 24px rgba(0, 0, 0, 0.3);
+  animation: guide-nudge 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.guide.is-leaving .guide-gus {
+  opacity: 0;
+  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms 380ms;
+}
+@keyframes guide-nudge {
+  30% { transform: translateX(-3px) rotate(-4deg); }
+  65% { transform: translateX(2px) rotate(2deg); }
+}
+
+/* While Gus is out, his dock button folds away and the tabs take the room. */
+.gus-btn {
+  transition: transform var(--t-move) var(--ease-pop), width 520ms cubic-bezier(0.22, 1, 0.36, 1), margin 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms;
+}
+html.guide-on .gus-btn {
+  width: 0;
+  margin-left: -8px;
+  opacity: 0;
+  transform: scale(0.5);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-gus,
+  .guide-row,
+  .guide-line,
+  .guide-veil {
+    transition-duration: 1ms;
+    animation: none;
+  }
+  .guide-shine::before,
+  .guide-next::after,
+  .guide-gus-in {
+    animation: none;
+  }
+}

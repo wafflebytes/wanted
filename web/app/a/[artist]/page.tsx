@@ -275,7 +275,7 @@ function NextMoveCard({ move, ask, r }: { move: Move; ask: boolean; r: React.Ref
         </div>
       ) : null}
       <p className="nm-line">{move.line}</p>
-      <button className={`btn block ${ask ? '' : 'hot'}`} onClick={move.go}>
+      <button className={`btn block ${ask ? '' : 'hot'}`} onClick={move.go} data-tour="next-move">
         {move.action}
         <Icon name="forward" size={18} />
       </button>

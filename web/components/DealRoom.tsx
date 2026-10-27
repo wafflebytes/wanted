@@ -220,7 +220,7 @@ function Tug({ label, min, max, show, line, good, ask, offer, met }: { label: st
   // When the two pucks sit close, their labels split up and down instead of colliding.
   const close = ask !== null && offer !== null && Math.abs(ask - offer) / (max - min) < 0.16;
   return (
-    <div className="tug">
+    <div className="tug" data-tour="room">
       <div className="tug-h">
         <span>{label}</span>
         {met !== null && <b className={inside(met) ? 'ok' : 'no'}>{show(met)}</b>}

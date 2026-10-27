@@ -34,7 +34,7 @@ export function MapStage({ slug }: { slug: string }) {
             lon: cd.metro.lon,
             hexes: cd.hexes,
             neighborhoods: (cd.neighborhoods ?? []).map((n) => ({ name: n.name, rank: n.rank, lat: n.lat, lon: n.lon })),
-            rooms: cd.rooms.map((r) => ({ id: r.id, name: r.name, lat: r.lat, lon: r.lon, rank: r.rank })),
+            rooms: (cd.rooms ?? []).map((r) => ({ id: r.id, name: r.name, lat: r.lat, lon: r.lon, rank: r.rank })),
             outline: cd.outline,
           }
         : null,

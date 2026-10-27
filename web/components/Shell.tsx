@@ -17,6 +17,7 @@ import { mutate, useApi } from '@web/lib/hooks';
 import { session } from '@web/lib/session';
 import { Gus, type GusMood } from './Gus';
 import { GusPanels } from './GusPanels';
+import { Guide } from './Guide';
 import { MapStage } from './map/MapStage';
 import { ProgressiveBlur } from './ProgressiveBlur';
 import { Icon, type IconName } from './Icon';
@@ -143,6 +144,7 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
       {!hideChrome && <ProgressiveBlur side="bottom" />}
       {!hideChrome && <Dock slug={slug} tab={tab} badge={!!waiting} />}
       <GusPanels slug={slug} artist={artist.data} waiting={waiting ?? null} entries={book.data?.entries ?? []} />
+      <Guide slug={slug} />
     </div>
   );
 }
@@ -316,12 +318,14 @@ function Island() {
 
   const inner = useRef<HTMLSpanElement>(null);
   const [w, setW] = useState<number | null>(null);
+  // The compact row unmounts while a bump shows, so watch whichever element is there now.
   useLayoutEffect(() => {
-    if (!inner.current) return;
-    const ro = new ResizeObserver(() => setW(inner.current!.offsetWidth));
-    ro.observe(inner.current);
+    const el = inner.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setW(el.offsetWidth));
+    ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [!!bump]);
   useEffect(() => {
     if (bump) haptic(bump.tone === 'ok' ? 'success' : 'heard');
   }, [bump]);
@@ -333,7 +337,7 @@ function Island() {
   const hidden = g.panel === 'tray' || !!lv.open;
   return (
     <div className="island-row">
-      <button className={`island tone-${tone} ${hidden ? 'is-open' : ''} ${bump ? 'is-bump' : ''}`} style={w && !bump ? { width: w } : undefined} onClick={tap} aria-label={`Gus: ${words}. ${act ? 'Open what he is doing' : 'Open Gus’s tray'}`} aria-expanded={hidden}>
+      <button data-tour="island" className={`island tone-${tone} ${hidden ? 'is-open' : ''} ${bump ? 'is-bump' : ''}`} style={w && !bump ? { width: w } : undefined} onClick={tap} aria-label={`Gus: ${words}. ${act ? 'Open what he is doing' : 'Open Gus’s tray'}`} aria-expanded={hidden}>
         {bump ? (
           <span className={`island-bump tone-${bump.tone}`} key={bump.big + bump.small}>
             <span className="island-gus">
@@ -395,7 +399,7 @@ function IslandCard() {
   return (
     <>
       <div className={`isl-scrim ${a ? 'on' : ''}`} onClick={() => live.expand(null)} aria-hidden />
-      <div className={`isl-card ${a ? 'on' : ''} tone-${x?.tone ?? 'idle'}`} role="dialog" aria-label={x?.head ?? 'Gus'} aria-hidden={!a} inert={!a}>
+      <div className={`isl-card ${a ? 'on' : ''} tone-${x?.tone ?? 'idle'}`} data-tour="isl-card" role="dialog" aria-label={x?.head ?? 'Gus'} aria-hidden={!a} inert={!a}>
         {x && (
           <>
             <div className="isl-top">
@@ -522,6 +526,7 @@ function Dock({ slug, tab, badge }: { slug: string; tab: string; badge: boolean 
         ))}
       </nav>
       <button
+        data-tour="gus"
         className={`gus-btn ${g.holding ? 'is-held' : ''} ${open ? 'is-open' : ''} ${g.phase === 'listening' ? 'is-listening' : ''}`}
         onPointerDown={down}
         onPointerUp={up}
