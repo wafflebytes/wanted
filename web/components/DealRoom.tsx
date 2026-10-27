@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Deal, DealLetter, DealLimits, Mandate } from '@/lib/types';
 import { deals, useDeal } from '@web/lib/deals';
 import { gus } from '@web/lib/gus';
+import { live as island } from '@web/lib/live';
 import { haptic } from '@web/lib/haptics';
 import { useApi } from '@web/lib/hooks';
 import { Approval, fmtDate } from './Approval';
@@ -46,6 +47,12 @@ export function DealRoom({ open, slug }: { open: boolean; slug: string }) {
     }
   }, [d?.status, d?.id, open, stamped]);
 
+  // A call runs for minutes: fold it up into the island and carry on. It swells when the room answers.
+  const [away, setAway] = useState(false);
+  useEffect(() => {
+    if (open) setAway(false);
+  }, [open]);
+
   if (!d)
     return (
       <div className={`dr ${open ? 'on' : ''}`} aria-hidden={!open} inert={!open} role="dialog" aria-label="Deal room">
@@ -67,17 +74,23 @@ export function DealRoom({ open, slug }: { open: boolean; slug: string }) {
   const held = d.status === 'held';
   const mood = held ? 'proud' : waiting ? 'waiting' : live.paused ? 'sleeping' : talking ? 'phone' : 'idle';
   const kicker = held ? 'Held' : waiting ? 'They agreed. Your call' : live.paused ? 'Paused' : talking ? 'Gus is on the phone' : d.status === 'declined' ? 'You passed' : 'Let go';
+  const background = () => {
+    haptic('tap');
+    setAway(true);
+    gus.close();
+    setTimeout(() => island.bump({ big: 'Still on', small: `Gus keeps talking to ${d.roomName.replace(/\s+-\s+.*$/, '')}`, tone: 'live' }, 2200), 380);
+  };
   const go = (path: string) => {
     gus.close();
     router.push(`/a/${slug}${path}`);
   };
 
   return (
-    <div className={`dr ${open ? 'on' : ''} s-${d.status}`} aria-hidden={!open} inert={!open} role="dialog" aria-label={`Deal room: ${d.roomName}`}>
+    <div className={`dr ${open ? 'on' : ''} ${away ? 'away' : ''} s-${d.status}`} aria-hidden={!open} inert={!open} role="dialog" aria-label={`Deal room: ${d.roomName}`}>
       <div className="dr-sheet">
         <header className="dr-head">
           <span className={`dr-gus ${talking && !live.paused ? 'live' : ''}`}>
-            <Gus mood={mood} size={60} />
+            <Gus mood={mood} size={44} sticker={false} />
           </span>
           <div className="dr-who">
             <span className="dr-k">
@@ -90,9 +103,15 @@ export function DealRoom({ open, slug }: { open: boolean; slug: string }) {
               {d.terms ? ` · ${fmtDate(d.terms.date)}` : ''}
             </span>
           </div>
-          <button className="icon-btn flat dr-x" onClick={() => gus.close()} aria-label="Close the deal room">
-            <Icon name="close" size={18} />
-          </button>
+          {talking ? (
+            <button className="icon-btn flat dr-x" onClick={background} aria-label="Keep the call going in the background">
+              <Icon name="chevron" size={18} className="dr-down" />
+            </button>
+          ) : (
+            <button className="icon-btn flat dr-x" onClick={() => gus.close()} aria-label="Close the deal room">
+              <Icon name="close" size={18} />
+            </button>
+          )}
         </header>
 
         <div className="dr-body">
@@ -113,7 +132,7 @@ export function DealRoom({ open, slug }: { open: boolean; slug: string }) {
         </div>
 
         <footer className="dr-foot">
-          {talking && <Steer lim={lim} paused={live.paused} />}
+          {talking && <Steer lim={lim} paused={live.paused} onAway={background} />}
           {waiting && <Approval deal={d} busy={live.deciding} compact slim />}
           {held && (
             <div className="dr-next">
@@ -319,7 +338,7 @@ function plain(t: string) {
  * Steering a call in progress. Each chip is a sentence you'd say to a manager standing next
  * to you; it goes into the thread as your note and the next letter follows it.
  */
-function Steer({ lim, paused }: { lim: DealLimits | null; paused: boolean }) {
+function Steer({ lim, paused, onAway }: { lim: DealLimits | null; paused: boolean; onAway: () => void }) {
   const [sent, setSent] = useState<string | null>(null);
   const say = (key: string, patch: { minSplit?: number; maxDeposit?: number }) => {
     haptic('commit');
@@ -349,10 +368,16 @@ function Steer({ lim, paused }: { lim: DealLimits | null; paused: boolean }) {
           </button>
         )}
       </div>
-      <button className="btn ghost sm steer-p" onClick={() => (haptic('tap'), paused ? deals.play() : deals.pause())}>
-        <Icon name={paused ? 'play' : 'stop'} size={16} />
-        {paused ? 'Keep going' : 'Pause the call'}
-      </button>
+      <div className="steer-foot">
+        <button className="btn ghost sm steer-p" onClick={() => (haptic('tap'), paused ? deals.play() : deals.pause())}>
+          <Icon name={paused ? 'play' : 'stop'} size={16} />
+          {paused ? 'Keep going' : 'Pause the call'}
+        </button>
+        <button className="btn light sm steer-away" onClick={onAway}>
+          Do other things
+          <Icon name="chevron" size={14} className="dr-down" />
+        </button>
+      </div>
     </div>
   );
 }

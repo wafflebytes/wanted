@@ -6,11 +6,12 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Deal, LogEntry, Mandate } from '@/lib/types';
+import type { Deal, DealLetter, LogEntry, Mandate } from '@/lib/types';
 import type { ArtistState } from '@/ui/types';
 import { deals, useDeal } from '@web/lib/deals';
 import { haptic } from '@web/lib/haptics';
 import { gus, useGus, type GusAction } from '@web/lib/gus';
+import { live, useLive, type Activity } from '@web/lib/live';
 import { api } from '@web/lib/api';
 import { mutate, useApi } from '@web/lib/hooks';
 import { session } from '@web/lib/session';
@@ -39,7 +40,7 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
   const router = useRouter();
   const tab = tabOf(path, slug);
   const g = useGus();
-  const live = useDeal();
+  const call = useDeal();
   const artist = useApi<ArtistState>(`/artist/${slug}`);
   const book = useApi<{ entries: LogEntry[]; mandate: Mandate }>(`/artist/${slug}/logbook`, { every: 30_000 });
   const dealList = useApi<{ deals: Deal[] }>(`/artist/${slug}/deals`, { every: 20_000 });
@@ -108,19 +109,21 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
   }, [tab]);
 
   // The island's resting line, from what's actually happening.
-  const d = live.deal;
+  const d = call.deal;
   const waiting = d?.status === 'waiting' ? d : dealList.data?.deals.find((x) => x.status === 'waiting');
   const quiet = useQuiet(book.data?.mandate);
   useEffect(() => {
-    if (d?.status === 'talking' && !live.paused) gus.ambient({ words: `Asking ${shortRoom(d.roomName)}`, mood: 'thinking', tone: 'live' });
-    else if (d?.status === 'talking' && live.paused) gus.ambient({ words: 'Paused', mood: 'idle', tone: 'idle' });
+    if (d?.status === 'talking' && !call.paused) gus.ambient({ words: `Asking ${shortRoom(d.roomName)}`, mood: 'thinking', tone: 'live' });
+    else if (d?.status === 'talking' && call.paused) gus.ambient({ words: 'Paused', mood: 'idle', tone: 'idle' });
     else if (waiting) gus.ambient({ words: 'Needs your OK', mood: 'worried', tone: 'ask' });
     else if (quiet) gus.ambient({ words: `Quiet till ${fmtHour(book.data!.mandate.quietEnd)}`, mood: 'sleeping', tone: 'idle' });
     else {
       const n = artist.data?.opened.length ?? 0;
       gus.ambient({ words: n ? `Watching ${n} ${n === 1 ? 'city' : 'cities'}` : 'Ready when you are', mood: 'idle', tone: 'idle' });
     }
-  }, [d?.status, d?.roomName, live.paused, waiting?.id, quiet, artist.data?.opened.length]);
+  }, [d?.status, d?.roomName, call.paused, waiting?.id, quiet, artist.data?.opened.length]);
+
+  useDealActivity(d ?? null, waiting ?? null, call.paused);
 
   const onMap = tab === 'map';
   const hideChrome = tab === 'settings';
@@ -135,6 +138,105 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
       <GusPanels slug={slug} artist={artist.data} waiting={waiting ?? null} entries={book.data?.entries ?? []} />
     </div>
   );
+}
+
+const lastTerms = (t: DealLetter[], from: 'gus' | 'house') => [...t].reverse().find((l) => l.from === from && l.terms)?.terms ?? null;
+
+/**
+ * The deal as a live activity: Gus on the phone (where the two sides stand, Pause, Listen in),
+ * or the room's yes waiting on you. A new offer or a yes swells the island for a moment, so a
+ * call left in the background still tells you when it moves.
+ */
+function useDealActivity(d: Deal | null, waiting: Deal | null, paused: boolean) {
+  const g = useGus();
+  const seen = useRef<{ id: string | null; n: number; status: string | null }>({ id: null, n: 0, status: null });
+  const talking = d?.status === 'talking' ? d : null;
+  const ask = d?.status === 'waiting' ? d : waiting;
+  const held = d?.status === 'held' ? d : null;
+  const roomOpen = g.panel === 'room';
+
+  useEffect(() => {
+    if (!talking) return live.drop('call');
+    const ours = lastTerms(talking.thread, 'gus');
+    const theirs = lastTerms(talking.thread, 'house');
+    const apart = ours && theirs ? Math.max(0, ours.split - theirs.split) : null;
+    const a: Activity = {
+      id: 'call',
+      rank: 2,
+      tone: paused ? 'idle' : 'live',
+      lead: 'gus',
+      title: paused ? 'Paused' : shortRoom(talking.roomName),
+      trail: theirs ? `${theirs.split}%` : undefined,
+      progress: Math.min(1, talking.thread.length / 14),
+      kicker: paused ? 'Call paused' : 'Gus is on the phone',
+      head: talking.roomName,
+      line: !theirs ? `Gus opened at ${ours?.split ?? '…'}% of the door. Waiting on them.` : apart ? `${apart} ${apart === 1 ? 'point' : 'points'} apart on the door.` : 'They’re meeting in the middle.',
+      nums: [
+        ...(ours ? [{ k: 'Gus asks', v: `${ours.split}% · $${ours.deposit}`, tone: 'hot' as const }] : []),
+        ...(theirs ? [{ k: 'They offer', v: `${theirs.split}% · $${theirs.deposit}` }] : []),
+      ],
+      keys: [
+        { label: 'Listen in', primary: true, run: () => (live.expand(null), gus.open('room')) },
+        { label: paused ? 'Keep going' : 'Pause', run: () => (paused ? deals.play() : deals.pause()) },
+      ],
+    };
+    live.put(a);
+  }, [talking, paused]);
+
+  useEffect(() => {
+    if (!ask?.terms) return live.drop('ask');
+    const t = ask.terms;
+    live.put({
+      id: 'ask',
+      rank: 3,
+      tone: 'ask',
+      lead: 'gus',
+      title: 'Needs your OK',
+      trail: `${t.split}%`,
+      kicker: 'They agreed. Your call',
+      head: ask.roomName,
+      line: `${ask.cityName}, ${new Date(`${t.date}T12:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}.`,
+      nums: [
+        { k: 'Your cut', v: `${t.split}%`, tone: 'ok' },
+        { k: 'To hold it', v: `$${t.deposit}` },
+        ...(t.capacity ? [{ k: 'Room', v: `${t.capacity}` }] : []),
+      ],
+      keys: [
+        {
+          label: 'Look it over',
+          primary: true,
+          run: () => {
+            live.expand(null);
+            if (deals.get().deal?.id !== ask.id) deals.show(ask);
+            gus.open('room');
+          },
+        },
+      ],
+    });
+  }, [ask?.id, ask?.terms?.split, ask?.terms?.deposit]);
+
+  // Swell the island when the call moves and you're not watching it.
+  useEffect(() => {
+    const cur = d ?? null;
+    const s = seen.current;
+    if (!cur) return;
+    if (cur.id !== s.id) {
+      seen.current = { id: cur.id, n: cur.thread.length, status: cur.status };
+      return;
+    }
+    const fresh = cur.thread.slice(s.n);
+    seen.current = { id: cur.id, n: cur.thread.length, status: cur.status };
+    if (roomOpen) return;
+    if (cur.status !== s.status && cur.status === 'waiting' && cur.terms) return live.bump({ big: `${cur.terms.split}%`, small: `${shortRoom(cur.roomName)} said yes`, tone: 'ask' });
+    if (cur.status !== s.status && cur.status === 'held') return live.bump({ big: 'Held', small: `${shortRoom(cur.roomName)} is yours`, tone: 'ok' }, 3000);
+    const offer = [...fresh].reverse().find((l) => l.from === 'house' && l.terms);
+    if (offer?.terms) live.bump({ big: `${offer.terms.split}%`, small: `${shortRoom(cur.roomName)} came back`, tone: 'live' });
+  }, [d?.id, d?.thread.length, d?.status, roomOpen]);
+
+  useEffect(() => {
+    if (!held) return;
+    live.drop('call');
+  }, [held?.id]);
 }
 
 const shortRoom = (n: string) => n.replace(/\s+-\s+.*$/, '').replace(/^The\s+/i, 'The ');
@@ -190,14 +292,20 @@ function UndoChip() {
 
 function Island() {
   const g = useGus();
+  const lv = useLive();
   const step = g.steps.filter((s) => s.status === 'running').at(-1);
-  let words = g.ambient.words;
-  let mood: GusMood = g.ambient.mood;
-  let tone = g.ambient.tone;
+  // Gus talking to you takes the island; otherwise the top live activity; otherwise his resting line.
+  const busy = g.phase === 'listening' || g.phase === 'thinking' || g.speaking || !!g.flash;
+  const act = busy ? null : lv.list[0] ?? null;
+  const second = busy ? null : lv.list[1] ?? null;
+  let words = act?.title ?? g.ambient.words;
+  let mood: GusMood = act ? (act.tone === 'ask' ? 'worried' : act.tone === 'live' ? 'phone' : 'idle') : g.ambient.mood;
+  let tone = act?.tone ?? g.ambient.tone;
   if (g.phase === 'listening') (words = 'Listening'), (mood = 'listening'), (tone = 'live');
   else if (g.phase === 'thinking') (words = step ? islandWords(step.label) : 'Thinking'), (mood = 'thinking'), (tone = 'live');
   else if (g.speaking) (words = 'Talking'), (mood = 'talking'), (tone = 'live');
   if (g.flash) (words = g.flash), (tone = 'live');
+  const bump = busy ? null : lv.bump;
 
   const inner = useRef<HTMLSpanElement>(null);
   const [w, setW] = useState<number | null>(null);
@@ -207,16 +315,120 @@ function Island() {
     ro.observe(inner.current);
     return () => ro.disconnect();
   }, []);
+  useEffect(() => {
+    if (bump) haptic(bump.tone === 'ok' ? 'success' : 'heard');
+  }, [bump]);
+  const tap = () => {
+    haptic('tap');
+    if (act) return live.expand(lv.open === act.id ? null : act.id);
+    gus.open(g.panel === 'tray' ? 'none' : 'tray');
+  };
+  const hidden = g.panel === 'tray' || !!lv.open;
   return (
-    <button className={`island tone-${tone} ${g.panel === 'tray' ? 'is-open' : ''}`} style={w ? { width: w } : undefined} onClick={() => gus.open(g.panel === 'tray' ? 'none' : 'tray')} aria-label={`Gus: ${words}. Open Gus's tray`} aria-expanded={g.panel === 'tray'}>
-      <span className="island-in" ref={inner}>
-        <span className="island-gus">
-          <Gus mood={mood} size={24} sticker={false} level={g.level} />
-        </span>
-        <Swap text={words} />
-        {tone !== 'idle' && <i className={`island-dot ${tone}`} />}
-      </span>
-    </button>
+    <div className="island-row">
+      <button className={`island tone-${tone} ${hidden ? 'is-open' : ''} ${bump ? 'is-bump' : ''}`} style={w && !bump ? { width: w } : undefined} onClick={tap} aria-label={`Gus: ${words}. ${act ? 'Open what he is doing' : 'Open Gus’s tray'}`} aria-expanded={hidden}>
+        {bump ? (
+          <span className={`island-bump tone-${bump.tone}`} key={bump.big + bump.small}>
+            <span className="island-gus">
+              <Gus mood={bump.tone === 'ok' ? 'proud' : 'phone'} size={30} sticker={false} />
+            </span>
+            <b>{bump.big}</b>
+            <em>{bump.small}</em>
+          </span>
+        ) : (
+          <span className="island-in" ref={inner}>
+            <span className="island-gus">
+              <Gus mood={mood} size={24} sticker={false} level={g.level} />
+            </span>
+            <Swap text={words} />
+            {act?.trail ? (
+              <span className="island-trail">
+                {act.progress !== undefined && (
+                  <svg viewBox="0 0 20 20" aria-hidden>
+                    <circle cx="10" cy="10" r="8" />
+                    <circle cx="10" cy="10" r="8" pathLength={1} style={{ strokeDasharray: `${act.progress} 1` }} />
+                  </svg>
+                )}
+                <b>{act.trail}</b>
+              </span>
+            ) : (
+              tone !== 'idle' && <i className={`island-dot ${tone}`} />
+            )}
+          </span>
+        )}
+      </button>
+      {second && !bump && !hidden && (
+        <button className={`island-2 tone-${second.tone}`} onClick={() => (haptic('tap'), live.expand(second.id))} aria-label={`Also: ${second.title}`}>
+          {second.lead === 'gus' ? <Gus mood="phone" size={22} sticker={false} /> : <Icon name={second.lead} size={16} />}
+        </button>
+      )}
+      <IslandCard />
+    </div>
+  );
+}
+
+/**
+ * The island, expanded: the live activity it was carrying, with its numbers and the one or two
+ * keys that move it. It drops out of the pill and folds back into it.
+ */
+function IslandCard() {
+  const lv = useLive();
+  const a = lv.list.find((x) => x.id === lv.open) ?? null;
+  const [last, setLast] = useState(a);
+  useEffect(() => {
+    if (a) setLast(a);
+  }, [a]);
+  useEffect(() => {
+    if (!lv.open) return;
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && live.expand(null);
+    addEventListener('keydown', esc);
+    return () => removeEventListener('keydown', esc);
+  }, [lv.open]);
+  const x = a ?? last;
+  return (
+    <>
+      <div className={`isl-scrim ${a ? 'on' : ''}`} onClick={() => live.expand(null)} aria-hidden />
+      <div className={`isl-card ${a ? 'on' : ''} tone-${x?.tone ?? 'idle'}`} role="dialog" aria-label={x?.head ?? 'Gus'} aria-hidden={!a} inert={!a}>
+        {x && (
+          <>
+            <div className="isl-top">
+              <span className="isl-face">
+                <Gus mood={x.tone === 'ask' ? 'waiting' : x.tone === 'ok' ? 'proud' : x.tone === 'live' ? 'phone' : 'sleeping'} size={40} sticker={false} />
+              </span>
+              <div className="isl-who">
+                <span className="isl-k">
+                  {x.tone === 'live' && <i className="island-dot live" />}
+                  {x.kicker}
+                </span>
+                <b>{x.head}</b>
+              </div>
+              {x.trail && <span className="isl-trail">{x.trail}</span>}
+            </div>
+            <p className="isl-line">{x.line}</p>
+            {x.nums && x.nums.length > 0 && (
+              <dl className="isl-nums">
+                {x.nums.map((n) => (
+                  <div key={n.k} className={n.tone ?? ''}>
+                    <dt>{n.k}</dt>
+                    <dd>{n.v}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            <div className="isl-keys">
+              {x.keys?.map((k) => (
+                <button key={k.label} className={k.primary ? 'p' : ''} onClick={() => (haptic('tap'), k.run())}>
+                  {k.label}
+                </button>
+              ))}
+              <button className="more" onClick={() => (live.expand(null), gus.open('tray'))} aria-label="Everything Gus is doing">
+                <Icon name="grid" size={18} />
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </>
   );
 }
 

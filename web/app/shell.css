@@ -57,6 +57,59 @@
 @keyframes beacon { 0% { box-shadow: 0 0 0 0 rgba(255, 90, 31, 0.6); } 80%, 100% { box-shadow: 0 0 0 7px rgba(255, 90, 31, 0); } }
 @keyframes beacon-a { 0% { box-shadow: 0 0 0 0 rgba(242, 183, 5, 0.6); } 80%, 100% { box-shadow: 0 0 0 7px rgba(242, 183, 5, 0); } }
 
+/* The island carries live activities: a trailing number with a progress ring, a second job as
+   its own bubble, a swell when something lands, and an expanded card that drops out of it. */
+.island-row { position: relative; display: flex; align-items: flex-start; gap: 6px; height: 38px; }
+.island { transition: width var(--t-enter) var(--ease), height var(--t-enter) var(--ease), border-radius var(--t-enter) var(--ease), transform var(--t-tap) var(--ease), opacity var(--t-fade); }
+.island-trail { display: inline-flex; align-items: center; gap: 5px; margin-left: 2px; font: 750 13.5px/1 var(--display); font-variant-numeric: tabular-nums; color: #F6F4EF; }
+.island-trail svg { width: 16px; height: 16px; transform: rotate(-90deg); }
+.island-trail circle { fill: none; stroke-width: 2.6; stroke: rgba(246, 244, 239, 0.18); }
+.island-trail circle + circle { stroke: var(--wanted); stroke-linecap: round; transition: stroke-dasharray var(--t-hero) var(--ease); }
+.tone-ask .island-trail b { color: #FFE08A; }
+.tone-idle .island-trail circle + circle { stroke: rgba(246, 244, 239, 0.5); }
+.island.is-bump { width: min(296px, calc(100vw - 132px)); height: 64px; border-radius: 26px; }
+.island-bump { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; height: 64px; padding: 0 16px 0 12px; text-align: left; animation: bump-in 420ms var(--ease) both; }
+.island-bump .island-gus { grid-row: 1 / 3; width: 38px; height: 38px; background: rgba(246, 244, 239, 0.08); }
+.island-bump b { font: 800 24px/1 var(--display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #F6F4EF; }
+.island-bump em { font: 600 12.5px/1.2 var(--body); font-style: normal; color: rgba(246, 244, 239, 0.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.island-bump.tone-ask b { color: #FFE08A; }
+.island-bump.tone-ok b { color: #7BE0A8; }
+.island-bump.tone-live b { color: #FF9A6B; }
+@keyframes bump-in { from { opacity: 0; transform: scale(0.9); filter: blur(4px); } }
+.island-2 { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: #15130F; color: #F6F4EF; box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 8px 22px -10px rgba(10, 8, 4, 0.6); animation: isl2-in var(--t-enter) var(--ease) both; }
+.island-2.tone-ask { box-shadow: inset 0 0 0 1.5px var(--ask), 0 8px 22px -10px rgba(10, 8, 4, 0.6); }
+.island-2.tone-live { box-shadow: inset 0 0 0 1.5px var(--wanted), 0 8px 22px -10px rgba(10, 8, 4, 0.6); }
+@keyframes isl2-in { from { opacity: 0; transform: translateX(-20px) scale(0.6); } }
+
+.isl-scrim { position: fixed; inset: 0; z-index: 32; background: rgba(10, 8, 4, 0.28); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); opacity: 0; pointer-events: none; transition: opacity var(--t-move) var(--ease); }
+.isl-scrim.on { opacity: 1; pointer-events: auto; }
+.isl-card { position: fixed; top: calc(var(--safe-t) + 8px); left: 50%; z-index: 33; width: calc(100% - 20px); max-width: calc(var(--col) - 20px); display: flex; flex-direction: column; gap: 12px; padding: 14px 14px 12px; border-radius: 34px; background: #15130F; color: #F6F4EF; box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 24px 60px -20px rgba(0, 0, 0, 0.7); transform: translateX(-50%) scale(0.42, 0.12); transform-origin: 50% 0; opacity: 0; pointer-events: none; transition: transform var(--t-hero) var(--ease), opacity 160ms var(--ease); }
+.isl-card.on { transform: translateX(-50%); opacity: 1; pointer-events: auto; }
+.isl-card > * { opacity: 0; transition: opacity 120ms; }
+.isl-card.on > * { opacity: 1; transition: opacity 260ms var(--ease) 120ms; }
+.isl-top { display: flex; align-items: center; gap: 12px; }
+.isl-face { flex: none; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: rgba(246, 244, 239, 0.08); }
+.isl-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.isl-k { display: flex; align-items: center; gap: 6px; font: 650 11.5px/1 var(--body); letter-spacing: 0.06em; text-transform: uppercase; color: rgba(246, 244, 239, 0.55); }
+.tone-ask .isl-k { color: #FFE08A; }
+.isl-who b { font: 800 20px/1.1 var(--display); letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.isl-trail { font: 800 26px/1 var(--display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.tone-ask .isl-trail { color: #FFE08A; }
+.tone-live .isl-trail { color: #FF9A6B; }
+.isl-line { padding: 0 4px; font: 500 15px/1.4 var(--body); color: rgba(246, 244, 239, 0.8); text-wrap: pretty; }
+.isl-nums { display: flex; gap: 6px; margin: 0; }
+.isl-nums > div { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 18px; background: rgba(246, 244, 239, 0.07); }
+.isl-nums dt { font: 600 11.5px/1 var(--body); color: rgba(246, 244, 239, 0.55); }
+.isl-nums dd { margin: 6px 0 0; font: 800 17px/1 var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.isl-nums .ok dd { color: #7BE0A8; }
+.isl-nums .hot dd { color: #FF9A6B; }
+.isl-keys { display: flex; gap: 6px; }
+.isl-keys button { flex: 1; height: 46px; border-radius: 23px; background: rgba(246, 244, 239, 0.1); color: #F6F4EF; font: 700 15px/1 var(--body); transition: transform var(--t-tap) var(--ease), background var(--t-fade); }
+.isl-keys button:active { transform: scale(var(--press)); }
+.isl-keys button.p { background: #F6F4EF; color: #15130F; }
+.isl-keys button.more { flex: none; width: 46px; display: grid; place-items: center; }
+@media (prefers-reduced-motion: reduce) { .isl-card, .island { transition: opacity var(--t-fade); } .island-bump, .island-2 { animation: none; } }
+
 /* Text swap: old words lift and blur away, new ones rise in. */
 .swap { position: relative; display: inline-grid; }
 .swap > span { grid-area: 1 / 1; }
@@ -194,6 +247,31 @@
 .talk.is-listening .talk-ring { opacity: 0.9; }
 .talk.is-thinking .talk-ring { opacity: 0.5; border-color: var(--ink-4); border-top-color: var(--wanted); animation: spin 1s linear infinite; }
 .talk-cap { min-height: 15px; font: 600 11.5px var(--body); color: var(--ink-3); }
+.talk.is-intro .talk-ring { opacity: 0.8; animation: talk-call 1.8s var(--ease) infinite; }
+@keyframes talk-call { 0% { transform: scale(0.96); opacity: 0.8; } 70%, 100% { transform: scale(1.22); opacity: 0; } }
+.vc:has(.talk.is-intro) .talk-cap { color: var(--wanted-text); }
+
+/* Meeting Gus: the first tap says who he is, the four jobs, and the two ways to talk. Mic stays off. */
+.vc-meet { display: flex; flex-direction: column; gap: 6px; padding: 2px 2px 0; animation: rise var(--t-enter) var(--ease) both; }
+.vc-meet h3 { font: 800 24px/1.08 var(--display); letter-spacing: -0.025em; color: var(--ink); text-wrap: balance; }
+.vc-meet p { font: 500 15px/1.4 var(--body); color: var(--ink-2); text-wrap: pretty; }
+.vc-how { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 14px 4px; animation: rise var(--t-enter) var(--ease) 320ms both; }
+.vc-how-k { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: var(--r-m); background: var(--well-bg); box-shadow: var(--well); font: 500 13.5px/1.35 var(--body); color: var(--ink-2); }
+.vc-how-k > span { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; line-height: 1.25; color: var(--ink-3); }
+.vc-how-k b { font: 700 14px/1.2 var(--body); color: var(--ink); }
+/* A finger dot that taps once, or presses and stays. */
+.vc-how-k i { position: relative; flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--raise); box-shadow: var(--bevel), var(--drop); }
+.vc-how-k i::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--wanted); }
+.vc-how-k i.tap::after { animation: how-tap 1.6s var(--ease) infinite; }
+.vc-how-k i.hold::after { animation: how-hold 2.4s var(--ease) infinite; }
+@keyframes how-tap { 0%, 40%, 100% { transform: scale(1); opacity: 1; } 15% { transform: scale(0.6); } 25% { transform: scale(1.5); opacity: 0; } }
+@keyframes how-hold { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 90, 31, 0.5); } 15% { transform: scale(0.7); } 15.1%, 70% { transform: scale(0.7); box-shadow: 0 0 0 7px rgba(255, 90, 31, 0.18); } 80% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 90, 31, 0); } }
+@media (prefers-reduced-motion: reduce) { .vc-how-k i::after, .talk.is-intro .talk-ring { animation: none; } }
+
+/* Safari: a long press on Gus is a hold, never an image to save or text to select. */
+.gus-btn, .talk, .island, .hold-key, .tile { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.gus-btn *, .talk *, .island * { pointer-events: none; }
+img.gus { -webkit-touch-callout: none; }
 
 /* Generative UI: an offer you can edit, then a tap or a hold. */
 .pc { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--r-l); background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); animation: rise var(--t-enter) var(--ease) 260ms both; }

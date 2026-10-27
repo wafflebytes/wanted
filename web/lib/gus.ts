@@ -48,6 +48,8 @@ type State = {
   /** What Gus just changed, with a way back, shown beside the island for a few seconds. */
   undo: { words: string; run: () => void } | null;
   screen: string;
+  /** First time the Gus button is tapped: show what he does and how to talk, mic still off. */
+  intro: boolean;
 };
 
 let state: State = {
@@ -68,6 +70,7 @@ let state: State = {
   flash: null,
   undo: null,
   screen: 'map',
+  intro: false,
 };
 const subs = new Set<() => void>();
 const set = (patch: Partial<State>) => {
@@ -80,6 +83,21 @@ let navigate: Nav = () => {};
 let run = 0;
 let undoTimer: ReturnType<typeof setTimeout> | null = null;
 let flashTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Has this browser been shown what Gus does? Until then a tap introduces him instead of opening the mic. */
+const INTRO = 'wanted-gus-met';
+const met = () => {
+  try {
+    return localStorage.getItem(INTRO) === '1';
+  } catch {
+    return true;
+  }
+};
+const meet = () => {
+  try {
+    localStorage.setItem(INTRO, '1');
+  } catch {}
+};
 
 // ---------- mic
 let rec: MediaRecorder | null = null;
@@ -130,7 +148,8 @@ async function startMic() {
       if (meter) meter.raf = requestAnimationFrame(tick);
     };
     meter = { ctx, raf: requestAnimationFrame(tick), stream };
-    set({ phase: 'listening', panel: 'voice', error: null, answer: null, heard: null, steps: [], aside: null, spoken: 0 });
+    set({ phase: 'listening', panel: 'voice', error: null, answer: null, heard: null, steps: [], aside: null, spoken: 0, intro: false });
+    meet();
     haptic('hold');
   } catch {
     handsfree = false;
@@ -295,6 +314,8 @@ export const gus = {
       // Voice first: a tap talks. Tapping again sends what he heard; on an open sheet it closes.
       if (state.phase === 'listening') return void finish(false);
       if (state.panel === 'voice' || state.panel === 'tiles' || state.panel === 'room') return gus.close();
+      // The very first tap: meet Gus (what he does, how to talk) before any mic prompt.
+      if (!met()) return set({ panel: 'voice', phase: 'idle', intro: true, answer: null, error: null, heard: null, steps: [] });
       return gus.talk();
     }
     if (state.phase === 'listening') finish(true);
@@ -307,9 +328,10 @@ export const gus = {
   act,
   open: (p: Panel) => set({ panel: p, ...(p === 'voice' ? {} : { error: null }) }),
   close() {
+    if (state.intro) meet();
     if (state.phase === 'listening') stopMic();
     audio?.pause();
-    set({ panel: 'none', speaking: false, ...(state.phase === 'thinking' ? {} : { phase: 'idle', answer: null, error: null }) });
+    set({ panel: 'none', speaking: false, intro: false, ...(state.phase === 'thinking' ? {} : { phase: 'idle', answer: null, error: null }) });
   },
   screen: (s: string) => state.screen !== s && set({ screen: s }),
   ambient: (a: State['ambient']) => {

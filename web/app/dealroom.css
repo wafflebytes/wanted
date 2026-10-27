@@ -1,12 +1,22 @@
-/* The deal room: a tall sheet over everything, so the call has the whole screen. */
-.dr { position: fixed; left: 50%; bottom: 0; z-index: 40; width: 100%; max-width: var(--col); height: calc(100dvh - var(--safe-t) - 36px); transform: translate(-50%, 104%); pointer-events: none; transition: transform var(--t-hero) var(--ease); }
+/* The deal room: a tall sheet over everything, so the call has the whole screen. The header
+   steps back while it's open; sent to the background it folds up into the island. */
+.dr { position: fixed; left: 50%; bottom: 0; z-index: 40; width: 100%; max-width: var(--col); height: calc(100dvh - var(--safe-t) - 56px); transform: translate(-50%, 104%); pointer-events: none; transition: transform var(--t-hero) var(--ease), opacity var(--t-move) var(--ease); }
+.dr.away:not(.on) { transform: translate(-50%, calc(-100dvh + var(--safe-t) + 120px)) scale(0.36, 0.06); transform-origin: 50% 0; opacity: 0; transition: transform 460ms var(--ease), opacity 300ms var(--ease) 120ms; }
+.shell[data-panel="room"] .hdr { opacity: 0; transform: translate(-50%, -12px); pointer-events: none; transition: opacity var(--t-move) var(--ease), transform var(--t-move) var(--ease); }
+.shell[data-panel="room"] .hdr > * { pointer-events: none; }
+.hdr { transition: opacity var(--t-move) var(--ease), transform var(--t-move) var(--ease); }
+.gp-scrim.p-room { background: color-mix(in srgb, var(--bg) 40%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.1); backdrop-filter: blur(22px) saturate(1.1); }
 .dr.on { transform: translate(-50%, 0); pointer-events: auto; }
 .dr-sheet { height: 100%; display: flex; flex-direction: column; border-radius: var(--r-xl) var(--r-xl) 0 0; background: var(--card); box-shadow: var(--shadow-3), var(--rim); overflow: hidden; }
 .dr-sheet::before { content: ""; position: absolute; top: 7px; left: 50%; width: 38px; height: 5px; margin-left: -19px; border-radius: 3px; background: var(--line-2); }
 
 .dr-head { display: flex; align-items: center; gap: 12px; padding: 22px 16px 10px; }
-.dr-gus { position: relative; flex: none; width: 60px; height: 60px; display: grid; place-items: center; }
-.dr-gus.live::after { content: ""; position: absolute; inset: 2px; border-radius: 50%; box-shadow: 0 0 0 2px var(--wanted); opacity: 0; animation: dr-ring 1.8s var(--ease) infinite; }
+.dr-gus { position: relative; flex: none; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--wanted-tint); box-shadow: inset 0 0 0 0.5px var(--line-2), var(--drop); }
+.dr-gus .gus { margin-top: 2px; }
+.s-waiting .dr-gus { background: color-mix(in srgb, var(--ask) 22%, var(--card)); }
+.s-held .dr-gus { background: var(--ok-tint); }
+.dr-down { transform: rotate(90deg); }
+.dr-gus.live::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; box-shadow: 0 0 0 2px var(--wanted); opacity: 0; animation: dr-ring 1.8s var(--ease) infinite; }
 @keyframes dr-ring { 0% { opacity: 0.55; transform: scale(0.9); } 100% { opacity: 0; transform: scale(1.25); } }
 .dr-who { flex: 1; min-width: 0; }
 .dr-k { display: flex; align-items: center; gap: 6px; font: 600 12px/1 var(--body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
@@ -35,8 +45,8 @@
 .tug-puck i { position: absolute; left: 0; top: 0; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; box-shadow: 0 0 0 2.5px var(--card), 0 3px 8px -2px rgba(30, 18, 6, 0.35); }
 .tug-puck em { position: absolute; bottom: 18px; left: 0; transform: translateX(-50%); white-space: nowrap; font: 800 13px/1 var(--display); font-style: normal; font-variant-numeric: tabular-nums; color: var(--ink); }
 .tug-puck.low em { bottom: auto; top: 19px; }
-.tug-puck.gus i { background: var(--wanted); }
-.tug-puck.gus i img { width: 120%; height: 120%; object-fit: cover; }
+.tug-puck.gus i { background: var(--wanted-tint); box-shadow: 0 0 0 2.5px var(--wanted), 0 3px 8px -2px rgba(30, 18, 6, 0.35); }
+.tug-puck.gus i img { width: 21px; height: 21px; margin-top: 1px; object-fit: contain; }
 .tug-puck.gus em { color: var(--wanted-text); }
 .tug-puck.venue i { background: var(--key); color: var(--key-fg); }
 .tug-puck.venue.in i { background: var(--ok); color: #fff; }
@@ -91,7 +101,8 @@
 .steer-c { flex: none; height: 40px; padding: 0 15px; border-radius: var(--r-pill); background: var(--raise); color: var(--ink); box-shadow: var(--bevel), var(--drop); font: 650 14.5px/1 var(--body); transition: transform var(--t-tap) var(--ease), background var(--t-fade) var(--ease), color var(--t-fade) var(--ease); }
 .steer-c:active { transform: scale(var(--press)); }
 .steer-c.sent { background: var(--wanted); color: #fff; box-shadow: var(--hot-bevel), var(--drop); }
-.steer-p { align-self: flex-start; }
+.steer-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.steer-away { gap: 4px; }
 .dr-next { display: flex; flex-direction: column; gap: 8px; }
 
 .dr-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; padding: 24px; }

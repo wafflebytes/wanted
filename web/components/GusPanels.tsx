@@ -72,7 +72,7 @@ export function GusPanels({ slug, artist, waiting, entries }: { slug: string; ar
     <>
       <div className={`gp-scrim ${g.panel !== 'none' ? 'on' : ''} p-${g.panel}`} onClick={() => gus.close()} aria-hidden />
       <Tiles open={g.panel === 'tiles'} tiles={tiles} />
-      <VoiceCard open={g.panel === 'voice'} suggest={tiles.filter((t) => ['Ask rooms', 'Catch me up', 'Find an opener'].includes(t.title))} />
+      <VoiceCard open={g.panel === 'voice'} suggest={tiles.filter((t) => ['Ask rooms', 'Plan the tour', 'Find an opener', 'Catch me up'].includes(t.title))} />
       <Tray open={g.panel === 'tray'} slug={slug} waiting={waiting} entries={entries} />
       <DealRoom open={g.panel === 'room'} slug={slug} />
     </>
@@ -149,7 +149,7 @@ function VoiceCard({ open, suggest }: { open: boolean; suggest: Tile[] }) {
   const [typing, setTyping] = useState(false);
   const body = useRef<HTMLDivElement>(null);
   const live = g.phase === 'listening' || g.phase === 'thinking';
-  const caption = g.phase === 'listening' ? 'Listening' : g.phase === 'thinking' ? 'Working on it' : g.speaking ? 'Gus' : g.error ? 'Hmm' : g.answer ? 'Gus' : 'Talk to Gus';
+  const caption = g.phase === 'listening' ? 'Listening' : g.phase === 'thinking' ? 'Working on it' : g.speaking ? 'Gus' : g.error ? 'Hmm' : g.answer ? 'Gus' : g.intro ? 'Meet Gus' : 'Talk to Gus';
   const done = g.steps.filter((s) => s.status !== 'running');
   const running = g.steps.find((s) => s.status === 'running');
   const lastFound = [...done].reverse().find((s) => s.found)?.found ?? null;
@@ -178,8 +178,15 @@ function VoiceCard({ open, suggest }: { open: boolean; suggest: Tile[] }) {
         </div>
         <div className="vc-body" ref={body} aria-live="polite">
           {fresh && (
-            <div className="vc-fresh">
-              <p className="vc-hint">{g.noMic ? 'Your mic is off here, so type to me. Or pick one:' : 'Say it like you’d say it to your tour manager.'}</p>
+            <div className={`vc-fresh ${g.intro ? 'is-intro' : ''}`}>
+              {g.intro ? (
+                <div className="vc-meet">
+                  <h3>I’m Gus, your tour manager.</h3>
+                  <p>I find the cities that want you and ask the rooms. Pick a job, or talk to me.</p>
+                </div>
+              ) : (
+                <p className="vc-hint">{g.noMic ? 'Your mic is off here, so type to me. Or pick one:' : 'Say it like you’d say it to your tour manager.'}</p>
+              )}
               <div className="vc-sugs">
                 {suggest.map((t, i) => (
                   <button key={t.title} className="vc-sug" style={{ ['--i' as string]: i }} onClick={t.run}>
@@ -189,10 +196,10 @@ function VoiceCard({ open, suggest }: { open: boolean; suggest: Tile[] }) {
                     </span>
                   </button>
                 ))}
-                <button className="vc-sug more" style={{ ['--i' as string]: suggest.length }} onClick={() => gus.open('tiles')}>
+                {!g.intro && <button className="vc-sug more" style={{ ['--i' as string]: suggest.length }} onClick={() => gus.open('tiles')}>
                   <Icon name="grid" size={18} />
                   <span>Everything Gus can do</span>
-                </button>
+                </button>}
               </div>
             </div>
           )}
@@ -241,6 +248,18 @@ function VoiceCard({ open, suggest }: { open: boolean; suggest: Tile[] }) {
           {g.answer?.action && <Proposal key={`pc${g.answer.reply}`} action={g.answer.action} />}
           {g.error && <p className="vc-err">{g.error}</p>}
         </div>
+        {fresh && g.intro && !g.noMic && !typing && (
+          <div className="vc-how" aria-label="How to talk to Gus">
+            <span className="vc-how-k">
+              <i className="tap" aria-hidden />
+              <span><b>Tap to talk</b>I stop when you pause</span>
+            </span>
+            <span className="vc-how-k">
+              <i className="hold" aria-hidden />
+              <span><b>Hold to talk</b>Let go when you’re done</span>
+            </span>
+          </div>
+        )}
         <div className={`vc-bar ${typing ? 'is-typing' : ''}`}>
           {typing ? (
             <>
@@ -278,7 +297,7 @@ function TalkKey({ live, dark }: { live: boolean; dark: boolean }) {
   const listening = g.phase === 'listening';
   const face = (
     <button
-      className={`talk ${listening ? 'is-listening' : ''} ${g.phase === 'thinking' ? 'is-thinking' : ''}`}
+      className={`talk ${listening ? 'is-listening' : ''} ${g.phase === 'thinking' ? 'is-thinking' : ''} ${g.intro ? 'is-intro' : ''}`}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -319,7 +338,7 @@ function TalkKey({ live, dark }: { live: boolean; dark: boolean }) {
       ) : (
         face
       )}
-      <span className="talk-cap">{listening ? 'Tap to send' : g.phase === 'thinking' ? '' : 'Tap or hold'}</span>
+      <span className="talk-cap">{listening ? 'Tap to send' : g.phase === 'thinking' ? '' : g.intro ? 'Try me' : 'Tap to talk'}</span>
     </div>
   );
 }
