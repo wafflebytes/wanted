@@ -121,10 +121,26 @@ function ramp(stops: [number, RGB][], t: number): RGB {
   return [0, 1, 2].map((j) => Math.round(p[j] + (q[j] - p[j]) * k)) as RGB;
 }
 
+/** The heat as one continuous field: maplibre's own heatmap, blurred on the GPU, so cities
+ *  melt into regions instead of reading as separate dots. Density maps onto the same ramps. */
+const HEAT_COLOR = (dark: boolean) => {
+  // Hot is a saturated orange with a small bright core, never a pale wash over the labels.
+  const stops: [number, string][] = dark
+    ? [[0.08, 'rgba(120,48,24,0.16)'], [0.3, 'rgba(150,58,26,0.5)'], [0.55, 'rgba(214,84,30,0.78)'], [0.8, 'rgba(255,112,40,0.9)'], [1, 'rgba(255,170,90,0.95)']]
+    : [[0.08, 'rgba(245,168,114,0.16)'], [0.3, 'rgba(245,150,96,0.45)'], [0.55, 'rgba(255,110,44,0.7)'], [0.8, 'rgba(228,66,14,0.82)'], [1, 'rgba(168,36,4,0.9)']];
+  return ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0,0,0,0)', ...stops.flat()];
+};
+/** A kernel about five cells wide in metres, as pixels per zoom (512 px tiles, at ~40°N). */
+const heatRadius = (spacingM: number) => {
+  const r0 = (spacingM * 5) / 61400;
+  return ['interpolate', ['exponential', 2], ['zoom'], 0, r0, 16, r0 * 65536];
+};
+const HEAT_ID = 'crowd-heat';
+
 /** Positron, repainted. Matched on layer ids so a style update can't break the look. */
 const PAPER = {
-  light: { bg: '#EEE9DE', park: '#E3E6D3', water: '#CFDCE0', waterway: '#BFD0D6', resi: '#EAE4D8', wood: '#E0E2D0', bldg: '#E4DDCF', road: '#FBF8F2', casing: '#E0D8C8', boundary: '#BDB4A3', text: '#8A8478', halo: '#F6F4EF', city: '#5E5950' },
-  dark: { bg: '#191814', park: '#1D211A', water: '#10171B', waterway: '#142027', resi: '#1C1B17', wood: '#1C1F18', bldg: '#23211C', road: '#2A2823', casing: '#211F1A', boundary: '#3E3A31', text: '#6E6A61', halo: '#12110E', city: '#9C968A' },
+  light: { bg: '#EEE9DE', park: '#E3E6D3', water: '#CFDCE0', waterway: '#BFD0D6', resi: '#EAE4D8', wood: '#E0E2D0', bldg: '#E4DDCF', road: '#FBF8F2', casing: '#E0D8C8', boundary: '#BDB4A3', text: '#6F695E', halo: '#F6F4EF', city: '#2E2A24' },
+  dark: { bg: '#191814', park: '#1D211A', water: '#10171B', waterway: '#142027', resi: '#1C1B17', wood: '#1C1F18', bldg: '#23211C', road: '#2A2823', casing: '#211F1A', boundary: '#3E3A31', text: '#A49E93', halo: '#12110E', city: '#EDE7DB' },
 };
 function paint(m: maplibregl.Map, dark: boolean) {
   const p = dark ? PAPER.dark : PAPER.light;
@@ -153,34 +169,29 @@ function paint(m: maplibregl.Map, dark: boolean) {
     else if (l.type === 'fill' && /(road|aeroway)/.test(id)) set(id, 'fill-color', p.road);
     else if (l.type === 'symbol') {
       set(id, 'text-color', /label_(city|town|state|country)/.test(id) ? p.city : p.text);
+      // Labels sit on the heat: a wide halo in the ground colour keeps them readable on orange.
       set(id, 'text-halo-color', p.halo);
-      set(id, 'text-opacity', /label_(village|other)|highway-name/.test(id) ? 0.6 : 0.75);
+      set(id, 'text-halo-width', 1.8);
+      set(id, 'text-halo-blur', 0.4);
+      set(id, 'text-opacity', /label_(village|other)|highway-name/.test(id) ? 0.7 : 0.95);
     }
   }
 }
 
-type Dot = { pos: [number, number]; v: number; r: number; strong: boolean };
-function halftone<T extends { h3: string }>(hexes: T[], value: (h: T) => number, strong: (h: T) => boolean, fill = 1): Dot[] {
-  if (!hexes.length) return [];
-  const inner = getHexagonEdgeLengthAvg(getResolution(hexes[0].h3), UNITS.m) * 0.866;
-  return hexes.map((h) => {
+/** Hex cells as weighted points for the heatmap, and the cell spacing that sizes its kernel. */
+function heatPoints<T extends { h3: string }>(hexes: T[], weight: (h: T) => number) {
+  const spacing = hexes.length ? getHexagonEdgeLengthAvg(getResolution(hexes[0].h3), UNITS.m) * 1.732 : 1;
+  const features = hexes.map((h) => {
     const [lat, lon] = cellToLatLng(h.h3);
-    const v = value(h);
-    return { pos: [lon, lat], v, r: inner * fill * (0.26 + 0.74 * Math.sqrt(Math.max(0, v))), strong: strong(h) };
+    return { type: 'Feature' as const, properties: { w: Math.max(0, Math.min(1, weight(h))) }, geometry: { type: 'Point' as const, coordinates: [lon, lat] } };
   });
+  return { spacing, data: { type: 'FeatureCollection' as const, features } };
 }
 
 /** The rendered pushpins (web/public/art, 256 px, point at the bottom centre). */
 const PIN = (name: 'pin-city' | 'pin-sleeper' | 'pin-booked') => ({ url: `/art/${name}.webp`, id: name, width: 256, height: 256, anchorY: 250, mask: false });
 
 const ORANGE: RGB = [255, 90, 31];
-
-/** A soft disc in the map's own ground colour, laid under each pin so it lifts off the heat. */
-const halo = (dark: boolean) => {
-  const c = dark ? '18,17,14' : '246,244,239';
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96'><defs><radialGradient id='g'><stop offset='0' stop-color='rgb(${c})' stop-opacity='${dark ? 0.9 : 0.85}'/><stop offset='0.55' stop-color='rgb(${c})' stop-opacity='${dark ? 0.6 : 0.5}'/><stop offset='1' stop-color='rgb(${c})' stop-opacity='0'/></radialGradient></defs><circle cx='48' cy='48' r='48' fill='url(#g)'/></svg>`;
-  return { url: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, id: dark ? 'halo-dark' : 'halo-light', width: 96, height: 96, anchorY: 48, mask: false };
-};
 
 export default function CrowdMap(props: CrowdMapProps) {
   const el = useRef<HTMLDivElement>(null);
@@ -219,6 +230,17 @@ export default function CrowdMap(props: CrowdMapProps) {
     m.on('styledata', () => paint(m, darkRef.current));
     m.on('load', () => {
       paint(m, darkRef.current);
+      const firstLabel = m.getStyle().layers.find((l) => l.type === 'symbol')?.id;
+      m.addSource(HEAT_ID, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      m.addLayer(
+        {
+          id: HEAT_ID,
+          type: 'heatmap',
+          source: HEAT_ID,
+          paint: { 'heatmap-weight': ['^', ['get', 'w'], 1.4], 'heatmap-opacity': 0, 'heatmap-opacity-transition': { duration: 520, delay: 0 } },
+        },
+        firstLabel,
+      );
       // Start the attribution folded; it opens on tap.
       m.getContainer().querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
       setReady(true);
@@ -320,8 +342,27 @@ export default function CrowdMap(props: CrowdMapProps) {
 
   const opened = useMemo(() => new Set(props.opened), [props.opened]);
   const scored = useMemo(() => props.metros.filter((m) => m.score !== null), [props.metros]);
-  const countryDots = useMemo(() => halftone(props.hexes, (d) => (d.score !== null ? d.score / 100 : d.heat * 0.55), (d) => d.score !== null, 0.96), [props.hexes]);
-  const cityDots = useMemo(() => (props.city ? halftone(props.city.hexes, (d) => 0.15 + d.heat * 0.85, (d) => d.heat > 0.15) : []), [props.city]);
+  // Cities Qloo scored carry full weight; the unscored fill-in carries a little, so the field
+  // reads as regions and the scored cities stand out of it.
+  const countryHeat = useMemo(() => heatPoints(props.hexes, (d) => (d.score !== null ? Math.pow(d.score / 100, 1.3) : d.heat * 0.22)), [props.hexes]);
+  const cityHeat = useMemo(() => (props.city ? heatPoints(props.city.hexes, (d) => 0.1 + d.heat * 0.9) : null), [props.city]);
+  const touring = !props.city && !!props.route?.length;
+
+  // The heat field: the country, a city once the camera lands, nothing while the run is shown.
+  useEffect(() => {
+    const m = map.current;
+    if (!ready || !m?.getLayer(HEAT_ID)) return;
+    const src = m.getSource(HEAT_ID) as maplibregl.GeoJSONSource;
+    const heat = props.city ? (cityLive ? cityHeat : null) : touring ? null : countryHeat;
+    m.setPaintProperty(HEAT_ID, 'heatmap-color', HEAT_COLOR(dark));
+    // The field eases off as you lean in, so the streets and names stay readable.
+    m.setPaintProperty(HEAT_ID, 'heatmap-opacity', heat ? ['interpolate', ['linear'], ['zoom'], 3.5, 1, 6, 0.55, 9, props.city ? 0.75 : 0.4] : 0);
+    if (!heat) return;
+    src.setData(heat.data);
+    m.setPaintProperty(HEAT_ID, 'heatmap-radius', heatRadius(heat.spacing));
+    // Brighter from far away, gentler up close where the strong region fills the screen.
+    m.setPaintProperty(HEAT_ID, 'heatmap-intensity', props.city ? 0.5 : ['interpolate', ['linear'], ['zoom'], 2, 0.75, 5, 0.42]);
+  }, [ready, countryHeat, cityHeat, cityLive, touring, dark, props.city]);
   const [narrow, setNarrow] = useState(false);
   useEffect(() => {
     const on = () => setNarrow(window.innerWidth < 600);
@@ -362,19 +403,6 @@ export default function CrowdMap(props: CrowdMapProps) {
     const city = props.city;
     
     if (!city) {
-      layers.push(
-        new ScatterplotLayer({
-          id: 'country-hex',
-          data: countryDots,
-          getPosition: (d: Dot) => d.pos,
-          getRadius: (d: Dot) => d.r,
-          radiusUnits: 'meters',
-          // Opacity follows heat, so neighbouring cells blend instead of patching.
-          getFillColor: (d: Dot) => [...ramp(R, d.v), Math.round((d.strong ? 1 : 0.55) * (90 + 165 * Math.sqrt(Math.max(0, Math.min(1, d.v)))))] as [number, number, number, number],
-          updateTriggers: { getFillColor: dark },
-          transitions: props.reduceMotion ? undefined : { getRadius: { duration: 1100, enter: () => [0] } },
-        }),
-      );
       // Only the strongest few sleepers get a star; a sky full of them means nothing.
       const sleepers = props.route?.length ? [] : props.metros.filter((m) => m.sleeper).sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 4);
       layers.push(
@@ -391,16 +419,6 @@ export default function CrowdMap(props: CrowdMapProps) {
           updateTriggers: { getRadius: phase, getLineColor: phase },
         }),
         new IconLayer({
-          id: 'pin-halo',
-          data: [...sleepers.filter((m) => !opened.has(m.id)), ...scored.filter((m) => opened.has(m.id))],
-          getPosition: (d: MapMetro) => [d.lon, d.lat],
-          getIcon: () => halo(dark),
-          getSize: narrow ? 60 : 70,
-          getPixelOffset: [0, narrow ? -15 : -18],
-          sizeUnits: 'pixels',
-          updateTriggers: { getIcon: dark, data: props.opened.join() },
-        }),
-        new IconLayer({
           id: 'sleeper-pin',
           data: sleepers.filter((m) => !opened.has(m.id)),
           getPosition: (d: MapMetro) => [d.lon, d.lat],
@@ -413,9 +431,9 @@ export default function CrowdMap(props: CrowdMapProps) {
           id: 'metros',
           data: scored,
           getPosition: (d: MapMetro) => [d.lon, d.lat],
-          getRadius: (d: MapMetro) => (opened.has(d.id) ? 7 : 6),
+          getRadius: (d: MapMetro) => (opened.has(d.id) ? 7 : 3.5),
           radiusUnits: 'pixels',
-          getFillColor: (d: MapMetro) => (opened.has(d.id) ? [...ORANGE, 255] : [...ink, zoom > 4.2 ? 90 : 0]) as [number, number, number, number],
+          getFillColor: (d: MapMetro) => (opened.has(d.id) ? [...ORANGE, 255] : [...(dark ? [18, 17, 14] : [246, 244, 239]), zoom > 4.2 ? 200 : 0]) as [number, number, number, number],
           stroked: true,
           getLineColor: (d: MapMetro) => (opened.has(d.id) ? [255, 255, 255, 255] : [0, 0, 0, 0]),
           lineWidthMinPixels: 2,
@@ -491,18 +509,6 @@ export default function CrowdMap(props: CrowdMapProps) {
 
     if (city && cityLive) {
       const grow = props.reduceMotion ? undefined : { getRadius: { duration: 650, enter: () => [0] } };
-      layers.push(
-        new ScatterplotLayer({
-          id: 'city-hex',
-          transitions: grow,
-          data: cityDots,
-          getPosition: (d: Dot) => d.pos,
-          getRadius: (d: Dot) => d.r,
-          radiusUnits: 'meters',
-          getFillColor: (d: Dot) => [...ramp(R, d.v), d.strong ? 170 : 80] as [number, number, number, number],
-          updateTriggers: { getFillColor: dark },
-        }),
-      );
       if (city.outline?.length) {
         layers.push(
           new PathLayer({
@@ -607,7 +613,7 @@ export default function CrowdMap(props: CrowdMapProps) {
     // On Tour the run is the only story: the heat, the pins and the fans step aside, and the
     // route glows on a quiet map (Bump's roadtrip, Anydistance's routes).
     const tour = !city && !!props.route?.length;
-    const QUIET = new Set(['country-hex', 'sleeper-ring', 'sleeper-pin', 'metros', 'opened-pins', 'claim-ripple', 'claims']);
+    const QUIET = new Set(['sleeper-ring', 'sleeper-pin', 'metros', 'opened-pins', 'claim-ripple', 'claims']);
     overlay.current.setProps({
       layers: (tour ? (layers as { id: string }[]).filter((l) => !QUIET.has(l.id)) : layers) as never,
       onClick: (info: { layer?: { id: string } | null; object?: unknown }) => {
@@ -621,7 +627,7 @@ export default function CrowdMap(props: CrowdMapProps) {
       getCursor: ({ isHovering }: { isHovering: boolean }) => (isHovering ? 'pointer' : 'grab'),
     } as never);
     syncLabels(map.current, marks.current, declutter(map.current, labels), (p) => pickRef.current(p));
-  }, [ready, countryDots, cityDots, props.hexes, props.metros, props.dots, props.city, props.route, dark, t, zoom, labelled, scored, opened, props.held, narrow, cityLive, routeT, props.onPick]);
+  }, [ready, props.hexes, props.metros, props.dots, props.city, props.route, dark, t, zoom, labelled, scored, opened, props.held, narrow, cityLive, routeT, props.onPick]);
 
   return <div ref={el} className="crowd-map" />;
 }
