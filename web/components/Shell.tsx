@@ -115,6 +115,23 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
     gus.screen(tab);
   }, [tab]);
 
+  // The island answers your taps too: switch tabs and it swells with where you are, then settles.
+  const firstTab = useRef(true);
+  useEffect(() => {
+    if (firstTab.current) return void (firstTab.current = false);
+    const posters = artist.data?.opened.length ?? 0;
+    const unread = artist.data?.unread ?? 0;
+    const say: Record<string, string> = {
+      map: posters ? `Watching ${posters} ${posters === 1 ? 'city' : 'cities'}` : 'Your map',
+      tour: 'Your route',
+      posters: posters ? `${posters} ${posters === 1 ? 'poster' : 'posters'} up` : 'Your posters',
+      pulse: unread ? `${unread} new from fans` : 'Fan Mail',
+      logbook: 'What Gus did',
+      settings: 'Your limits',
+    };
+    if (say[tab]) gus.glance(say[tab]);
+  }, [tab]);
+
   // The island's resting line, from what's actually happening.
   const d = call.deal;
   const waiting = d?.status === 'waiting' ? d : dealList.data?.deals.find((x) => x.status === 'waiting');
@@ -313,6 +330,8 @@ function Island() {
   else if (g.phase === 'thinking') (words = step ? islandWords(step.label) : 'Thinking'), (mood = 'thinking'), (tone = 'live');
   else if (g.speaking) (words = 'Talking'), (mood = 'talking'), (tone = 'live');
   if (g.flash) (words = g.flash), (tone = 'live');
+  const glance = !busy && g.glance;
+  if (glance) words = glance;
   const bump = busy ? null : lv.bump;
 
   const inner = useRef<HTMLSpanElement>(null);
@@ -336,7 +355,7 @@ function Island() {
   const hidden = g.panel === 'tray' || !!lv.open;
   return (
     <div className="island-row">
-      <button data-tour="island" className={`island tone-${tone} ${hidden ? 'is-open' : ''} ${bump ? 'is-bump' : ''}`} style={w && !bump ? { width: w } : undefined} onClick={tap} aria-label={`Gus: ${words}. ${act ? 'Open what he is doing' : 'Open Gus’s tray'}`} aria-expanded={hidden}>
+      <button data-tour="island" className={`island tone-${tone} ${hidden ? 'is-open' : ''} ${bump ? 'is-bump' : ''} ${glance ? 'is-glance' : ''}`} style={w && !bump ? { width: w } : undefined} onClick={tap} aria-label={`Gus: ${words}. ${act ? 'Open what he is doing' : 'Open Gus’s tray'}`} aria-expanded={hidden}>
         {bump ? (
           <span className={`island-bump tone-${bump.tone}`} key={bump.big + bump.small}>
             <span className="island-gus">
@@ -351,7 +370,7 @@ function Island() {
               <Gus mood={mood} size={24} sticker={false} level={g.level} />
             </span>
             <Swap text={words} />
-            {act?.trail ? (
+            {act?.trail && !glance ? (
               <span className="island-trail">
                 {act.progress !== undefined && (
                   <svg viewBox="0 0 20 20" aria-hidden>

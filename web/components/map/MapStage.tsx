@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Deal } from '@/lib/types';
 import type { CityData, MapData } from '@/ui/types';
 import { useApi, useDark, usePrefersReducedMotion } from '@web/lib/hooks';
+import { gus } from '@web/lib/gus';
 import { stage, useStage } from '@web/lib/stage';
 
 const CrowdMap = dynamic(() => import('./CrowdMap'), { ssr: false });
@@ -40,6 +41,11 @@ export function MapStage({ slug }: { slug: string }) {
         : null,
     [s.city, cd],
   );
+  // Opening a city swells the island with its name, the way the tabs do.
+  const cityName = cd && cd.metro.id === s.city ? cd.metro.name : null;
+  useEffect(() => {
+    if (cityName) gus.glance(cityName);
+  }, [cityName]);
   const [w, setW] = useState(390);
   useEffect(() => {
     const on = () => setW(window.innerWidth);

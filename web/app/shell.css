@@ -46,6 +46,10 @@
 }
 .island:active { transform: scale(var(--press)); }
 .island.is-open { opacity: 0; transform: scale(0.9); }
+/* A glance: the island swells a little taller while it says where you are, then settles. */
+.island.is-glance { height: 44px; margin-top: -3px; box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 14px 30px -12px rgba(10, 8, 4, 0.7); }
+.island.is-glance .island-in { height: 44px; padding: 0 17px 0 9px; }
+.island-in { transition: height var(--t-enter) var(--ease), padding var(--t-enter) var(--ease); }
 .island-in { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px 0 7px; white-space: nowrap; }
 .island-gus { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; }
 .island .swap { font: 650 14px/1 var(--display); font-weight: 600; letter-spacing: -0.01em; }
@@ -60,7 +64,7 @@
 /* The island carries live activities: a trailing number with a progress ring, a second job as
    its own bubble, a swell when something lands, and an expanded card that drops out of it. */
 .island-row { position: relative; display: flex; align-items: flex-start; gap: 6px; height: 38px; }
-.island { transition: width var(--t-enter) var(--ease), height var(--t-enter) var(--ease), border-radius var(--t-enter) var(--ease), transform var(--t-tap) var(--ease), opacity var(--t-fade); }
+.island { transition: width var(--t-enter) var(--ease), margin var(--t-enter) var(--ease), box-shadow var(--t-enter) var(--ease), height var(--t-enter) var(--ease), border-radius var(--t-enter) var(--ease), transform var(--t-tap) var(--ease), opacity var(--t-fade); }
 .island-trail { display: inline-flex; align-items: center; gap: 5px; margin-left: 2px; font: 750 13.5px/1 var(--display); font-variant-numeric: tabular-nums; color: #F6F4EF; }
 .island-trail svg { width: 16px; height: 16px; transform: rotate(-90deg); }
 .island-trail circle { fill: none; stroke-width: 2.6; stroke: rgba(246, 244, 239, 0.18); }

@@ -45,6 +45,8 @@ type State = {
   ambient: { words: string; mood: GusMood; tone: 'idle' | 'live' | 'ask' | 'ok' };
   /** Instant acknowledgement: a short-lived island override ("On it"). */
   flash: string | null;
+  /** What you just opened, said in the island for a moment as it swells and settles back. */
+  glance: string | null;
   /** What Gus just changed, with a way back, shown beside the island for a few seconds. */
   undo: { words: string; run: () => void } | null;
   screen: string;
@@ -68,6 +70,7 @@ let state: State = {
   aside: null,
   ambient: { words: 'Watching your cities', mood: 'idle', tone: 'idle' },
   flash: null,
+  glance: null,
   undo: null,
   screen: 'map',
   intro: false,
@@ -83,6 +86,7 @@ let navigate: Nav = () => {};
 let run = 0;
 let undoTimer: ReturnType<typeof setTimeout> | null = null;
 let flashTimer: ReturnType<typeof setTimeout> | null = null;
+let glanceTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** Has this browser been shown what Gus does? Until then a tap introduces him instead of opening the mic. */
 const INTRO = 'wanted-gus-met';
@@ -292,6 +296,11 @@ export const gus = {
     if (flashTimer) clearTimeout(flashTimer);
     set({ flash: words });
     flashTimer = setTimeout(() => set({ flash: null }), ms);
+  },
+  glance(words: string, ms = 1800) {
+    if (glanceTimer) clearTimeout(glanceTimer);
+    set({ glance: words });
+    glanceTimer = setTimeout(() => set({ glance: null }), ms);
   },
   press() {
     set({ holding: true });
