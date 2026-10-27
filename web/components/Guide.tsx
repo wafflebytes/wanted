@@ -16,7 +16,7 @@ import '../app/guide.css';
 
 type Box = { x: number; y: number; w: number; h: number; r: number };
 const PAD = 6;
-const SIZE = 52;
+const SIZE = 72;
 const GAP = 14;
 
 export function steps(): GuideStep[] {
@@ -80,7 +80,15 @@ export function steps(): GuideStep[] {
 
 const radius = (el: HTMLElement) => parseFloat(getComputedStyle(el).borderTopLeftRadius) || 14;
 
-/** A full-screen rectangle with a rounded hole: the veil blurs everything but the hole. */
+/** The same hole as an SVG mask with a feathered edge, so the blur fades into the focus. */
+function holeMask(vw: number, vh: number, b: Box) {
+  const x = b.x - PAD, y = b.y - PAD, w = b.w + PAD * 2, h = b.h + PAD * 2;
+  const r = Math.min(b.r + PAD, w / 2, h / 2);
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${vw}' height='${vh}'><defs><filter id='f' x='-20%' y='-20%' width='140%' height='140%'><feGaussianBlur stdDeviation='7'/></filter><mask id='m'><rect width='100%' height='100%' fill='white'/><rect x='${x}' y='${y}' width='${w}' height='${h}' rx='${r}' fill='black' filter='url(#f)'/></mask></defs><rect width='100%' height='100%' fill='black' mask='url(#m)'/></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+/** A full-screen rectangle with a rounded hole: presses on the rest go nowhere. */
 function holePath(vw: number, vh: number, b: Box) {
   const x = b.x - PAD, y = b.y - PAD, w = b.w + PAD * 2, h = b.h + PAD * 2;
   const r = Math.min(b.r + PAD, w / 2, h / 2);
@@ -229,12 +237,14 @@ export function Guide({ slug }: { slug: string }) {
     gy = home.y + (home.h - SIZE) / 2;
   }
   const veil = box ? holePath(vw, vh, box) : undefined;
+  const mask = box ? holeMask(vw, vh, box) : undefined;
   const last = g.i === all.length - 1;
 
   return (
     <div className={`guide ${landing ? 'is-landing' : ''} ${leaving ? 'is-leaving' : ''}`} aria-live="polite">
+      <div className={`guide-veil ${box ? '' : 'is-open'}`} style={mask ? { WebkitMaskImage: mask, maskImage: mask } : undefined} />
       <div
-        className={`guide-veil ${box ? '' : 'is-open'}`}
+        className="guide-block"
         style={{ clipPath: veil }}
         onClick={() => {
           haptic('tick');
@@ -242,7 +252,9 @@ export function Guide({ slug }: { slug: string }) {
         }}
       />
       {cta && step?.wait === 'tap' && !landing && (
-        <div className="guide-shine" style={{ transform: `translate(${cta.x}px, ${cta.y}px)`, width: cta.w, height: cta.h, borderRadius: cta.r }} />
+        <div className="guide-shine" style={{ transform: `translate(${cta.x}px, ${cta.y}px)`, width: cta.w, height: cta.h, borderRadius: cta.r }}>
+          <i />
+        </div>
       )}
       <div
         className={`guide-row ${top !== undefined ? 'is-top' : 'is-bottom'}`}
@@ -254,7 +266,7 @@ export function Guide({ slug }: { slug: string }) {
             {step.wait === 'next' && (
               <div className="guide-keys">
                 <button className="guide-next" onClick={advance}>
-                  {last ? 'Done' : 'Next'}
+                  <span>{last ? 'Done' : 'Next'}</span>
                 </button>
                 {!last && (
                   <button className="guide-skip" onClick={() => finish(false)}>
@@ -268,7 +280,7 @@ export function Guide({ slug }: { slug: string }) {
       </div>
       <div className="guide-gus" style={{ transform: `translate(${gx}px, ${gy}px)` }} aria-hidden>
         <div className="guide-gus-in" key={nudge}>
-          <Gus mood={step?.wait === 'tap' ? 'talking' : 'idle'} size={42} sticker={false} />
+          <Gus mood={step?.wait === 'tap' ? 'talking' : 'idle'} size={SIZE} sticker={false} />
         </div>
       </div>
     </div>

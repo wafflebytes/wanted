@@ -6,17 +6,26 @@
   pointer-events: none;
 }
 
-/* The veil: a blur over the whole app with a cut-out for the one thing Gus means. Presses on
-   the veil go nowhere; the cut-out passes them through to the real element. */
-.guide-veil {
+/* The veil is two layers. The blur only paints: its feathered mask (set inline) lets the
+   focus fade in with no seam. The block only catches presses: its clip-path hole passes them
+   through to the real element. Blur stays light, it runs over the live map. */
+.guide-veil,
+.guide-block {
   position: fixed;
   inset: 0;
-  pointer-events: auto;
-  background: color-mix(in srgb, var(--bg) 34%, transparent);
-  -webkit-backdrop-filter: blur(14px) saturate(1.1);
-  backdrop-filter: blur(14px) saturate(1.1);
-  transition: clip-path 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.guide-veil {
+  pointer-events: none;
+  background: color-mix(in srgb, var(--bg) 40%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  transition: opacity 300ms cubic-bezier(0.22, 1, 0.36, 1);
   animation: guide-in 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.guide-block {
+  pointer-events: auto;
 }
 /* No target: the map stays clear up top, the drawer below steps back. */
 .guide-veil.is-open {
@@ -26,35 +35,57 @@
 .guide.is-landing .guide-veil,
 .guide.is-leaving .guide-veil {
   opacity: 0;
+}
+.guide.is-landing .guide-block,
+.guide.is-leaving .guide-block {
   pointer-events: none;
 }
 @keyframes guide-in {
   from { opacity: 0; }
 }
 
-/* The thing to press: a band of light runs across it, left to right. */
-.guide-shine,
-.guide-next {
-  overflow: hidden;
-}
+/* The thing to press: a warm glow breathes around it and a band of light crosses it. */
 .guide-shine {
   position: fixed;
   left: 0;
   top: 0;
+  pointer-events: none;
+  animation: guide-glow 1800ms cubic-bezier(0.37, 0, 0.63, 1) infinite;
 }
-.guide-shine::before,
-.guide-next::after {
-  content: '';
+.guide-shine i,
+.guide-next span {
   position: absolute;
   inset: 0;
-  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.5) 50%, transparent 70%);
-  transform: translateX(-100%);
-  animation: guide-shine 2400ms cubic-bezier(0.22, 1, 0.36, 1) 600ms infinite;
-  pointer-events: none;
+  border-radius: inherit;
+  overflow: hidden;
 }
-@keyframes guide-shine {
-  0% { transform: translateX(-100%); }
-  45%, 100% { transform: translateX(100%); }
+.guide-next span {
+  position: relative;
+  display: block;
+  line-height: 40px;
+}
+.guide-shine i::before,
+.guide-next span::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 60%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.32) 50%, transparent);
+  transform: translateX(-120%) skewX(-12deg);
+  animation: guide-sweep 1800ms cubic-bezier(0.22, 1, 0.36, 1) 300ms infinite;
+}
+.guide-next span::before {
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45) 50%, transparent);
+}
+@keyframes guide-sweep {
+  0% { transform: translateX(-120%) skewX(-12deg); }
+  55%, 100% { transform: translateX(260%) skewX(-12deg); }
+}
+@keyframes guide-glow {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--wanted) 0%, transparent), 0 0 20px 2px color-mix(in srgb, var(--wanted) 50%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--wanted) 35%, transparent), 0 0 40px 10px color-mix(in srgb, var(--wanted) 70%, transparent); }
 }
 
 /* The line and Gus sit side by side, the line toward the middle, Gus at the edge. */
@@ -100,14 +131,15 @@
 }
 .guide-next {
   position: relative;
-  height: 36px;
-  padding: 0 18px;
+  height: 40px;
+  padding: 0 20px;
   border: 0;
-  border-radius: 18px;
+  border-radius: 20px;
   background: var(--wanted);
   color: #fff;
   font: 700 15px var(--display);
   transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: guide-glow 1800ms cubic-bezier(0.37, 0, 0.63, 1) infinite;
 }
 .guide-next:active {
   transform: scale(0.97);
@@ -121,13 +153,13 @@
   font: 600 14px var(--display);
 }
 
-/* Gus: flies out of the dock and back into it. */
+/* Gus: flies out of the dock and back into it, on his own, no badge behind him. */
 .guide-gus {
   position: fixed;
   left: 0;
   top: 0;
-  width: 52px;
-  height: 52px;
+  width: 72px;
+  height: 72px;
   transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms;
 }
 .guide-gus-in {
@@ -135,9 +167,7 @@
   height: 100%;
   display: grid;
   place-items: center;
-  border-radius: 50%;
-  background: #15130f;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 10px 24px rgba(0, 0, 0, 0.3);
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.35));
   animation: guide-nudge 360ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .guide.is-leaving .guide-gus {
@@ -169,8 +199,10 @@ html.guide-on .gus-btn {
     transition-duration: 1ms;
     animation: none;
   }
-  .guide-shine::before,
-  .guide-next::after,
+  .guide-shine,
+  .guide-shine i::before,
+  .guide-next,
+  .guide-next span::before,
   .guide-gus-in {
     animation: none;
   }

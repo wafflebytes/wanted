@@ -81,7 +81,7 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
       const base = `/a/${slug}`;
       if (a.type === 'link') return void window.open(a.url, '_blank', 'noopener');
       if (a.type === 'limit') {
-        // Rung 1: Gus changes it where it lives, shows you the row, and keeps a way back.
+        // Rung 1: Gus changes it in place and says so in the island with a way back. No page jump.
         const key = a.key;
         const book = `/artist/${slug}/logbook`;
         api
@@ -91,7 +91,6 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
             await api.post(book, { mandate: { [key]: a.value } });
             mutate(book).catch(() => {});
             haptic('commit');
-            router.push(`${base}/settings?hl=${key}#gus`);
             const say = key === 'maxDeposit' ? `Deposit up to $${a.value}` : `At least ${a.value}% of the door`;
             gus.did(say, () => {
               api.post(book, { mandate: { [key]: was } }).then(() => mutate(book)).catch(() => {});

@@ -243,8 +243,8 @@ function Welcome() {
             <button className="btn light block" onClick={() => go('fan')}>
               I’m a fan
             </button>
-            <button className="wl-demo" onClick={() => router.push(`/a/${DEMO}`)}>
-              Look around a demo act first
+            <button className="wl-demo" onClick={() => router.push(`/a/${DEMO}?tour=1`)}>
+              Take a quick tour with Gus first
               <Icon name="chevron" size={14} />
             </button>
           </div>

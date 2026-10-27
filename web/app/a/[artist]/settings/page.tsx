@@ -249,6 +249,8 @@ export default function Settings() {
         )}
       </section>
 
+      <Connector />
+
       <section className="st-ios">
         <Icon name="apple" size={26} />
         <div>
@@ -261,6 +263,45 @@ export default function Settings() {
         </div>
       </section>
     </main>
+  );
+}
+
+/** Gus as a connector in Claude or ChatGPT (src/server/mcp.ts). Asking is free; paying comes back here. */
+function Connector() {
+  const [url, setUrl] = useState('');
+  const [copied, setCopied] = useState(false);
+  useEffect(() => setUrl(`${location.origin}/api/mcp`), []);
+  return (
+    <section id="claude">
+      <div className="section-h">
+        <h2>Gus in Claude</h2>
+      </div>
+      <div className="st-group st-mcp">
+        <p>Ask Gus from Claude or ChatGPT: where you’re wanted, a city’s rooms, your deals. He can start asking rooms too. Paying always comes back here for your yes.</p>
+        <button
+          className="st-mcp-url"
+          onClick={() => {
+            navigator.clipboard?.writeText(url).then(() => {
+              haptic('tap');
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1600);
+            });
+          }}
+          aria-label="Copy the connector link"
+        >
+          <code>{url || '…/api/mcp'}</code>
+          <span className="st-mcp-copy">
+            <Icon name={copied ? 'check' : 'copy'} size={16} />
+            {copied ? 'Copied' : 'Copy'}
+          </span>
+        </button>
+        <ol>
+          <li>In Claude, open Settings, then Connectors.</li>
+          <li>Add a custom connector and paste the link.</li>
+          <li>Ask: “Where should I play next?”</li>
+        </ol>
+      </div>
+    </section>
   );
 }
 

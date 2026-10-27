@@ -34,6 +34,13 @@ a.st-row:active { background: var(--veil); }
 
 .st-theme { height: 44px; }
 
+.st-mcp { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.st-mcp p { font-size: 14.5px; line-height: 1.42; color: var(--ink-2); }
+.st-mcp-url { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 8px 0 14px; border-radius: var(--r-m); background: var(--bg); box-shadow: inset 0 0 0 0.5px var(--line-2); text-align: left; transition: transform 120ms var(--ease); }
+.st-mcp-url:active { transform: scale(0.99); }
+.st-mcp-url code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 13.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
+.st-mcp-copy { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; border-radius: 17px; background: var(--ink); color: var(--bg); font: 700 13.5px var(--display); }
+.st-mcp ol { display: flex; flex-direction: column; gap: 6px; padding-left: 20px; font-size: 14px; line-height: 1.4; color: var(--ink-2); }
 .st-ios { display: flex; gap: 14px; margin-top: 32px; padding: 18px; border-radius: var(--r-l); background: var(--raise); box-shadow: var(--bevel), var(--drop); }
 .st-ios > svg { flex: none; margin-top: 1px; }
 .st-ios div { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
