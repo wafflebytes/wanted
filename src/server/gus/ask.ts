@@ -25,7 +25,8 @@ export type GusAction =
   | { type: 'city'; id: string; name: string; label: string }
   | { type: 'pitch'; id: string; name: string; label: string }
   | { type: 'deal'; id: string; name: string; roomId: string; label: string }
-  | { type: 'link'; url: string; label: string };
+  | { type: 'link'; url: string; label: string }
+  | { type: 'limit'; key: 'maxDeposit' | 'minSplit'; value: number; label: string };
 
 /** One thing Gus looked up. `found` is what he'd tell you he saw, in a few words. */
 export type GusStep = { id: string; tool: string; label: string; source: 'qloo' | 'fans' | 'wanted'; status: 'running' | 'done' | 'failed'; found: string | null; ms: number };
@@ -337,6 +338,16 @@ async function execTool(ctx: Ctx, name: string, args: Record<string, string>): P
  * Keyword intents, but it still does the work: it runs the same tools the model would and
  * answers from what they return.
  */
+/** A limit Gus proposes; the artist confirms it on the real slider. Clamped to what Settings allows. */
+function limitAction(which: 'deposit' | 'cut', value: number): GusAction {
+  if (which === 'deposit') {
+    const v = Math.max(0, Math.min(1000, Math.round(value / 25) * 25));
+    return { type: 'limit', key: 'maxDeposit', value: v, label: `Let Gus put down up to $${v}` };
+  }
+  const v = Math.max(50, Math.min(95, Math.round(value / 5) * 5));
+  return { type: 'limit', key: 'minSplit', value: v, label: `Never take less than ${v}% of the door` };
+}
+
 async function liteAgent(ctx: Ctx, heard: string): Promise<Omit<GusAnswer, 'heard' | 'model' | 'steps'>> {
   const t = norm(heard);
   const { metros, ranked } = ctx;
@@ -344,6 +355,14 @@ async function liteAgent(ctx: Ctx, heard: string): Promise<Omit<GusAnswer, 'hear
   const city = named[0] ?? null;
   const day = dayIn(heard);
   const name = ctx.artist.name;
+
+  const amount = heard.match(/\$?\s?(\d{2,4})\s?(%|percent|dollars|bucks)?/i);
+  if (amount && /(deposit|put down|up front|upfront|cut|split|door|percent|%)/.test(t) && /(limit|up to|at most|max|most|never|less than|no less|at least|let|set|raise|lower|change|allow)/.test(t)) {
+    const n = Number(amount[1]);
+    const cut = /(cut|split|door|percent|%)/.test(t) && !/(deposit|put down|up front|upfront)/.test(t);
+    const action = limitAction(cut ? 'cut' : 'deposit', n);
+    return { reply: cut ? `Fine. I won’t take less than ${(action as { value: number }).value} percent of the door. Slide it if that’s right.` : `Fine. I’ll go up to ${(action as { value: number }).value} dollars to hold a night. Check the slider.`, mood: 'idle', action };
+  }
 
   if (named.length >= 2 && /( or |versus| vs |compare|better|which)/.test(` ${t} `)) {
     const [a, b] = named;
@@ -431,9 +450,10 @@ Rules:
 - Talk like a tour manager to a musician. Never say: score, Wanted Score, sleeper, proof, threshold, metric, data, Qloo, rank or ranked, market. Say instead: "one of your best cities", "a city nobody's playing yet", "35 more signatures and I can ask rooms", "fans there".
 - It's spoken aloud: whole words, no dashes, slashes or abbreviations ("Wednesday to Friday", not "wed-thu-fri").
 - When you call tools, also say one short line out loud about what you're checking ("Let me see how Ithaca's doing."), no numbers.
+- Changing what you may agree to (the biggest deposit, the smallest cut of the door): never say it's changed. Offer it with action "limit" and the value they asked for; they confirm it on the slider.
 - You can open one screen or start one thing. Booking: you only ASK a room for a date (action "book"); the artist approves any money later. Hotels and dinner open a search; you never claim to have booked them.
 When you are done, reply with ONLY this JSON:
-{"reply": "<one or two spoken sentences, under 35 words, with the specific answer>", "mood": "idle|proud|unimpressed", "action": {"type": "none|city|tab|pitch|book|stay|eat", "city": "<city name, if any>", "tab": "<map|tour|pulse|posters, if type is tab>", "room": "<exact room name from a rooms result, if type is book>"}}`;
+{"reply": "<one or two spoken sentences, under 35 words, with the specific answer>", "mood": "idle|proud|unimpressed", "action": {"type": "none|city|tab|pitch|book|stay|eat|limit", "city": "<city name, if any>", "tab": "<map|tour|pulse|posters, if type is tab>", "room": "<exact room name from a rooms result, if type is book>", "limit": "<deposit|cut, if type is limit>", "value": <number, if type is limit>}}`;
 
 export async function answer(artist: ArtistRow, heard: string, screen: string | null, emit: (e: GusEvent) => void = () => {}): Promise<GusAnswer> {
   const map = await mapData(artist);
@@ -445,7 +465,7 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     ranked,
     opened: map.opened,
     steps: [],
-    evidence: { numbers: [ranked.length], names: [artist.name, ...ranked.slice(0, 12).map((m) => m.name)] },
+    evidence: { numbers: [ranked.length, ...(heard.match(/\d+/g) ?? []).map(Number)], names: [artist.name, ...ranked.slice(0, 12).map((m) => m.name)] },
     seenRooms: new Map(),
     memo: new Map(),
     emit,
@@ -514,7 +534,7 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     finalText = null;
   }
 
-  const parsed = parseJson<{ reply?: string; mood?: GusAnswer['mood']; action?: { type?: string; city?: string; tab?: string; room?: string } }>(finalText);
+  const parsed = parseJson<{ reply?: string; mood?: GusAnswer['mood']; action?: { type?: string; city?: string; tab?: string; room?: string; limit?: string; value?: number } }>(finalText);
   const reply = digitize((parsed?.reply ?? '').trim());
   const grounded = reply ? checkGrounded(reply, ctx.evidence, METRO_NAMES) : null;
   if (!reply || !grounded?.ok || wordCount(reply) > 45) {
@@ -526,6 +546,7 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
   const city = a.city ? (findCity(a.city, metros) ?? null) : null;
   let action: GusAction | null = null;
   if (a.type === 'tab' && a.tab && a.tab in TABS) action = TABS[a.tab];
+  else if (a.type === 'limit' && (a.limit === 'deposit' || a.limit === 'cut') && typeof a.value === 'number') action = limitAction(a.limit, a.value);
   else if (city && a.type === 'city') action = { type: 'city', id: city.id, name: city.name, label: `Go to ${city.name}` };
   else if (city && a.type === 'pitch') action = { type: 'pitch', id: city.id, name: city.name, label: `Pitch ${city.name}` };
   else if (city && (a.type === 'stay' || a.type === 'eat')) action = stayLink(city, a.type);

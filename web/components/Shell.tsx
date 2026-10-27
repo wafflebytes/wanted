@@ -11,7 +11,8 @@ import type { ArtistState } from '@/ui/types';
 import { deals, useDeal } from '@web/lib/deals';
 import { haptic } from '@web/lib/haptics';
 import { gus, useGus, type GusAction } from '@web/lib/gus';
-import { useApi } from '@web/lib/hooks';
+import { api } from '@web/lib/api';
+import { mutate, useApi } from '@web/lib/hooks';
 import { session } from '@web/lib/session';
 import { Gus, type GusMood } from './Gus';
 import { GusPanels } from './GusPanels';
@@ -70,6 +71,28 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
     gus.wire(slug, (a: GusAction) => {
       const base = `/a/${slug}`;
       if (a.type === 'link') return void window.open(a.url, '_blank', 'noopener');
+      if (a.type === 'limit') {
+        // Rung 1: Gus changes it where it lives, shows you the row, and keeps a way back.
+        const key = a.key;
+        const book = `/artist/${slug}/logbook`;
+        api
+          .get<{ mandate: Mandate }>(book)
+          .then(async ({ mandate }) => {
+            const was = mandate[key];
+            await api.post(book, { mandate: { [key]: a.value } });
+            mutate(book).catch(() => {});
+            haptic('commit');
+            router.push(`${base}/settings?hl=${key}#gus`);
+            const say = key === 'maxDeposit' ? `Deposit up to $${a.value}` : `At least ${a.value}% of the door`;
+            gus.did(say, () => {
+              api.post(book, { mandate: { [key]: was } }).then(() => mutate(book)).catch(() => {});
+              haptic('tap');
+              gus.flash('Put it back', 1600);
+            });
+          })
+          .catch(() => gus.flash('Couldn’t change that'));
+        return;
+      }
       if (a.type === 'tab') return router.push(`${base}${a.tab === 'map' ? '' : `/${a.tab}`}`);
       if (a.type === 'deal') {
         gus.flash(`Asking ${a.name}`);
@@ -142,10 +165,26 @@ function Header({ slug, artist, onMap }: { slug: string; artist: ArtistState | u
         {portrait ? <img src={portrait} alt="" /> : <span>{initials || '·'}</span>}
       </Link>
       <Island />
+      <UndoChip />
       <Link href={`/a/${slug}/settings`} className="icon-btn hdr-btn" aria-label="Settings">
         <Icon name="settings" size={20} />
       </Link>
     </header>
+  );
+}
+
+/** Beside the island for a few seconds after Gus changes something: what he did, and Undo. */
+function UndoChip() {
+  const g = useGus();
+  const [last, setLast] = useState(g.undo);
+  useEffect(() => {
+    if (g.undo) setLast(g.undo);
+  }, [g.undo]);
+  return (
+    <div className={`undo-chip ${g.undo ? 'on' : ''}`} aria-live="polite" inert={!g.undo}>
+      <span>{last?.words}</span>
+      <button onClick={() => gus.undo()}>Undo</button>
+    </div>
   );
 }
 

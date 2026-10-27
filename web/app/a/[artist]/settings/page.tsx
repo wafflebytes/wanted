@@ -33,11 +33,21 @@ export default function Settings() {
   const [feel, setFeel] = useState<{ kind: ReturnType<typeof hapticKind>; on: boolean } | null>(null);
   const [saved, setSaved] = useState<'idle' | 'saving' | 'saved'>('idle');
   const pending = useRef<Partial<Mandate>>({});
+  // Gus changed a row from the voice card: light it up so you see what moved.
+  const [hl, setHl] = useState<string | null>(null);
+  useEffect(() => {
+    const k = new URLSearchParams(location.search).get('hl');
+    if (!k) return;
+    setHl(k);
+    const t = setTimeout(() => setHl(null), 2400);
+    return () => clearTimeout(t);
+  }, []);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Follow the saved limits (Gus or Undo may change them) unless you're mid-drag.
   useEffect(() => {
-    if (book.data && !m) setM(book.data.mandate);
-  }, [book.data, m]);
+    if (book.data && !Object.keys(pending.current).length) setM(book.data.mandate);
+  }, [book.data]);
   useEffect(() => {
     setActs(session.acts());
     try {
@@ -172,10 +182,10 @@ export default function Settings() {
                   </div>
                 </li>
               )}
-              <li className="st-row col">
+              <li className={`st-row col ${hl === 'maxDeposit' ? 'st-hl' : ''}`}>
                 <Slide label="Biggest deposit" hint="He won’t agree to put down more to hold a date." value={m.maxDeposit} min={0} max={1000} step={25} show={(v) => (v ? `$${v}` : 'None')} onChange={(v) => change({ maxDeposit: v })} />
               </li>
-              <li className="st-row col">
+              <li className={`st-row col ${hl === 'minSplit' ? 'st-hl' : ''}`}>
                 <Slide label="Your cut of the door" hint="He won’t take a deal that leaves you less." value={m.minSplit} min={50} max={95} step={5} show={(v) => `${v}%`} onChange={(v) => change({ minSplit: v })} />
               </li>
               <li className="st-row">

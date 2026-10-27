@@ -7,7 +7,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import VoiceBeam from 'voice-glow';
-import type { Deal, LogEntry } from '@/lib/types';
+import type { Deal, LogEntry, Mandate } from '@/lib/types';
 import type { ArtistState, MapData, MapMetroRow } from '@/ui/types';
 import { deals, useDeal } from '@web/lib/deals';
 import { gus, useGus, type GusAction } from '@web/lib/gus';
@@ -356,6 +356,45 @@ function Captions({ text, spoken }: { text: string; spoken: number }) {
  * commits (asking a venue) is a short hold, so a stray tap never books a room.
  */
 function Proposal({ action }: { action: GusAction }) {
+  if (action.type === 'limit') return <LimitProposal action={action} />;
+  return <Offer action={action} />;
+}
+
+/**
+ * Gus hands you the real control. Asked to change a limit, he brings the Settings slider set
+ * to his reading of what you said, with your current line ghosted, and one tap applies it.
+ * The card says where it lives so you learn the app while he drives.
+ */
+function LimitProposal({ action }: { action: Extract<GusAction, { type: 'limit' }> }) {
+  const slug = gus.get().slug;
+  const book = useApi<{ mandate: Mandate }>(slug ? `/artist/${slug}/logbook` : null);
+  const [v, setV] = useState(action.value);
+  const dep = action.key === 'maxDeposit';
+  const [min, max, step] = dep ? [0, 1000, 25] : [50, 95, 5];
+  const show = (n: number) => (dep ? `$${n}` : `${n}%`);
+  const now = book.data?.mandate[action.key] ?? null;
+  const pct = (n: number) => ((n - min) / (max - min)) * 100;
+  return (
+    <div className="pc lp">
+      <span className="pc-k">Want me to</span>
+      <p className="pc-line">{dep ? <>Put down up to <b className="tok">{show(v)}</b> to hold a night</> : <>Never take less than <b className="tok">{show(v)}</b> of the door</>}</p>
+      <div className="lp-slide">
+        {now !== null && now !== v && (
+          <i className="lp-was" style={{ left: `${pct(now)}%` }}>
+            <em>Now {show(now)}</em>
+          </i>
+        )}
+        <input type="range" className="range" min={min} max={max} step={step} value={v} aria-label={dep ? 'Biggest deposit' : 'Your cut of the door'} aria-valuetext={show(v)} style={{ ['--p' as string]: `${pct(v)}%` }} onChange={(e) => (haptic('tick'), setV(Number(e.target.value)))} />
+      </div>
+      <span className="lp-where">This lives in Settings, under What Gus can do.</span>
+      <button className="btn hot block" onClick={() => (haptic('tap'), gus.act({ ...action, value: v }))} disabled={now === v}>
+        {now === v ? 'That’s already your line' : `Set it to ${show(v)}`}
+      </button>
+    </div>
+  );
+}
+
+function Offer({ action }: { action: GusAction }) {
   const slug = gus.get().slug;
   const map = useApi<MapData>(slug ? `/artist/${slug}/map` : null);
   const [a, setA] = useState(action);

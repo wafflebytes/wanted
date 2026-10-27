@@ -16,7 +16,8 @@ export type GusAction =
   | { type: 'city'; id: string; name: string; label: string }
   | { type: 'pitch'; id: string; name: string; label: string }
   | { type: 'deal'; id: string; name: string; roomId: string; label: string }
-  | { type: 'link'; url: string; label: string };
+  | { type: 'link'; url: string; label: string }
+  | { type: 'limit'; key: 'maxDeposit' | 'minSplit'; value: number; label: string };
 export type GusStep = { id: string; tool: string; label: string; source: 'qloo' | 'fans' | 'wanted'; status: 'running' | 'done' | 'failed'; found: string | null; ms: number };
 export type GusAnswer = { heard: string; reply: string; mood: 'idle' | 'proud' | 'unimpressed' | 'thinking'; action: GusAction | null; model: string; steps?: GusStep[] };
 
@@ -44,6 +45,8 @@ type State = {
   ambient: { words: string; mood: GusMood; tone: 'idle' | 'live' | 'ask' | 'ok' };
   /** Instant acknowledgement: a short-lived island override ("On it"). */
   flash: string | null;
+  /** What Gus just changed, with a way back, shown beside the island for a few seconds. */
+  undo: { words: string; run: () => void } | null;
   screen: string;
 };
 
@@ -63,6 +66,7 @@ let state: State = {
   aside: null,
   ambient: { words: 'Watching your cities', mood: 'idle', tone: 'idle' },
   flash: null,
+  undo: null,
   screen: 'map',
 };
 const subs = new Set<() => void>();
@@ -74,6 +78,7 @@ const set = (patch: Partial<State>) => {
 type Nav = (a: GusAction) => void;
 let navigate: Nav = () => {};
 let run = 0;
+let undoTimer: ReturnType<typeof setTimeout> | null = null;
 let flashTimer: ReturnType<typeof setTimeout> | null = null;
 
 // ---------- mic
@@ -225,7 +230,7 @@ async function send(body: FormData | { text: string; screen: string }) {
   set({ phase: 'answer', answer: a, spoken: 0 });
   speak(a.reply, a.mood);
   // Still holding when the answer lands: he just takes you there (links always ask first).
-  if (state.holding && a.action && a.action.type !== 'link') act(a.action);
+  if (state.holding && a.action && a.action.type !== 'link' && a.action.type !== 'limit') act(a.action);
 }
 
 function act(a: GusAction) {
@@ -244,6 +249,19 @@ export const gus = {
     navigate = nav;
   },
   /** Island acknowledgement inside 100 ms, before the server answers. */
+  /** Gus changed something reversible: say it by the island with Undo, then let it settle. */
+  did(words: string, run: () => void, ms = 6000) {
+    if (undoTimer) clearTimeout(undoTimer);
+    set({ undo: { words, run } });
+    undoTimer = setTimeout(() => set({ undo: null }), ms);
+  },
+  undo() {
+    const u = state.undo;
+    if (!u) return;
+    if (undoTimer) clearTimeout(undoTimer);
+    set({ undo: null });
+    u.run();
+  },
   flash(words: string, ms = 1600) {
     if (flashTimer) clearTimeout(flashTimer);
     set({ flash: words });
