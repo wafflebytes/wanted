@@ -176,6 +176,13 @@ export function CitySheet({
               <RoomTile key={r.id} r={r} highlight={r.id === focusRoom} />
             ))}
           </ScrollView>
+          <T v="caption">Qloo fit and listed business hours do not confirm a bookable show date. Room size is a guess unless sourced.</T>
+          {rooms.filter((r) => r.operationalFacts).map((r) => <View key={r.id} style={{ backgroundColor: PANE, borderRadius: R.card, padding: S.lg, gap: S.sm }}>
+            <T v="headline" color={C.amber}>{r.name} · needs a capacity check</T>
+            <T v="footnote" color={C.text2}>{r.operationalFacts!.warning}</T>
+            <T v="caption">Research checked Oct 25, 2026. {Date.now() > r.operationalFacts!.expiresAt ? 'Source evidence is stale. ' : ''}Actual date availability and current terms are unknown.</T>
+            {r.operationalFacts!.sources.map((source) => <Pressable key={source.url} accessibilityRole="link" onPress={() => Linking.openURL(source.url)} style={{ minHeight: 44, justifyContent: 'center' }}><T v="footnote" color={C.purpleHi}>{source.label} ↗</T></Pressable>)}
+          </View>)}
         </View>
       ) : null}
 
@@ -259,7 +266,7 @@ function Compare({ label, value, words, color }: { label: string; value: number 
 
 /** A room as a card you flick through: a photo when there is one, the name, one line. Tap for its site. */
 function RoomTile({ r, highlight }: { r: CityRoom; highlight: boolean }) {
-  const line = [r.neighborhood, r.openDays?.length ? `Open ${days(r.openDays)}` : null, r.sizeGuess ? `${r.sizeGuess} room` : null].filter(Boolean).join(' · ');
+  const line = [r.neighborhood, r.openDays?.length ? `Hours listed ${days(r.openDays)}` : null, r.sizeGuess ? `${r.sizeGuess} (Gus’s guess)` : null].filter(Boolean).join(' · ');
   const go = r.website ? () => (haptic.tick(), Linking.openURL(r.website!)) : undefined;
   return (
     <Pressable onPress={go} disabled={!go} accessibilityRole={go ? 'link' : undefined} accessibilityLabel={`${r.name}. ${line}`} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.98 : 1 }] })}>
@@ -276,11 +283,11 @@ function RoomTile({ r, highlight }: { r: CityRoom; highlight: boolean }) {
             {r.name}
           </T>
           <T v="footnote" color={C.text2} numberOfLines={2}>
-            {line || 'No hours on file'}
+            {line || 'Show availability unknown'}
           </T>
           {r.closedDays?.length ? (
             <T v="footnote" color={C.text3} numberOfLines={1}>
-              Dark {days(r.closedDays)}
+              Listed closed {days(r.closedDays)}
             </T>
           ) : null}
         </View>

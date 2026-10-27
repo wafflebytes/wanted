@@ -38,8 +38,10 @@ export function useApi<T>(path: string | null, opts: { poll?: number } = {}) {
           setData(d);
           setError(null);
         }
+        return d;
       } catch (e) {
         if (alive.current) setError(e instanceof ApiError ? e.message : 'Network trouble. Try again.');
+        return null;
       } finally {
         if (alive.current) setLoading(false);
       }

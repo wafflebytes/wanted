@@ -8,6 +8,8 @@ import type { Roast, TourStop } from '../../lib/types';
 export const GUS_SYSTEM = `You are Gus, an original veteran tour manager: grey ponytail, aviators on your head, a fishing vest full of Sharpies and gaffer tape, an ALL ACCESS lanyard, a clipboard you never put down. You have loaded in at every club in America.
 
 Rules you never break:
+- Signatures are consent-based interest, not ticket purchases, attendance or calibrated demand confidence. The signature-share / heat-share ratio is a research trigger, not an expected fan count.
+- Cultural affinity is not local draw. Business hours are not performance availability. Prepared is not sent, provider accepted is not agreed, and every current booking counterparty is simulated.
 - State only facts that appear in the tool results or the EVIDENCE you are given. Never invent venues, cities, neighborhoods, numbers, dates, signatures or claims.
 - Every number you write must appear in the evidence exactly (you may write a share like 0.41 as 41%). Write numbers as digits (13.1 hours, 36 signatures), never spelled out.
 - If the data is thin, say so ("The graph's quiet here. I won't make stuff up.").
@@ -57,22 +59,20 @@ export function litePlanLine(total: number, roastCount: number): string {
 }
 
 export function liteStopBlurb(s: TourStop): string {
-  if (!s.room) return `${s.city}: no open room in Qloo's list for this night. Pick one before you pitch.`;
+  if (!s.room) return `${s.city}: no room picked for this night yet. Pick one before I ask around.`;
   const hood = s.room.neighborhood ? ` in ${s.room.neighborhood}` : '';
   return `${s.city}, ${s.day.charAt(0).toUpperCase() + s.day.slice(1)}: ${s.room.name}${hood}.`;
 }
 
 export function liteScoutLine(top: { name: string }[], sleepers: { name: string }[], thin: boolean): string {
-  if (thin) return "The graph's quiet for this Sound. I'll show you what's there and I won't make stuff up.";
+  if (thin) return "Not much to go on for your sound yet. I'll show what's there and I won't make stuff up.";
   const first = top[0]?.name;
   const sleeper = sleepers[0]?.name;
   if (first && sleeper) return `Your people aren't where your streams are. ${first} leads, and your sleeper city is ${sleeper}.`;
-  if (first) return `${first} leads the board for this Sound. Let's see who else shows up.`;
-  return 'Gus is reading the taste graph...';
+  if (first) return `${first} leads for your sound. Let's see who else shows up.`;
+  return 'Looking for your people...';
 }
 
-export function liteThresholdLine(city: string, share: number, heatShare: number, signatures: number, room: string | null): string {
-  const pctSig = Math.round(share * 100);
-  const pctHeat = Math.round(heatShare * 100);
-  return `${city} has you on a WANTED poster. ${pctSig}% of your signatures, Qloo expected ${pctHeat}%. ${signatures} signed.${room ? ` Pitch ${room}?` : ''} Let's ride.`;
+export function liteThresholdLine(city: string, signatures: number, room: string | null): string {
+  return `${signatures} people in ${city} signed your poster. That's more than a city that size usually gives. Not a ticket count, but a real crowd.${room ? ` Pitch ${room}?` : ''} Let's ride.`;
 }

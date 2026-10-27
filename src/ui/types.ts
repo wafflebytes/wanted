@@ -35,6 +35,7 @@ export type MapData = {
 };
 
 export type CityRoom = Room & {
+  operationalFacts?: import('@/lib/venue-evidence').VenueFacts | null;
   rank: number;
   neighborhoodRank: number | null;
   openDays: string[] | null;
@@ -87,6 +88,8 @@ export type PosterState = {
   mine: (ClaimView & { refCode: string; earlyAccess: boolean; friends: number }) | null;
   played: { at: number; venue: string | null } | null;
   rank: number | null;
+  /** A held date for this city: signers hear first. */
+  show?: { room: string; date: string } | null;
   /** The Bounty (FR-23d): one signer meets the artist. Mirrors the server's BountyView. */
   bounty?: {
     prize: string;

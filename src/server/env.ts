@@ -11,6 +11,11 @@ export const env = {
   get openrouterKey() {
     return read('OPENROUTER_API_KEY');
   },
+  /** Operator-supplied credential pool (OPENROUTER_API_KEYS, comma separated) plus the primary key. Deduped, order kept. */
+  get openrouterKeys(): string[] {
+    const pool = (read('OPENROUTER_API_KEYS') ?? '').split(',').map((k) => k.trim()).filter(Boolean);
+    return [...new Set([...(read('OPENROUTER_API_KEY') ? [read('OPENROUTER_API_KEY')!] : []), ...pool])];
+  },
   get fishKey() {
     return read('FISH_AUDIO_API_KEY');
   },
@@ -50,7 +55,7 @@ export const env = {
 /** Redacts anything that looks like one of our keys from a string (logs, traces, errors). */
 export function redact(text: string): string {
   let out = text;
-  for (const key of [env.qlooKey, env.openrouterKey, env.fishKey, env.setlistKey, env.contactKey]) {
+  for (const key of [env.qlooKey, ...env.openrouterKeys, env.fishKey, env.setlistKey, env.contactKey]) {
     if (key) out = out.split(key).join('[redacted]');
   }
   return out.replace(/hack_[A-Za-z0-9]{6,}/g, 'hack_[redacted]').replace(/sk-(or|fish)-[A-Za-z0-9-]{6,}/g, 'sk-[redacted]');

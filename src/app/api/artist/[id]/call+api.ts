@@ -9,7 +9,8 @@ import { requireArtist } from '@/server/service';
  */
 export const GET = handler(async (req: Request, { id }: Record<string, string>) => {
   const artist = await requireArtist(id);
-  const h = Number(new URL(req.url).searchParams.get('hour'));
+  const rawHour = new URL(req.url).searchParams.get('hour');
+  const h = rawHour === null ? NaN : Number(rawHour);
   return json({ call: await checkIn(artist, Number.isInteger(h) && h >= 0 && h < 24 ? h : null) });
 });
 

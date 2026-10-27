@@ -1,4 +1,5 @@
 import { sign } from '@/server/claims';
+import { replayDemo } from '@/server/demo';
 import { ageHold } from '@/server/deals';
 import { body, handler, HttpError, json, limit } from '@/server/http';
 import { requireArtist } from '@/server/service';
@@ -15,9 +16,11 @@ export const POST = handler(async (req: Request, { id }: Record<string, string>)
   await limit(req, 'simulate', 20);
   const artist = await requireArtist(id);
   if (!artist.isDemo) throw new HttpError(403, 'Simulation is only for demo artists.');
-  const input = await body<{ city: string; n?: number; action?: 'hold-expiring' }>(req);
+  const input = await body<{ city: string; n?: number; action?: 'hold-expiring' | 'replay' }>(req);
   // The video's "hold expires tonight" beat: the waiting hold now runs out in under 3 hours.
   if (input.action === 'hold-expiring') return json({ deal: await ageHold(artist, 2.8) });
+  // The judges' replay: reset the city, then fans sign until Gus goes to work.
+  if (input.action === 'replay') return json(await replayDemo(artist, input.city));
   const state = await posterState(artist.slug, input.city, null);
   const hoods = state.neighborhoods.slice(0, 8);
   const n = Math.max(1, Math.min(60, input.n ?? 5));

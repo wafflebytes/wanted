@@ -10,7 +10,7 @@
  */
 import type { EscalationLevel, Mandate } from '../lib/types';
 import { kvGet, kvSet, one } from './db';
-import { limitsFor, setLimits } from './deals';
+import { limitsFor, setLimits } from './deal-limits';
 
 const DEFAULTS: Omit<Mandate, 'maxDeposit' | 'minSplit'> = {
   autoAsk: true,

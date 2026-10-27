@@ -8,7 +8,7 @@ import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, Text, View } from 'react-native';
 import type { ClaimView } from '@/lib/types';
-import { POSTER_BOXES as B, POSTER_H, POSTER_INK, POSTER_RED, POSTER_W, signatureSpot } from '@/lib/poster';
+import { POSTER_BOXES, POSTER_H, POSTER_INK, POSTER_RED, POSTER_W, signatureSpot } from '@/lib/poster';
 import { CityMark, cityEdition, type Hex } from './CityMark';
 import { useReducedMotion } from '../hooks';
 import { posterArt } from '../posterArt';
@@ -44,6 +44,7 @@ export function Poster({ d, width, fresh, stampKey }: { d: PosterView; width: nu
   const ed = d.cityId ? cityEdition(d.cityId) : null;
   const art = posterArt(d.cityId, d.state, d.wear);
   const paper = art.base;
+  const B = art.layout ?? POSTER_BOXES;
   return (
     <View
       accessibilityRole="image"
@@ -68,30 +69,30 @@ export function Poster({ d, width, fresh, stampKey }: { d: PosterView; width: nu
         )}
       </View>
       <View style={[box(B.name, s), { alignItems: 'center', justifyContent: 'flex-end' }]}>
-        <Text numberOfLines={1} style={{ fontFamily: F.displayBlack, color: POSTER_INK, fontSize: fit(name, B.name.w, 58) * s, letterSpacing: -1 * s, lineHeight: 62 * s }}>
+        <Text numberOfLines={1} style={{ fontFamily: F.posterBlack, color: POSTER_INK, fontSize: fit(name, B.name.w, Math.min(58, B.name.h * 0.92), art.layout ? 0.88 : 0.78) * s, letterSpacing: -1 * s, lineHeight: Math.min(62, B.name.h) * s }}>
           {name}
         </Text>
       </View>
       <View style={[box(B.city, s), { alignItems: 'center', justifyContent: 'center' }]}>
-        <Text numberOfLines={1} style={{ fontFamily: F.display, color: ed?.ink ?? POSTER_RED, fontSize: fit(city, B.city.w, 40) * s, letterSpacing: 1 * s }}>
+        <Text numberOfLines={1} style={{ fontFamily: F.poster, color: ed?.ink ?? POSTER_RED, fontSize: fit(city, B.city.w, Math.min(40, B.city.h * 0.62), art.layout ? 0.9 : 0.78) * s, letterSpacing: 1 * s }}>
           {city}
         </Text>
       </View>
       <View style={[box(B.reward, s), { alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={{ fontFamily: F.serif, color: POSTER_INK, fontSize: 44 * s, letterSpacing: 1 * s }}>One sold-out show.</Text>
+        <Text style={{ fontFamily: F.serif, color: POSTER_INK, fontSize: Math.min(44, B.reward.h * 0.85) * s, letterSpacing: 1 * s }}>One sold-out show.</Text>
       </View>
       {wanted ? (
         <View style={[box(B.wantedIn, s), { alignItems: 'center', justifyContent: 'center' }]}>
-          <Text numberOfLines={1} style={{ fontFamily: F.serif, color: POSTER_INK, fontSize: fit(wanted, B.wantedIn.w, 30, 0.42) * s }}>
+          <Text numberOfLines={1} style={{ fontFamily: F.serif, color: POSTER_INK, fontSize: fit(wanted, B.wantedIn.w, Math.min(30, B.wantedIn.h * 0.65), 0.42) * s }}>
             {wanted}
           </Text>
         </View>
       ) : null}
       {d.signatures.slice(0, 28).map((c) => (
-        <Signature key={c.number} c={c} s={s} animate={c.number === fresh} />
+        <Signature key={c.number} c={c} s={s} lay={art.layout} animate={c.number === fresh} />
       ))}
       {ed && d.cityId && d.hexes?.length ? (
-        <View pointerEvents="none" style={{ position: 'absolute', left: 70 * s, top: 830 * s }}>
+        <View pointerEvents="none" style={{ position: 'absolute', left: (B.portrait.x - 120) * s, top: (B.portrait.y + B.portrait.h - 195) * s }}>
           <CityMark cityId={d.cityId} cityName={d.cityName} state={d.state} hexes={d.hexes} size={230 * s} ink={ed.ink} tilt={ed.tilt} />
         </View>
       ) : null}
@@ -112,7 +113,7 @@ export function Poster({ d, width, fresh, stampKey }: { d: PosterView; width: nu
       >
         {/* Engraved ink, not liquid metal: at poster scale the metal effect vanished into the gold on the web. */}
         <Text style={{ fontFamily: F.monoBold, fontSize: (d.count > 999 ? 40 : 54) * s, lineHeight: (d.count > 999 ? 44 : 58) * s, color: '#2b1806', textShadowColor: 'rgba(255,240,200,0.55)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 0 }}>{d.count}</Text>
-        <Text style={{ fontFamily: F.display, fontSize: 17 * s, color: '#2b1806', letterSpacing: 2 * s }}>SIGNED</Text>
+        <Text style={{ fontFamily: F.poster, fontSize: 17 * s, color: '#2b1806', letterSpacing: 2 * s }}>SIGNED</Text>
       </View>
       {d.played ? <Stamp s={s} k={stampKey} /> : null}
       {d.isDemo ? <Text style={{ position: 'absolute', left: 120 * s, top: 1462 * s, fontFamily: F.mono, fontSize: 18 * s, color: POSTER_INK, opacity: 0.7 }}>DEMO DATA</Text> : null}
@@ -121,9 +122,9 @@ export function Poster({ d, width, fresh, stampKey }: { d: PosterView; width: nu
 }
 
 /** One signature. The newest one scrawls in: the ink reveals left to right like a pen stroke. */
-function Signature({ c, s, animate }: { c: Pick<ClaimView, 'number' | 'initials' | 'font'>; s: number; animate: boolean }) {
+function Signature({ c, s, lay, animate }: { c: Pick<ClaimView, 'number' | 'initials' | 'font'>; s: number; lay: typeof POSTER_BOXES | null; animate: boolean }) {
   const reduced = useReducedMotion();
-  const spot = signatureSpot(c.number);
+  const spot = signatureSpot(c.number, lay);
   const text = `${c.initials} #${c.number}`;
   const [w, setW] = useState(0);
   const reveal = useRef(new Animated.Value(animate && !reduced ? 0 : 1)).current;

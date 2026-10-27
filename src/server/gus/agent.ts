@@ -368,6 +368,7 @@ Write:
 - "planLine": one line on the whole route, under 22 words: your verdict as the tour manager, with an opinion. Never recite the dates, the stop count or the Tour Score; the app shows those. Good: "Strong Northeast swing. Fix the Tuesday in Burlington and I'll stop grumbling." Bad: "Ten stops across the Northeast, December 10th to 19th, tour score 51."
 - "blurbs": one line per stop in order, under 16 words: what to know about that night (the drive in, the night of the week, the room's neighborhood). The app already shows the date, city and room name, so don't just restate them.
 - "roasts": for each roast id, one funny line under 18 words about the route problem in "why" (a roast of the routing, never of people).
+Talk like a tour manager in the van, not a dashboard: never say data, score, metrics, signal, gaps or empty. "No room picked yet in Ithaca" is fine; "empty neighborhood data" is not.
 Reply with only JSON: {"planLine": "...", "blurbs": ["..."], "roasts": [{"id": "...", "line": "..."}]}`,
         },
       ],
@@ -401,7 +402,9 @@ Reply with only JSON: {"planLine": "...", "blurbs": ["..."], "roasts": [{"id": "
     parsed.blurbs = (parsed.blurbs ?? []).map((b) => digitize(b ?? ''));
     parsed.roasts = (parsed.roasts ?? []).map((r) => ({ ...r, line: digitize(r.line ?? '') }));
     const fallback = lite();
-    const ok = (t: string | undefined, max: number) => !!t && wordCount(t) <= max && checkGrounded(t, evidence, METRO_NAMES).ok;
+    // Musicians read these: anything that sounds like a dashboard falls back to the plain line.
+    const jargon = /\b(data|dataset|metrics?|signals?|scores?|null|empty|gaps?)\b/i;
+    const ok = (t: string | undefined, max: number) => !!t && wordCount(t) <= max && !jargon.test(t) && checkGrounded(t, evidence, METRO_NAMES).ok;
     // A verdict, not a readout: lines that recite the score or the calendar fall back.
     const recites = /tour score|\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(parsed.planLine);
     return {
@@ -438,7 +441,7 @@ export async function thresholdMessage(f: ThresholdFacts): Promise<{ body: strin
     numbers: numbersIn({ s: f.signatures, ss: f.signatureShare, hs: f.heatShare, r: f.ratio }),
     names: [f.artistName, f.city, ...(f.topRoom ? [f.topRoom] : []), ...f.topNeighborhoods],
   };
-  const lite = liteThresholdLine(f.city, f.signatureShare, f.heatShare, f.signatures, f.topRoom);
+  const lite = liteThresholdLine(f.city, f.signatures, f.topRoom);
   try {
     const res = await chat({
       messages: [
@@ -446,7 +449,7 @@ export async function thresholdMessage(f: ThresholdFacts): Promise<{ body: strin
         {
           role: 'user',
           content: `EVIDENCE: ${JSON.stringify({ city: f.city, signatures: f.signatures, shareOfAllSignatures: f.signatureShare, shareQlooExpected: f.heatShare, proofRatio: f.ratio, bestRoom: f.topRoom })}
-A city just crossed the proof threshold on ${untrusted(f.artistName)}'s WANTED poster. Write one inbox message to the artist, under 30 words: say the city, its share of signatures vs what Qloo expected (as percents), and recommend pitching the best room. End with "Let's ride." Reply with only the message.`,
+A city just crossed an interest-over-index research threshold on ${untrusted(f.artistName)}'s WANTED poster. Write one inbox message to the artist, under 30 words, in plain words a musician would text: say the city and signature count, state that signatures are interest not ticket commitments, and recommend researching the best room (no attendance predictions or calibrated demand claims). End with "Let's ride." Reply with only the message.`,
         },
       ],
       temperature: 0.7,

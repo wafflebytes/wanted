@@ -20,15 +20,18 @@ import { drawBounty } from './bounty';
 import { isOpenOn } from './city';
 import { id } from './crypto';
 import { log } from './logbook';
-import { all, kvGet, kvSet, one, run } from './db';
-import { env } from './env';
+import { all, kvGet, kvSet, one, run, transaction } from './db';
+import { env, redact } from './env';
 import { HttpError } from './http';
 import { recordOutbound } from './outbound';
+import { dealReview, assertDealReview, type DealReview } from './deal-scope';
 import { metroById } from './score';
 import { cityData, loadPlan } from './service';
-import { postInbox } from './watcher';
+import { makeShowPlan } from './showplan';
+import { postInbox } from './inbox';
 
-export const DEFAULT_LIMITS: DealLimits = { maxDeposit: 200, minSplit: 70 };
+import { limitsFor } from './deal-limits';
+export { DEFAULT_LIMITS, limitsFor, setLimits } from './deal-limits';
 const HOLD_MS = 48 * 60 * 60 * 1000;
 
 /** Rough room economics by size: how many fit, and what a night there usually costs to hold. */
@@ -42,20 +45,6 @@ const DAY_NAME: Record<DayKey, string> = { monday: 'Monday', tuesday: 'Tuesday',
 const nice = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 const tens = (n: number) => Math.max(0, Math.round(n / 10) * 10);
 const today = () => new Date().toISOString().slice(0, 10);
-
-export async function limitsFor(artistId: string): Promise<DealLimits> {
-  return { ...DEFAULT_LIMITS, ...((await kvGet<Partial<DealLimits>>(`deal-limits:${artistId}`)) ?? {}) };
-}
-
-export async function setLimits(artistId: string, next: Partial<DealLimits>): Promise<DealLimits> {
-  const cur = await limitsFor(artistId);
-  const out = {
-    maxDeposit: Math.min(2000, Math.max(0, Math.round(next.maxDeposit ?? cur.maxDeposit))),
-    minSplit: Math.min(95, Math.max(50, Math.round(next.minSplit ?? cur.minSplit))),
-  };
-  await kvSet(`deal-limits:${artistId}`, out);
-  return out;
-}
 
 export async function dealsFor(artistId: string): Promise<Deal[]> {
   const rows = await all<{ body: string }>('select body from deals where artist_id = ? order by created_at desc limit 20', [artistId]);
@@ -133,7 +122,7 @@ type Stored = Deal & { talk?: Talk };
 
 const tool = (name: string, text: string): DealLetter => ({ from: 'gus', kind: 'tool', tool: name, text, terms: null });
 const letter = (from: DealLetter['from'], text: string, terms: DealLetter['terms']): DealLetter => ({ from, kind: 'letter', text, terms });
-const pub = ({ talk: _t, ...d }: Stored): Deal => d;
+const pub = ({ talk: _t, ...d }: Stored): Deal => ({ ...d, review: dealReview(d) });
 
 /** Gus looks things up, then sends his opening letter. The room answers on the next turn. */
 export async function startDeal(artist: ArtistRow, metroId: string, roomId: string | null, opts: { quiet?: boolean } = {}): Promise<Deal> {
@@ -143,7 +132,7 @@ export async function startDeal(artist: ArtistRow, metroId: string, roomId: stri
   if (open) return open;
 
   const city = await cityData(artist, metroId, true);
-  const room = (roomId ? city.rooms.find((r) => r.id === roomId) : null) ?? city.rooms[0];
+  const room = roomId ? city.rooms.find((r) => r.id === roomId) : city.rooms[0];
   if (!room) throw new HttpError(404, "Gus couldn't find a room here to ask.");
   const signatures = city.proof ? (artist.isDemo ? city.proof.signatures : city.proof.realSignatures) : 0;
   const hoods = (city.proof?.neighborhoods ?? []).slice(0, 2).map((n) => n.name);
@@ -162,8 +151,8 @@ export async function startDeal(artist: ArtistRow, metroId: string, roomId: stri
 
   const thread: DealLetter[] = [
     tool('read_signatures', signatures ? `${signatures} signed in ${metro.name}${hoods.length ? `, most from ${hoods.join(' and ')}` : ''}` : `No signatures in ${metro.name} yet`),
-    tool('pick_room', `${room.name}${room.neighborhood ? `, ${room.neighborhood}` : ''}. Fits about ${house.capacity}`),
-    tool('check_calendar', date === asked ? `${nice(date)} looks open` : `Closed ${DAY_NAME[dayOf(asked)]}s. ${nice(date)} instead`),
+    tool('pick_room', `${room.name}${room.neighborhood ? `, ${room.neighborhood}` : ''}. Simulation capacity ${house.capacity}; actual capacity unverified`),
+    tool('check_calendar', date === asked ? `${nice(date)}: performance availability unverified; metadata is not a calendar` : `Closed ${DAY_NAME[dayOf(asked)]}s. ${nice(date)} instead`),
     letter('gus', `Hi, Gus here. I book for ${artist.name}. ${crowd} Could you hold ${nice(asked)}? We'd ask ${gus.split}% of the door and a $${gus.deposit} deposit.`, gus),
   ];
   const now = Date.now();
@@ -175,6 +164,8 @@ export async function startDeal(artist: ArtistRow, metroId: string, roomId: stri
     roomName: room.name,
     neighborhood: room.neighborhood,
     status: 'talking',
+    mode: 'simulation',
+    version: 1,
     terms: { date, day: dayOf(date), split: gus.split, deposit: gus.deposit, capacity: house.capacity },
     thread,
     withinLimits: true,
@@ -222,7 +213,7 @@ export async function advanceDeal(artist: ArtistRow, dealId: string, seen: numbe
       split: Math.max(t.limits.minSplit, Math.round((t.gus.split + t.offer.split) / 2 + 1)),
       deposit: Math.min(t.limits.maxDeposit, tens((t.gus.deposit + t.offer.deposit) / 2 - 10)),
     };
-    deal.thread.push(letter('gus', t.turn === 1 ? `${t.signatures >= 50 ? `${t.first} has the crowd to fill it.` : 'Fair.'} Could we meet at ${t.gus.split}% and $${t.gus.deposit}?` : `Last try: ${t.gus.split}% and $${t.gus.deposit}, and we handle the promo.`, t.gus));
+    deal.thread.push(letter('gus', t.turn === 1 ? `${t.signatures >= 50 ? `${t.first} has signatures expressing interest, not ticket commitments.` : 'Fair.'} Could we meet at ${t.gus.split}% and $${t.gus.deposit}?` : `Last try: ${t.gus.split}% and $${t.gus.deposit}, and we handle the promo.`, t.gus));
   }
   deal.terms = { ...deal.terms!, split: t.offer.split, deposit: t.offer.deposit };
   deal.updatedAt = Date.now();
@@ -231,11 +222,11 @@ export async function advanceDeal(artist: ArtistRow, dealId: string, seen: numbe
 }
 
 async function finish(artist: ArtistRow, deal: Stored, t: Talk): Promise<Deal> {
-  const terms: DealTerms = { date: t.date, day: dayOf(t.date), split: t.offer.split, deposit: t.offer.deposit, capacity: t.capacity };
+  const terms: DealTerms = { dealType: 'door-split', moneyDirection: 'artist-to-venue', basis: 'simulation', date: t.date, day: dayOf(t.date), split: t.offer.split, deposit: t.offer.deposit, capacity: t.capacity };
   const withinLimits = terms.split >= t.limits.minSplit && terms.deposit <= t.limits.maxDeposit;
   deal.thread.push(letter('house', `${withinLimits ? 'Deal' : 'Best we can do'}: ${terms.split}% of the door and $${terms.deposit} to hold ${nice(t.date)}. The hold lasts 48 hours.`, { split: terms.split, deposit: terms.deposit }));
   deal.thread.push(tool('check_limits', withinLimits ? 'Fits what you said you’d take. Checking with you' : 'More than you said you’d go for. Checking with you'));
-  Object.assign(deal, { terms, withinLimits, status: 'waiting', updatedAt: Date.now() });
+  Object.assign(deal, { terms, withinLimits, status: 'waiting', offerExpiresAt: Date.now() + HOLD_MS, version: (deal.version ?? 1) + 1, updatedAt: Date.now() });
   const quiet = t.quiet;
   delete deal.talk;
   await save(artist.id, deal);
@@ -254,7 +245,8 @@ async function finish(artist: ArtistRow, deal: Stored, t: Talk): Promise<Deal> {
 }
 
 async function pay(artist: ArtistRow, deal: Deal, amount: number): Promise<DealPayment> {
-  const pass = { amount, payee: deal.roomName, expiresAt: Date.now() + HOLD_MS };
+  if (!Number.isSafeInteger(amount * 100) || amount < 0) throw new HttpError(400, 'Deposit must be exact nonnegative USD cents.');
+  const pass = { amount, payee: deal.roomName, expiresAt: holdExpiresAt(deal) };
   // The pass is checked before anything moves: the exact amount, the room it was made for, in time.
   if (amount !== deal.terms?.deposit || pass.payee !== deal.roomName || Date.now() > pass.expiresAt) throw new HttpError(400, "That payment doesn't match the deal.");
   const key = env.stripeTestKey;
@@ -271,67 +263,103 @@ async function pay(artist: ArtistRow, deal: Deal, amount: number): Promise<DealP
     'metadata[artist]': artist.slug,
   });
   recordOutbound({ kind: 'web', url: 'https://api.stripe.com/v1/payment_intents', body: form.toString() });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  try {
   const res = await fetch('https://api.stripe.com/v1/payment_intents', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/x-www-form-urlencoded', 'Idempotency-Key': deal.id },
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/x-www-form-urlencoded', 'Idempotency-Key': `wanted-deposit:${deal.id}:${dealReview(deal).hash}` },
     body: form,
+    signal: controller.signal,
   });
-  const out = (await res.json()) as { id?: string; status?: string; livemode?: boolean; error?: { message?: string } };
-  if (!res.ok || !out.id) throw new HttpError(502, `Stripe test payment failed: ${out.error?.message ?? res.status}`);
-  if (out.livemode) throw new HttpError(500, 'Refusing a live payment.');
+  const out = (await res.json()) as { id?: string; status?: string; livemode?: boolean; amount?: number; currency?: string; error?: { message?: string } };
+  if (!res.ok || !out.id) throw new HttpError(502, `Stripe test payment failed: ${redact(out.error?.message ?? String(res.status))}`);
+  if (out.status !== 'succeeded') throw new HttpError(502, 'Stripe test payment is not confirmed as succeeded.');
+  if (out.livemode !== false || out.amount !== amount * 100 || out.currency !== 'usd') throw new HttpError(500, 'Test receipt does not establish the exact amount/currency and non-live mode. Review the provider record.');
   return { rail: 'stripe-test', ref: out.id, amount, at: Date.now(), pass };
+  } finally { clearTimeout(timer); }
 }
 
-export async function decideDeal(artist: ArtistRow, dealId: string, yes: boolean): Promise<Deal> {
-  const row = await one<{ body: string }>('select body from deals where artist_id = ? and id = ?', [artist.id, dealId]);
-  if (!row) throw new HttpError(404, 'No such deal.');
-  const deal = JSON.parse(row.body) as Deal;
-  if (deal.status !== 'waiting' || !deal.terms) return deal;
-  if (Date.now() - deal.createdAt > HOLD_MS) throw new HttpError(410, 'That hold ran out. Ask Gus to try again.');
-  const paid = yes ? await pay(artist, deal, deal.terms.deposit) : null;
-  const next: Deal = paid
-    ? {
-        ...deal,
-        status: 'held',
-        payment: paid,
-        thread: [
-          ...deal.thread,
-          tool('mint_pass', `Set aside exactly $${paid.amount}, for ${deal.roomName} only`),
-          tool('pay', 'Deposit paid (test mode, no real money)'),
-          letter('gus', `${artist.name.split(' ')[0]} says yes. Deposit's sent. See you ${nice(deal.terms.date)}.`, null),
-        ],
-      }
-    : { ...deal, status: 'passed', thread: [...deal.thread, letter('gus', `We'll pass for now. Thanks for holding it.`, null)] };
-  next.updatedAt = Date.now();
-  await log(artist.id, {
-    kind: 'payment',
-    city: deal.city,
-    title: paid ? `You said yes. Paid the $${paid.amount} deposit to ${deal.roomName}` : `You passed on ${deal.roomName}`,
-    detail: paid ? `${nice(deal.terms.date)} is yours. Test mode, no real money moved.` : null,
-    source: 'artist',
-    level: 3,
-    ref: { dealId: deal.id },
+/** Exact review, one persisted decision, one provider idempotency key. A lost response
+ * may be retried only for this same scope/choice while the original offer is current.
+ * Stripe idempotency is a test charge, not transfer/recipient identity or real commerce. */
+type DecisionOptions = { now?: number; pay?: typeof pay; followup?: boolean; loseAcknowledgment?: boolean };
+export async function decideDeal(artist: ArtistRow, dealId: string, yes: boolean, review?: DealReview, options: DecisionOptions = {}): Promise<Deal> {
+  const now = options.now ?? Date.now(), token = id('decision_');
+  const claimed = await transaction(async tx => {
+    const row = await tx.execute({ sql: 'select body from deals where artist_id = ? and id = ?', args: [artist.id, dealId] });
+    if (!row.rows[0]) throw new HttpError(404, 'No such deal.');
+    const deal = JSON.parse(String(row.rows[0].body)) as Deal; assertDealReview(deal, review);
+    const prior = await tx.execute({ sql: 'select * from deal_decisions where artist_id = ? and deal_id = ?', args: [artist.id, dealId] });
+    const existing = prior.rows[0];
+    if (existing && (existing.scope_hash !== review!.hash || existing.outcome !== (yes ? 'yes' : 'no'))) throw new HttpError(409, 'The original decision has a different scope or choice. Review follow-up; no replacement payment.');
+    if (existing?.state === 'completed') return { deal, completed: true, decisionId: String(existing.id) };
+    if (deal.status !== 'waiting' || !deal.terms) throw new HttpError(409, 'The offer is not awaiting this exact decision.');
+    if (now >= holdExpiresAt(deal)) throw new HttpError(410, 'That hold ran out. An uncertain earlier payment needs reconciliation, not a new charge.');
+    if (existing && now - Number(JSON.parse(String(existing.body)).firstAttemptAt ?? now) >= 23 * 3_600_000) throw new HttpError(409, 'Provider idempotency retention may have elapsed. Reconcile the original provider record; no blind repost.');
+    if (existing?.state === 'executing' && Number(existing.lease_until) > now) throw new HttpError(409, 'This exact decision is already executing. Refresh its record, do not make another choice.');
+    const decisionId = existing ? String(existing.id) : `deposit:${artist.id}:${dealId}:${review!.hash}`;
+    await tx.execute({ sql: "insert into deal_decisions(id,artist_id,deal_id,scope_hash,outcome,state,run_token,lease_until,body,updated_at) values(?,?,?,?,?,'executing',?,?,?,?) on conflict(id) do update set state='executing',run_token=excluded.run_token,lease_until=excluded.lease_until,updated_at=excluded.updated_at", args: [decisionId, artist.id, dealId, review!.hash, yes ? 'yes' : 'no', token, now + 60_000, JSON.stringify({ review, exactTerms: deal.terms, firstAttemptAt: now }), now] });
+    return { deal, completed: false, decisionId };
   });
-  if (paid) {
-    // The show is real now: Gus draws the city's Bounty and puts the winner on the list.
-    try {
-      const b = await drawBounty(artist, deal.city, 'gus');
-      const w = b.drawn?.winner;
-      if (w) {
-        next.thread.push(tool('draw_bounty', `Picked your Bounty winner: #${w.number}${w.neighborhood ? ` from ${w.neighborhood}` : ''}`));
-        next.thread.push(letter('gus', `One more thing: please add a +1 at soundcheck for our Bounty winner (signature #${w.number}, ${w.initials}). They'll meet ${artist.name.split(' ')[0]} before doors.`, null));
-      }
-    } catch (e) {
-      console.warn('[bounty] draw after hold failed', String(e));
-    }
+  if (claimed.completed) return pub(claimed.deal);
+  const deal = claimed.deal;
+  let paid: DealPayment | null;
+  try { paid = yes ? await (options.pay ?? pay)(artist, deal, deal.terms!.deposit) : null; }
+  catch (e) {
+    await run("update deal_decisions set state='uncertain',run_token=null,lease_until=null,updated_at=? where id=? and run_token=?", [Date.now(), claimed.decisionId, token]);
+    throw e;
   }
-  await save(artist.id, next);
-  await run("update gus_inbox set read = 1 where artist_id = ? and kind = 'deal' and evidence like ?", [artist.id, `%${dealId}%`]);
-  return next;
+  const result = await transaction(async tx => {
+    // Save the original receipt before inspecting a changed current offer. History cannot be unsent.
+    if (paid) await tx.execute({ sql: 'insert into deal_payment_receipts(id,artist_id,deal_id,scope_hash,body,created_at) values(?,?,?,?,?,?) on conflict(id) do nothing', args: [claimed.decisionId, artist.id, dealId, review!.hash, JSON.stringify(paid), Date.now()] });
+    const finished = await tx.execute({ sql: "update deal_decisions set state='completed',run_token=null,lease_until=null,body=?,updated_at=? where id=? and run_token=?", args: [JSON.stringify({ review, exactTerms: deal.terms, receipt: paid }), Date.now(), claimed.decisionId, token] });
+    if (!finished.rowsAffected) return null; // Lost ownership: keep receipt, but never stamp current deal state.
+    const row = await tx.execute({ sql: 'select body from deals where artist_id=? and id=?', args: [artist.id, dealId] });
+    const current = row.rows[0] ? JSON.parse(String(row.rows[0].body)) as Deal : null;
+    if (!current || dealReview(current).hash !== review!.hash) return null;
+    const next: Deal = paid ? { ...current, status: 'held', payment: paid, thread: [...current.thread, tool('pay', 'Exact test deposit recorded. No real venue agreement or settlement.')] } : { ...current, status: 'passed', thread: [...current.thread, letter('gus', 'We will pass on this simulated offer.', null)] };
+    next.updatedAt = Date.now();
+    await tx.execute({ sql: 'update deals set body=?,updated_at=? where artist_id=? and id=?', args: [JSON.stringify(next), next.updatedAt, artist.id, dealId] });
+    await tx.execute({ sql: "update gus_inbox set read=1 where artist_id=? and kind='deal' and evidence like ?", args: [artist.id, `%${dealId}%`] });
+    await tx.execute({ sql: "insert into gus_log(id,artist_id,kind,city,title,detail,source,level,ref,created_at) values(?,?,'payment',?,?,?,'artist',3,?,?) on conflict(id) do nothing", args: [`decision-log:${claimed.decisionId}`, artist.id, deal.city, paid ? `Recorded exact $${paid.amount} test deposit for ${deal.roomName}` : `Passed on ${deal.roomName}`, 'Simulated offer only. No venue transfer, agreement or settlement.', JSON.stringify({ dealId }), next.updatedAt] });
+    if (paid) await tx.execute({ sql: "insert into deal_followups(id,artist_id,deal_id,scope_hash,state,updated_at) values(?,?,?,?,'queued',?) on conflict(id) do nothing", args: [`followup:${claimed.decisionId}`, artist.id, dealId, review!.hash, next.updatedAt] });
+    return next;
+  });
+  if (!result) throw new HttpError(409, 'Original test payment receipt retained, but the offer changed during execution. Review follow-up; no current booking is inferred.');
+  if (options.loseAcknowledgment) throw new HttpError(503, 'Test acknowledgment lost. Refresh the original scoped decision; do not replace it.');
+  if (paid && options.followup !== false) await runDepositFollowup(artist, `followup:${claimed.decisionId}`);
+  return pub(result);
+}
+
+/** The payment receipt and its continuation are committed together. A failed promo/
+ * Bounty follow-up cannot lose a receipt, repeat a charge or keep an HTTP request alive. */
+export async function runDepositFollowup(artist: ArtistRow, jobId: string, execute?: (deal: Deal) => Promise<void>) {
+  const now = Date.now(), token = id('followup_');
+  const claimed = await run("update deal_followups set state='running',attempts=attempts+1,run_token=?,lease_until=?,updated_at=? where id=? and artist_id=? and attempts<3 and (state in ('queued','failed') or (state='running' and lease_until<=?))", [token, now + 180_000, now, jobId, artist.id, now]);
+  if (!claimed.rowsAffected) return false;
+  try {
+    const j = (await one<{ deal_id: string; scope_hash: string }>('select deal_id,scope_hash from deal_followups where id=? and artist_id=?', [jobId, artist.id]))!;
+    const r = await one<{ body: string }>('select body from deals where id=? and artist_id=?', [j.deal_id, artist.id]);
+    const d = r ? JSON.parse(r.body) as Deal : null;
+    if (!d || d.status !== 'held' || !d.payment || dealReview(d).hash !== j.scope_hash) throw new Error('Held offer changed. Follow-up needs operator review; no stale promotion.');
+    if (execute) await execute(d);
+    else { await drawBounty(artist, d.city, 'gus'); await makeShowPlan(artist, d); }
+    await run("update deal_followups set state='completed',run_token=null,lease_until=null,error=null,updated_at=? where id=? and run_token=?", [Date.now(), jobId, token]);
+    return true;
+  } catch(e) {
+    await run("update deal_followups set state='failed',run_token=null,lease_until=null,error=?,updated_at=? where id=? and run_token=?", [redact(String(e)).slice(0,240), Date.now(), jobId, token]); return false;
+  }
+}
+export async function drainDepositFollowups(limit = 3) {
+  const rows = await all<{ id: string; artist_id: string }>("select id,artist_id from deal_followups where attempts<3 and (state in ('queued','failed') or (state='running' and lease_until<=?)) order by updated_at limit ?", [Date.now(), Math.max(1,Math.min(10,limit))]);
+  let completed = 0;
+  for (const row of rows) { const { getArtist } = await import('./artists'); const artist = await getArtist(row.artist_id); if (artist && await runDepositFollowup(artist,row.id)) completed++; }
+  return { attempted: rows.length, completed };
 }
 
 /** When a hold's deposit offer runs out. */
-export const holdExpiresAt = (d: Pick<Deal, 'createdAt'>) => d.createdAt + HOLD_MS;
+export const holdExpiresAt = (d: Pick<Deal, 'createdAt' | 'offerExpiresAt'>) => d.offerExpiresAt ?? d.createdAt + HOLD_MS;
 
 /** Plays the agents' turns on the server until they land (no screen needed). */
 export async function runToEnd(artist: ArtistRow, dealId: string): Promise<Deal> {
@@ -361,7 +389,8 @@ export async function ageHold(artist: ArtistRow, hoursLeft: number): Promise<Dea
   if (!deal) return null;
   const row = await one<{ body: string }>('select body from deals where artist_id = ? and id = ?', [artist.id, deal.id]);
   const stored = JSON.parse(row!.body) as Stored;
-  stored.createdAt = Date.now() + hoursLeft * 3_600_000 - HOLD_MS;
+  stored.offerExpiresAt = Date.now() + hoursLeft * 3_600_000;
+  stored.createdAt = stored.offerExpiresAt - HOLD_MS;
   await save(artist.id, stored);
   return pub(stored);
 }

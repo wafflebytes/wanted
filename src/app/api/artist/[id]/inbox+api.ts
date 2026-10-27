@@ -1,6 +1,6 @@
 import { body, handler, json } from '@/server/http';
 import { requireArtist } from '@/server/service';
-import { inbox, markRead } from '@/server/watcher';
+import { inbox, markRead } from '@/server/inbox';
 
 export const GET = handler(async (_req: Request, { id }: Record<string, string>) => {
   const artist = await requireArtist(id);

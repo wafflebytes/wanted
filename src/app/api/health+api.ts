@@ -8,7 +8,7 @@ export async function GET() {
   return json({
     ok: true,
     qloo: !!env.qlooKey,
-    llm: !!env.openrouterKey,
+    llm: env.openrouterKeys.length > 0,
     voice: !!env.fishKey,
     offline: env.offline,
     baselineMetros: baseline.size,

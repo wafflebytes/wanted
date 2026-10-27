@@ -14,7 +14,7 @@ import { secretHex, sha256 } from './crypto';
 import { all, one, run } from './db';
 import { log } from './logbook';
 import { metroById } from './score';
-import { postInbox } from './watcher';
+import { postInbox } from './inbox';
 
 const MAX_FRIEND_ENTRIES = 3;
 

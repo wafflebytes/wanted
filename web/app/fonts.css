@@ -1,0 +1,15 @@
+/* Display: SF Pro Rounded wherever the visitor already has it (Safari resolves `ui-rounded`;
+   local() picks up an installed copy in any browser), otherwise Wanted Rounded, our OFL
+   derivative of Nunito re-proportioned to match SF Pro Rounded (scripts/build-wanted-rounded.py).
+   SF Pro Rounded itself is never served: Apple's licence covers Apple-platform UI only. */
+@font-face { font-family: "Wanted Display"; font-weight: 500; font-display: swap; src: local("SF Pro Rounded Medium"), local("SFProRounded-Medium"), url("/fonts/WantedRounded-500.woff2") format("woff2"); }
+@font-face { font-family: "Wanted Display"; font-weight: 600; font-display: swap; src: local("SF Pro Rounded Semibold"), local("SFProRounded-Semibold"), url("/fonts/WantedRounded-600.woff2") format("woff2"); }
+@font-face { font-family: "Wanted Display"; font-weight: 700; font-display: swap; src: local("SF Pro Rounded Bold"), local("SFProRounded-Bold"), url("/fonts/WantedRounded-700.woff2") format("woff2"); }
+@font-face { font-family: "Wanted Display"; font-weight: 800; font-display: swap; src: local("SF Pro Rounded Heavy"), local("SFProRounded-Heavy"), url("/fonts/WantedRounded-800.woff2") format("woff2"); }
+@font-face { font-family: "Wanted Display"; font-weight: 900; font-display: swap; src: local("SF Pro Rounded Black"), local("SFProRounded-Black"), url("/fonts/WantedRounded-900.woff2") format("woff2"); }
+
+:root {
+  --display: ui-rounded, "Wanted Display", system-ui, sans-serif;
+  --body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+}

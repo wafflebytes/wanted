@@ -8,6 +8,7 @@
  * The conversation lives in the deals store, so closing this sheet only backgrounds it; the
  * capsule above the tab bar brings it back. Nothing is paid until the artist taps; test mode.
  */
+import { router } from "expo-router";
 import { useEffect, useRef } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import Animated, {
@@ -25,6 +26,7 @@ import {
   GlassSheetTitle,
 } from "@/components/glassyui/glass-sheet";
 import type { Deal, DealLetter } from "@/lib/types";
+import { useArtistSlug } from "../artist";
 import { deals, useDeals } from "../deals/store";
 import { Beam } from "../fx/Beam";
 import { Roll } from "../fx/Roll";
@@ -51,6 +53,8 @@ const TOOL_ICON: Record<string, IconName> = {
   check_limits: "shield",
   mint_pass: "key",
   pay: "card",
+  draw_bounty: "star",
+  fill_room: "ticket",
 };
 
 export function DealSheet() {
@@ -299,8 +303,29 @@ function Footer({ deal, deciding }: { deal: Deal; deciding: boolean }) {
         </Pressable>
       </View>
     );
+  return <DoneFooter deal={deal} />;
+}
+
+/** Once the date is held, the next thing is selling it: Gus's plan for filling the room. */
+function DoneFooter({ deal }: { deal: Deal }) {
+  const slug = useArtistSlug();
+  const held = deal.status === "held" && !!slug;
   return (
-    <View style={{ paddingTop: 12 }}>
+    <View style={{ paddingTop: 12, gap: 8 }}>
+      {held ? (
+        <Btn
+          tone="scout"
+          size="lg"
+          full
+          icon={<Icon name="ticket" size={16} color={C.text} />}
+          onPress={() => {
+            deals.dismiss();
+            router.push(`/a/${slug}/show?deal=${deal.id}`);
+          }}
+        >
+          See how Gus fills the room
+        </Btn>
+      ) : null}
       <Btn tone="glass" size="lg" full onPress={deals.dismiss}>
         Done
       </Btn>

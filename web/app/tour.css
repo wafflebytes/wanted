@@ -1,0 +1,83 @@
+/* Tour: the run on the map, the drawer with fixes and a lockable timeline. */
+.tr-skel { padding: 6px 0 20px; }
+.tr-empty { padding: 24px 8px 40px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.tr-empty p { max-width: 30ch; }
+
+
+.tr-fixes { display: flex; flex-direction: column; gap: 10px; }
+.tr-fix { display: flex; flex-direction: column; gap: 8px; padding: 16px; animation: rise var(--t-enter) var(--ease) both; animation-delay: calc(var(--i) * 60ms); }
+.tr-fix-title { font: 700 17px/1.25 var(--display); letter-spacing: -0.01em; }
+.tr-diff { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; }
+.tr-from { color: var(--ink-3); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--no) 70%, transparent); text-decoration-thickness: 1.5px; }
+.tr-to { font-weight: 650; color: var(--ok-text); }
+.tr-fix p { font-size: 14.5px; }
+.tr-fix-acts { display: flex; gap: 8px; margin-top: 4px; }
+
+.tr-lock { width: 44px; height: 44px; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--ink-3); transition: color var(--t-fade), background-color var(--t-fade), transform var(--t-tap) var(--ease); }
+.tr-lock.on { color: var(--key-fg); background: var(--key); box-shadow: var(--key-bevel), var(--drop); }
+.tr-lock:active { transform: scale(0.9); }
+.tr-lock[disabled] { opacity: 0.5; }
+.tr-replan { margin-top: 18px; }
+.tr-body .fine { margin-top: 10px; text-align: center; }
+
+/* Hero: the dates big, the run as a strip, the score as a ring. The van breaks out over the edge. */
+.th { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.th-obj { position: absolute; right: -14px; top: -70px; z-index: 2; filter: drop-shadow(0 18px 16px rgba(60, 36, 10, 0.22)); transform: scaleX(-1); animation: van-in 760ms var(--ease) both; pointer-events: none; }
+@keyframes van-in { from { opacity: 0; transform: scaleX(-1) translateX(80px); } }
+.th .kicker { padding-right: 110px; }
+.th-title { display: flex; align-items: baseline; gap: 10px; font: 800 34px/1.05 var(--display); letter-spacing: -0.035em; margin-top: 2px; }
+.th-arrow { color: var(--ink-4); font-weight: 600; }
+.th-sub { font: 600 15px var(--body); color: var(--ink-2); }
+
+.rs { width: 100%; display: flex; align-items: center; margin: 14px 0 6px; }
+.rs-seg { display: flex; align-items: center; flex: 1; }
+.rs-seg:first-child { flex: none; }
+.rs-link { flex: 1; height: 2px; min-width: 4px; background: var(--ink-4); transform-origin: left; animation: link 320ms var(--ease) both; animation-delay: calc(var(--i) * 70ms); }
+.rs-link.long { height: 0; border-top: 2px dashed var(--no); background: none; }
+@keyframes link { from { transform: scaleX(0); } }
+.rs-node { width: 24px; height: 24px; flex: none; border-radius: 50%; display: grid; place-items: center; font: 800 10.5px/1 var(--display); font-variant-numeric: tabular-nums; color: var(--ink-2); background: var(--card); box-shadow: inset 0 0 0 1.5px var(--ink-4); animation: pop 300ms var(--ease) both; animation-delay: calc(var(--i) * 70ms + 80ms); }
+.rs-node.locked { background: var(--ink); color: var(--on-ink); box-shadow: none; }
+.rs-node.moved { background: var(--wanted); color: #fff; box-shadow: none; }
+
+.th-score { width: 100%; display: flex; align-items: center; gap: 14px; margin-top: 12px; padding: 12px 14px 12px 12px; border-radius: 20px; background: var(--well-bg); box-shadow: var(--well); }
+.th-score p { flex: 1; font-size: 14.5px; line-height: 1.38; color: var(--ink-2); }
+.th-score p b { color: var(--ink); font-weight: 650; }
+.th .btn.block { margin-top: 12px; }
+.ring { position: relative; width: 64px; height: 64px; flex: none; display: grid; place-items: center; }
+.ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dasharray var(--t-hero) var(--ease); }
+.ring-bg { stroke: var(--veil-2); }
+.ring-gain { stroke: color-mix(in srgb, var(--wanted) 30%, transparent); }
+.ring-val { stroke: var(--wanted); }
+.ring b { font: 800 21px/1 var(--display); letter-spacing: -0.03em; }
+
+/* The run: an inset grouped list on a rail. Numbers sit on the rail; the drive rides the line. */
+.tr-stops { list-style: none; padding: 6px 0; }
+.tr-stop { position: relative; display: grid; grid-template-columns: 48px 1fr; animation: rise var(--t-enter) var(--ease) both; animation-delay: calc(var(--i) * 30ms); }
+.tr-stop::before { content: ""; position: absolute; left: 23px; top: 0; bottom: 0; width: 2px; background: var(--line-2, var(--ink-4)); opacity: 0.5; }
+.tr-stop:first-child::before { top: 50%; }
+.tr-stop:last-child::before { bottom: 50%; }
+.tr-stop.after-long::before { background: none; border-left: 2px dashed var(--no); opacity: 0.6; }
+.tr-node { position: relative; z-index: 1; align-self: end; justify-self: center; margin-bottom: 20px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 800 12px/1 var(--display); background: var(--card); color: var(--ink-2); box-shadow: inset 0 0 0 1.5px var(--ink-4); }
+.tr-stop.is-locked .tr-node { background: var(--ink); color: var(--on-ink); box-shadow: none; }
+.tr-stop.is-new .tr-node { background: var(--wanted); color: #fff; box-shadow: 0 0 0 4px var(--wanted-tint); }
+.tr-cell { min-width: 0; display: flex; flex-direction: column; padding-right: 8px; }
+.tr-stop + .tr-stop .tr-row { border-top: 1px solid var(--line); }
+.tr-drive { display: flex; align-items: center; gap: 6px; height: 30px; font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+.tr-drive.long { color: var(--no); }
+.tr-stop + .tr-stop .tr-drive + .tr-row { border-top: 0; }
+.tr-row { display: flex; align-items: center; gap: 6px; min-height: 64px; }
+.tr-stop.is-new .tr-row { animation: tr-flash 1600ms var(--ease) both; border-radius: 12px; }
+@keyframes tr-flash { 0%, 30% { background: var(--wanted-tint); } }
+.tr-main { flex: 1; min-width: 0; display: flex; align-items: center; padding: 8px 0; text-align: left; }
+.tr-what { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.tr-what em { font: 700 11px/1.3 var(--body); font-style: normal; text-transform: uppercase; letter-spacing: 0.06em; color: var(--wanted-text); }
+.tr-what b { display: flex; align-items: center; gap: 6px; font: 700 17px/1.2 var(--display); letter-spacing: -0.01em; }
+.tr-what b .tag { font-style: normal; }
+.tr-what span { font-size: 13.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Raised: the hero folds into one bar so the list gets the room. */
+.th-compact { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 8px 6px 6px; border-radius: 20px; background: var(--raise); box-shadow: var(--bevel), var(--drop); text-align: left; animation: fade var(--t-fade) var(--ease); }
+.th-mini { width: 42px; height: 42px; flex: none; border-radius: 50%; display: grid; place-items: center; font: 800 15px var(--display); background: radial-gradient(circle, var(--well-bg) 15px, transparent 15.5px), conic-gradient(var(--wanted) calc(var(--v) * 1%), var(--veil-2) 0); }
+.th-compact b { flex: 1; min-width: 0; display: flex; flex-direction: column; font: 700 16px/1.2 var(--display); letter-spacing: -0.01em; }
+.th-compact em { font: 500 13px var(--body); font-style: normal; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

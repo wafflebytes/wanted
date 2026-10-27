@@ -16,7 +16,7 @@ import { log } from './logbook';
 import { callsThisWeek, escalationLevel, mandateFor } from './mandate';
 import { metroById } from './score';
 import { cityData, crowdFor, loadPlan } from './service';
-import { postInbox } from './watcher';
+import { postInbox } from './inbox';
 
 const nice = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 const listOf = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
@@ -40,7 +40,7 @@ export async function autoBook(artist: ArtistRow, city: string): Promise<{ deal:
   const live = (await dealsFor(artist.id)).find((d) => d.city === city && (d.status === 'talking' || d.status === 'waiting' || d.status === 'held'));
   if (live) {
     await log(artist.id, { kind: 'decision', city, title: `Already talking to ${live.roomName} in ${metro.name}, so I didn’t ask anyone else`, source: 'gus', ref: { dealId: live.id } });
-    return { deal: live, asked: 0 };
+    return { deal: live.status === 'talking' ? await runToEnd(artist, live.id) : live, asked: 0 };
   }
 
   // 1. Rooms from Qloo, and the night we'd ask for.
@@ -76,7 +76,7 @@ export async function autoBook(artist: ArtistRow, city: string): Promise<{ deal:
       kind: 'lookup',
       city,
       title: `${opener.name} would make a good opener`,
-      detail: 'Your fans already like them.',
+      detail: 'Cultural compatibility only; locality, fee, availability and live draw are unverified.',
       source: 'qloo',
     });
   }
@@ -85,7 +85,7 @@ export async function autoBook(artist: ArtistRow, city: string): Promise<{ deal:
   await log(artist.id, {
     kind: 'letter',
     city,
-    title: `Asked ${picks.length === 1 ? picks[0].name : `${picks.length} venues`} to hold ${nice(night)} for you`,
+    title: `Simulated asking ${picks.length === 1 ? picks[0].name : `${picks.length} venues`} to hold ${nice(night)} for you`,
     detail: picks.length > 1 ? `${listOf(picks.map((r) => r.name))}.` : null,
     source: 'gus',
   });
@@ -93,7 +93,7 @@ export async function autoBook(artist: ArtistRow, city: string): Promise<{ deal:
   const finished = await Promise.all(started.filter((x): x is Deal => !!x).map((x) => runToEnd(artist, x.id).catch(() => null)));
   const deals = finished.filter((x): x is Deal => !!x);
   for (const x of deals) {
-    if (x.terms) await log(artist.id, { kind: 'letter', city, title: `${x.roomName} offered ${x.terms.split}% of the door and $${x.terms.deposit} to hold the date`, detail: x.withinLimits ? null : 'More than you said you’d go for.', source: 'room', ref: { dealId: x.id } });
+    if (x.terms) await log(artist.id, { kind: 'letter', city, title: `Simulated offer: ${x.roomName}, ${x.terms.split}% of the door and $${x.terms.deposit} to hold the date`, detail: x.withinLimits ? null : 'More than you said you’d go for.', source: 'room', ref: { dealId: x.id } });
   }
 
   // 5. Keep the best, thank the rest, ask the artist once.
@@ -116,7 +116,7 @@ export async function autoBook(artist: ArtistRow, city: string): Promise<{ deal:
   });
   await postInbox(artist.id, {
     kind: 'deal',
-    body: `${metro.name} filled its poster, so I went to work. ${picks.length === 1 ? `I asked ${best.roomName}` : `I asked ${picks.length} venues and ${best.roomName} made the best offer`}: ${nice(best.terms.date)}, you keep ${best.terms.split}% of the door, $${best.terms.deposit} to hold the date.${opener ? ` ${opener.name} would open well.` : ''} ${best.withinLimits ? 'Want me to pay the deposit?' : 'It’s more than you said you’d go for, so it’s your call.'}`,
+    body: `Demo negotiation, not a real venue offer. ${metro.name} reached the interest threshold, so I researched it. ${picks.length === 1 ? `I asked ${best.roomName}` : `I asked ${picks.length} venues and ${best.roomName} made the best offer`}: ${nice(best.terms.date)}, you keep ${best.terms.split}% of the door, $${best.terms.deposit} to hold the date.${opener ? ` ${opener.name} is a cultural suggestion, not a qualified local opener.` : ''} ${best.withinLimits ? 'Want me to pay the deposit?' : 'It’s more than you said you’d go for, so it’s your call.'}`,
     action: { label: 'See the deal', kind: 'deal', city, dealId: best.id },
     evidence: { city, dealId: best.id, asked: picks.map((r) => r.name), opener: opener?.name ?? null, level: esc.level },
     createdAt: Date.now(),

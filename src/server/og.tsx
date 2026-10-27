@@ -4,7 +4,7 @@
  * and resvg to PNG. Every image carries "Made with Wanted. Find out where you're wanted."
  */
 import type { ReactNode } from 'react';
-import { cityEdition, MADE_WITH, POSTER_BOXES as B, POSTER_H, POSTER_INK, POSTER_RED, POSTER_W, SIGNATURE_FONTS, signatureSpot } from '../lib/poster';
+import { cityEdition, MADE_WITH, POSTER_BOXES, POSTER_H, POSTER_INK, POSTER_RED, POSTER_W, posterArtFor, SIGNATURE_FONTS, signatureSpot } from '../lib/poster';
 import type { ClaimView } from '../lib/types';
 import { nodeRequire } from './node-require';
 
@@ -110,12 +110,15 @@ function fitSize(text: string, boxW: number, base: number, charW = 0.78) {
 
 /** The poster itself at scale s (1 = 1024 x 1536). */
 function Poster({ d, s, portrait }: { d: PosterData; s: number; portrait: string | null }) {
+  const art = posterArtFor(d.cityId, d.state);
+  const B = art?.layout ?? POSTER_BOXES;
+  const custom = !!art;
   const name = d.artistName.toUpperCase();
   const city = `IN ${d.cityName.toUpperCase()}, ${d.state}`;
   const hoods = d.topNeighborhoods.slice(0, 3);
   return (
     <div style={{ position: 'relative', display: 'flex', width: POSTER_W * s, height: POSTER_H * s }}>
-      <img src={img(`poster-${d.wear}`)} width={POSTER_W * s} height={POSTER_H * s} style={{ position: 'absolute', left: 0, top: 0 }} />
+      <img src={img(art ? `posters/${art.file}` : `poster-${d.wear}`)} width={POSTER_W * s} height={POSTER_H * s} style={{ position: 'absolute', left: 0, top: 0 }} />
       <div style={{ ...abs(B.portrait, s), display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         {portrait ? (
           <img src={portrait} style={{ width: B.portrait.w * s, height: B.portrait.h * s, objectFit: 'cover', opacity: 0.94 }} />
@@ -130,23 +133,23 @@ function Poster({ d, s, portrait }: { d: PosterData; s: number; portrait: string
         )}
       </div>
       <div style={{ ...abs(B.name, s), display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-        <div style={{ fontFamily: 'Archivo Expanded', fontWeight: 900, color: POSTER_INK, fontSize: fitSize(name, B.name.w, 58) * s, letterSpacing: -1 * s, lineHeight: 1 }}>{name}</div>
+        <div style={{ fontFamily: 'Archivo Expanded', fontWeight: 900, color: POSTER_INK, fontSize: fitSize(name, B.name.w, Math.min(58, B.name.h * 0.92), custom ? 0.88 : 0.78) * s, letterSpacing: -1 * s, lineHeight: 1 }}>{name}</div>
       </div>
       <div style={{ ...abs(B.city, s), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontFamily: 'Archivo Expanded', fontWeight: 800, color: d.cityId ? cityEdition(d.cityId).ink : POSTER_RED, fontSize: fitSize(city, B.city.w, 40) * s, letterSpacing: 1 * s }}>{city}</div>
+        <div style={{ fontFamily: 'Archivo Expanded', fontWeight: 800, color: d.cityId ? cityEdition(d.cityId).ink : POSTER_RED, fontSize: fitSize(city, B.city.w, Math.min(40, B.city.h * 0.62), custom ? 0.9 : 0.78) * s, letterSpacing: 1 * s }}>{city}</div>
       </div>
       <div style={{ ...abs(B.reward, s), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontFamily: 'Instrument Serif', color: POSTER_INK, fontSize: 44 * s, letterSpacing: 1 * s }}>One sold-out show.</div>
+        <div style={{ fontFamily: 'Instrument Serif', color: POSTER_INK, fontSize: Math.min(44, B.reward.h * 0.85) * s, letterSpacing: 1 * s }}>One sold-out show.</div>
       </div>
       {hoods.length ? (
         <div style={{ ...abs(B.wantedIn, s), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontFamily: 'Instrument Serif', color: POSTER_INK, fontSize: fitSize(`Most wanted in ${hoods.join(', ')}`, B.wantedIn.w, 30, 0.42) * s }}>
+          <div style={{ fontFamily: 'Instrument Serif', color: POSTER_INK, fontSize: fitSize(`Most wanted in ${hoods.join(', ')}`, B.wantedIn.w, Math.min(30, B.wantedIn.h * 0.65), 0.42) * s }}>
             {`Most wanted in ${hoods.join(', ')}`}
           </div>
         </div>
       ) : null}
       {d.signatures.slice(0, 28).map((c) => {
-        const spot = signatureSpot(c.number);
+        const spot = signatureSpot(c.number, art?.layout);
         return (
           <div
             key={c.number}
@@ -208,15 +211,19 @@ export async function renderPoster(d: PosterData, format: 'story' | 'wide' | 'po
   const portrait = await portraitFor({ portrait: d.portrait, imageUrl: d.imageUrl });
   if (format === 'poster') return render(<Poster d={d} s={1} portrait={portrait} />, POSTER_W, POSTER_H);
   if (format === 'story') {
-    const s = 960 / POSTER_W;
+    const s = 900 / POSTER_W;
+    const first = d.artistName.split(' ')[0];
     return render(
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 1080, height: 1920, backgroundColor: '#24140a' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 1080, height: 1920, backgroundColor: '#140a04' }}>
         <img src={img('backdrop')} width={1080} height={1920} style={{ position: 'absolute', left: 0, top: 0, objectFit: 'cover' }} />
-        <div style={{ display: 'flex', marginTop: 60 }}>
+<div style={{ position: 'absolute', left: 0, top: 0, width: 1080, height: 1920, backgroundColor: 'rgba(10,5,2,0.5)' }} />
+        <div style={{ display: 'flex', marginTop: 90, transform: 'rotate(-1.2deg)' }}>
           <Poster d={d} s={s} portrait={portrait} />
         </div>
-        <div style={{ display: 'flex', marginTop: 40, padding: '26px 44px', borderRadius: 32, backgroundColor: 'rgba(20,10,4,0.72)' }}>
-          <Footer width={900} link={d.link} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 56, width: 900, position: 'relative' }}>
+          <div style={{ display: 'flex', fontFamily: 'Instrument Serif', fontSize: 64, lineHeight: 1.05, color: '#fff7e8', textAlign: 'center' }}>{`${d.cityName} wants ${first}.`}</div>
+          <div style={{ display: 'flex', marginTop: 28, padding: '20px 44px', borderRadius: 999, backgroundColor: '#ff6a1a', fontFamily: 'Archivo', fontWeight: 700, fontSize: 38, color: '#1a0c03' }}>Sign the poster</div>
+          <div style={{ display: 'flex', marginTop: 22, fontFamily: 'Chivo Mono', fontSize: 28, color: '#ffd27a' }}>{d.link.replace(/^https?:\/\//, '')}</div>
         </div>
       </div>,
       1080,
@@ -228,10 +235,11 @@ export async function renderPoster(d: PosterData, format: 'story' | 'wide' | 'po
   return render(
     <div style={{ display: 'flex', width: 1200, height: 630, backgroundColor: '#24140a' }}>
       <img src={img('backdrop')} width={1200} height={1800} style={{ position: 'absolute', left: 0, top: -400, objectFit: 'cover' }} />
+<div style={{ position: 'absolute', left: 0, top: 0, width: 1200, height: 630, backgroundColor: 'rgba(10,5,2,0.5)' }} />
       <div style={{ display: 'flex', marginLeft: 70, marginTop: 15 }}>
         <Poster d={d} s={s} portrait={portrait} />
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', marginLeft: 60, width: 640, color: '#fff7e8' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', marginLeft: 60, width: 640, color: '#fff7e8', position: 'relative' }}>
         <div style={{ fontFamily: 'Archivo Expanded', fontWeight: 900, fontSize: 76, lineHeight: 0.95, color: '#ffcf6b' }}>WANTED</div>
         <div style={{ fontFamily: 'Archivo Expanded', fontWeight: 800, fontSize: 40, marginTop: 8 }}>{`IN ${d.cityName.toUpperCase()}`}</div>
         <div style={{ fontFamily: 'Archivo', fontWeight: 700, fontSize: 44, marginTop: 22 }}>{d.artistName}</div>
@@ -254,6 +262,7 @@ export async function renderPoster(d: PosterData, format: 'story' | 'wide' | 'po
 
 export type CardData = {
   artistName: string;
+  cityId?: string;
   cityName: string;
   state: string;
   claim: ClaimView;
@@ -270,11 +279,11 @@ const fmtDate = (t: number) => new Date(t).toLocaleDateString('en-US', { day: 'n
 
 export async function renderCard(d: CardData, format: 'story' | 'wide'): Promise<Buffer> {
   const portrait = await portraitFor({ portrait: d.portrait, imageUrl: d.imageUrl });
-  const meta = [d.artistName.toUpperCase(), `${(d.claim.neighborhood ?? d.cityName).toUpperCase()}, ${d.cityName.toUpperCase()}`, d.claim.deputy ? 'DEPUTY' : null, `SIGNED ${fmtDate(d.claim.createdAt)}`]
-    .filter(Boolean)
-    .join(' · ');
+  const where = d.claim.neighborhood ? `${d.claim.neighborhood}, ${d.cityName}` : d.cityName;
+  const when = [d.claim.deputy ? 'Deputy' : null, `Signed ${fmtDate(d.claim.createdAt)}`].filter(Boolean).join(' · ');
   const poster: PosterData = {
     artistName: d.artistName,
+    cityId: d.cityId,
     cityName: d.cityName,
     state: d.state,
     count: d.total,
@@ -296,13 +305,15 @@ export async function renderCard(d: CardData, format: 'story' | 'wide'): Promise
     return render(
       <div style={{ display: 'flex', width: 1200, height: 630, backgroundColor: '#140c06' }}>
         <img src={img('backdrop')} width={1200} height={1800} style={{ position: 'absolute', left: 0, top: -500, objectFit: 'cover', opacity: 0.55 }} />
+<div style={{ position: 'absolute', left: 0, top: 0, width: 1200, height: 630, backgroundColor: 'rgba(10,5,2,0.5)' }} />
         <div style={{ display: 'flex', marginLeft: 70, marginTop: 35, transform: 'rotate(-3deg)' }}>
           <Poster d={poster} s={s} portrait={portrait} />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', marginLeft: 70, width: 620, color: '#fff7e8' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', marginLeft: 70, width: 620, color: '#fff7e8', position: 'relative' }}>
           <div style={{ fontFamily: 'Chivo Mono', fontSize: 26, color: '#ffcf6b', letterSpacing: 3 }}>SIGNATURE</div>
           <div style={{ fontFamily: 'Archivo Expanded', fontWeight: 900, fontSize: 120, lineHeight: 1 }}>{`#${d.claim.number}`}</div>
-          <div style={{ fontFamily: 'Chivo Mono', fontSize: 22, marginTop: 12, lineHeight: 1.4 }}>{meta}</div>
+          <div style={{ display: 'flex', fontFamily: 'Archivo', fontWeight: 700, fontSize: 34, marginTop: 14 }}>{d.artistName}</div>
+          <div style={{ display: 'flex', fontFamily: 'Instrument Serif', fontSize: 30, marginTop: 4, opacity: 0.9 }}>{`${where} · ${when}`}</div>
           {caught ? <div style={{ fontFamily: 'Archivo', fontWeight: 700, fontSize: 26, marginTop: 18, color: '#ff5a3c' }}>{caught}</div> : null}
           <div style={{ fontFamily: 'Instrument Serif', fontSize: 22, marginTop: 26, opacity: 0.7 }}>{MADE_WITH}</div>
         </div>
@@ -313,21 +324,23 @@ export async function renderCard(d: CardData, format: 'story' | 'wide'): Promise
     );
   }
 
-  const s = 720 / POSTER_W;
+  const s = 760 / POSTER_W;
   return render(
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 1080, height: 1920, backgroundColor: '#140c06' }}>
-      <img src={img('backdrop')} width={1080} height={1920} style={{ position: 'absolute', left: 0, top: 0, objectFit: 'cover', opacity: 0.6 }} />
-      <div style={{ display: 'flex', marginTop: 70, transform: 'rotate(-2.5deg)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 1080, height: 1920, backgroundColor: '#140a04' }}>
+      <img src={img('backdrop')} width={1080} height={1920} style={{ position: 'absolute', left: 0, top: 0, objectFit: 'cover' }} />
+<div style={{ position: 'absolute', left: 0, top: 0, width: 1080, height: 1920, backgroundColor: 'rgba(10,5,2,0.5)' }} />
+      <div style={{ display: 'flex', marginTop: 90, transform: 'rotate(-2deg)' }}>
         <Poster d={poster} s={s} portrait={portrait} />
       </div>
-      {d.claim.deputy ? <img src={img('deputy-star')} width={230} height={230} style={{ position: 'absolute', right: 70, top: 980, transform: 'rotate(12deg)' }} /> : null}
-      {d.played ? <img src={img('stamp-caught-live')} width={900} height={450} style={{ position: 'absolute', left: 90, top: 520, transform: 'rotate(-14deg)' }} /> : null}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 40, width: 960, padding: '30px 40px', borderRadius: 36, backgroundColor: 'rgba(14,8,3,0.82)', color: '#fff7e8' }}>
-        <div style={{ fontFamily: 'Chivo Mono', fontSize: 30, color: '#ffcf6b', letterSpacing: 4 }}>SIGNATURE</div>
-        <div style={{ fontFamily: 'Archivo Expanded', fontWeight: 900, fontSize: 150, lineHeight: 1 }}>{`#${d.claim.number}`}</div>
-        <div style={{ fontFamily: 'Chivo Mono', fontSize: 26, marginTop: 12, textAlign: 'center', lineHeight: 1.45 }}>{meta}</div>
-        {caught ? <div style={{ fontFamily: 'Archivo', fontWeight: 700, fontSize: 30, marginTop: 18, color: '#ff5a3c', textAlign: 'center' }}>{caught}</div> : null}
-        <div style={{ fontFamily: 'Instrument Serif', fontSize: 28, marginTop: 22, opacity: 0.8 }}>{MADE_WITH}</div>
+      {d.claim.deputy ? <img src={img('deputy-star')} width={230} height={230} style={{ position: 'absolute', right: 80, top: 1030, transform: 'rotate(12deg)' }} /> : null}
+      {d.played ? <img src={img('stamp-caught-live')} width={900} height={450} style={{ position: 'absolute', left: 90, top: 540, transform: 'rotate(-14deg)' }} /> : null}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 70, width: 900, position: 'relative' }}>
+        <div style={{ display: 'flex', fontFamily: 'Chivo Mono', fontSize: 30, color: '#ffcf6b', letterSpacing: 6 }}>SIGNATURE</div>
+        <div style={{ display: 'flex', fontFamily: 'Archivo Expanded', fontWeight: 900, fontSize: 190, lineHeight: 1, color: '#fff7e8' }}>{`#${d.claim.number}`}</div>
+        <div style={{ display: 'flex', fontFamily: 'Archivo', fontWeight: 700, fontSize: 44, marginTop: 14, color: '#fff7e8' }}>{d.artistName}</div>
+        <div style={{ display: 'flex', fontFamily: 'Instrument Serif', fontSize: 42, marginTop: 6, color: '#fff7e8', opacity: 0.9, textAlign: 'center' }}>{`${where} · ${when}`}</div>
+        {caught ? <div style={{ display: 'flex', fontFamily: 'Archivo', fontWeight: 700, fontSize: 30, marginTop: 24, color: '#ff7a5c', textAlign: 'center' }}>{caught}</div> : null}
+        <div style={{ display: 'flex', fontFamily: 'Instrument Serif', fontSize: 28, marginTop: 36, color: '#fff7e8', opacity: 0.65 }}>{MADE_WITH}</div>
       </div>
     </div>,
     1080,

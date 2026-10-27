@@ -4,9 +4,10 @@
  * numbers and short words, whole words for sentences (fewer views, same feel).
  */
 import { memo } from 'react';
-import { Platform, Text, View, type StyleProp, type TextStyle } from 'react-native';
+import { Platform, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 import Animated, { Keyframe, LayoutAnimationConfig } from 'react-native-reanimated';
 import { useReducedMotion } from '../hooks';
+import { displayChildren } from '../components/DisplayGlyphs';
 import { EASE, EASE_IN } from '../motion';
 
 const inAt = (delay: number, dy: number) =>
@@ -42,8 +43,9 @@ export const Roll = memo(function Roll({
   stagger?: number;
 }) {
   const reduced = useReducedMotion();
+  const family = StyleSheet.flatten(style)?.fontFamily;
   const mode = by ?? (text.length > 18 ? 'word' : 'char');
-  if (reduced || Platform.OS === 'web') return <Text style={[style, { textAlign: align }]}>{text}</Text>;
+  if (reduced || Platform.OS === 'web') return <Text accessibilityLabel={text} style={[style, { textAlign: align }]}>{displayChildren(text, family)}</Text>;
   const parts = mode === 'word' ? text.split(/(\s+)/).filter((p) => p.length) : [...text];
   const step = stagger ?? (mode === 'word' ? 22 : 14);
   const size = (style as TextStyle | undefined)?.fontSize ?? 17;
@@ -74,7 +76,7 @@ export const Roll = memo(function Roll({
         >
           {parts.map((p, i) => (
             <Animated.Text key={i} entering={inAt(i * step, dy)} style={style} importantForAccessibility="no">
-              {p}
+              {displayChildren(p, family)}
             </Animated.Text>
           ))}
         </Animated.View>

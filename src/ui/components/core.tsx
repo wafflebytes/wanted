@@ -139,7 +139,7 @@ export function Divider() {
   return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: C.lineHi, marginVertical: 4 }} />;
 }
 
-/** A labeled stat: a wide Archivo number over a quiet label. */
+/** A labeled stat: a Karl display number over a quiet label. */
 export function Stat({ value, label, color = C.text, sub }: { value: ReactNode; label: string; color?: string; sub?: string }) {
   return (
     <View style={{ gap: 2, minWidth: 64 }}>

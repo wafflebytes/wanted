@@ -10,10 +10,11 @@ import { shapeRooms } from './city';
 import { proofFor } from './claims';
 import { config } from './config';
 import { id } from './crypto';
-import { all, one, run } from './db';
-import { autoBook } from './autobook';
+import { run, transaction } from './db';
+import { runBookingJob } from './jobs';
 import { thresholdMessage } from './gus/agent';
 import { log } from './logbook';
+import { mandateFor } from './mandate';
 import { rooms as qlooRooms } from './qloo/api';
 import { metroById } from './score';
 
@@ -27,19 +28,21 @@ export async function onSignature(artistId: string, city: string, opts: { includ
   const proof = (await proofFor(artist.id, { includeDemo })).find((p) => p.city === city);
   if (!proof) return { fired: false, reason: 'city not opened' };
 
-  const state = await one<{ last_fired_at: number | null; crossed: number }>(
-    'select last_fired_at, crossed from watcher_state where artist_id = ? and city = ?',
-    [artist.id, city],
-  );
-  const wasCrossed = !!state?.crossed;
-  await run(
-    `insert into watcher_state(artist_id, city, last_fired_at, last_ratio, crossed) values(?, ?, ?, ?, ?)
-     on conflict(artist_id, city) do update set last_ratio = excluded.last_ratio, crossed = excluded.crossed`,
-    [artist.id, city, state?.last_fired_at ?? null, proof.ratio, proof.crossed ? 1 : 0],
-  );
-  if (!proof.crossed) return { fired: false, reason: 'below threshold' };
-  if (wasCrossed) return { fired: false, reason: 'already crossed' };
-  if (state?.last_fired_at && now - state.last_fired_at < config.proof.cooldownMs) return { fired: false, reason: 'cooldown' };
+  // Persist the crossing and its work atomically. Concurrent signatures cannot enqueue twice.
+  const jobId = id('job_');
+  const gate = await transaction(async (tx) => {
+    const found = await tx.execute({ sql: 'select last_fired_at, crossed from watcher_state where artist_id = ? and city = ?', args: [artist.id, city] });
+    const state = found.rows[0];
+    const crossed = !!state?.crossed;
+    await tx.execute({ sql: `insert into watcher_state(artist_id, city, last_fired_at, last_ratio, crossed) values(?, ?, ?, ?, ?) on conflict(artist_id, city) do update set last_ratio = excluded.last_ratio, crossed = excluded.crossed`, args: [artist.id, city, state?.last_fired_at ?? null, proof.ratio, proof.crossed ? 1 : 0] });
+    if (!proof.crossed) return 'below threshold';
+    if (crossed) return 'already crossed';
+    if (state?.last_fired_at && now - Number(state.last_fired_at) < config.proof.cooldownMs) return 'cooldown';
+    await tx.execute({ sql: 'update watcher_state set last_fired_at = ? where artist_id = ? and city = ?', args: [now, artist.id, city] });
+    await tx.execute({ sql: "insert into gus_jobs(id, artist_id, city, state, created_at, updated_at) values(?, ?, ?, 'queued', ?, ?)", args: [jobId, artist.id, city, now, now] });
+    return 'crossed';
+  });
+  if (gate !== 'crossed') return { fired: false, reason: gate };
 
   const metro = metroById(city)!;
   const opened = (await openedCities(artist.id)).find((c) => c.city === city);
@@ -83,7 +86,9 @@ export async function onSignature(artistId: string, city: string, opts: { includ
     createdAt: now,
     read: false,
   };
-  await run('insert into gus_inbox(id, artist_id, kind, body, action, evidence, created_at) values(?, ?, ?, ?, ?, ?, ?)', [
+  // When Gus may talk to venues himself, his offer card says it all; this one goes under "earlier".
+  message.read = (await mandateFor(artist.id)).autoAsk;
+  await run('insert into gus_inbox(id, artist_id, kind, body, action, evidence, created_at, read) values(?, ?, ?, ?, ?, ?, ?, ?)', [
     message.id,
     artist.id,
     message.kind,
@@ -91,53 +96,20 @@ export async function onSignature(artistId: string, city: string, opts: { includ
     JSON.stringify(message.action),
     JSON.stringify(message.evidence),
     now,
+    message.read ? 1 : 0,
   ]);
   await run('update watcher_state set last_fired_at = ? where artist_id = ? and city = ?', [now, artist.id, city]);
   await log(artist.id, {
     kind: 'decision',
     city,
     title: `${metro.name} filled its poster: ${proof.signatures} people signed`,
-    detail: `That’s more than we’d expect for a city this size, so it’s worth booking.${artist.isDemo ? ' (Demo data.)' : ''}`,
+    detail: `Interest over-indexed against the heat share. It is a reason to research rooms, not proof of ticket sales or attendance.${artist.isDemo ? ' (Demo signatures.)' : ''}`,
     source: 'fans',
     level: 1,
   });
-  // Then Gus goes to work on his own (9.3c); the fan's request doesn't wait for it.
-  const chain = autoBook(artist, city).catch((e) => console.error('[autobook]', String(e)));
-  if (opts.awaitChain) await chain;
+  // The queue owns the chain, not a detached Promise. An interrupted attempt is recoverable.
+  await runBookingJob(jobId);
   return { fired: true, reason: 'crossed', message };
 }
 
-export async function inbox(artistId: string, limit = 50): Promise<InboxMessage[]> {
-  const rows = await all<{ id: string; kind: string; body: string; action: string | null; evidence: string | null; created_at: number; read: number }>(
-    'select * from gus_inbox where artist_id = ? order by created_at desc limit ?',
-    [artistId, limit],
-  );
-  return rows.map((r) => ({
-    id: r.id,
-    kind: r.kind as InboxMessage['kind'],
-    body: r.body,
-    action: r.action ? JSON.parse(r.action) : null,
-    evidence: r.evidence ? JSON.parse(r.evidence) : null,
-    createdAt: r.created_at,
-    read: !!r.read,
-  }));
-}
-
-export async function postInbox(artistId: string, msg: Omit<InboxMessage, 'id' | 'read'>) {
-  const mid = id('m_');
-  await run('insert into gus_inbox(id, artist_id, kind, body, action, evidence, created_at) values(?, ?, ?, ?, ?, ?, ?)', [
-    mid,
-    artistId,
-    msg.kind,
-    msg.body,
-    msg.action ? JSON.stringify(msg.action) : null,
-    msg.evidence ? JSON.stringify(msg.evidence) : null,
-    msg.createdAt,
-  ]);
-  return mid;
-}
-
-export async function markRead(artistId: string, messageId?: string) {
-  if (messageId) await run('update gus_inbox set read = 1 where artist_id = ? and id = ?', [artistId, messageId]);
-  else await run('update gus_inbox set read = 1 where artist_id = ?', [artistId]);
-}
+export { inbox, postInbox, markRead } from './inbox';

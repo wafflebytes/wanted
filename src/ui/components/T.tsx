@@ -2,10 +2,13 @@
  * Text with Wanted's type scale. Sizes follow the iOS text styles at the default (Large)
  * Dynamic Type size: largeTitle 34, title1 28, title2 22, title3 20, headline/body 17,
  * callout 16, subhead 15, footnote 13, caption 12. See theme.ts for which face does what:
- * Archivo Expanded for titles and hero numbers, SF for reading, SF Rounded for Gus.
+ * Karl ST Trial for titles and hero numbers, SF for reading, SF Rounded for Gus.
  */
-import { Text, type TextProps, type TextStyle } from 'react-native';
+import { Children } from 'react';
+import { isKarl } from '@/lib/display-glyphs';
+import { StyleSheet, Text, type TextProps, type TextStyle } from 'react-native';
 import { C, F } from '../theme';
+import { displayChildren } from './DisplayGlyphs';
 
 type Variant =
   | 'display'
@@ -29,10 +32,10 @@ type Variant =
 const NUM: TextStyle = { fontVariant: ['tabular-nums'] };
 
 const V: Record<Variant, TextStyle> = {
-  display: { fontFamily: F.display, fontSize: 34, lineHeight: 38, letterSpacing: -0.6, color: C.text },
-  largeTitle: { fontFamily: F.display, fontSize: 30, lineHeight: 36, letterSpacing: -0.6, color: C.text },
-  title: { fontFamily: F.displayBold, fontSize: 24, lineHeight: 30, letterSpacing: -0.4, color: C.text },
-  title2: { fontFamily: F.bold, fontWeight: '700', fontSize: 22, lineHeight: 28, letterSpacing: -0.3, color: C.text },
+  display: { fontFamily: F.display, fontSize: 34, lineHeight: 41, letterSpacing: -0.3, color: C.text },
+  largeTitle: { fontFamily: F.display, fontSize: 32, lineHeight: 39, letterSpacing: -0.3, color: C.text },
+  title: { fontFamily: F.displayBold, fontSize: 25, lineHeight: 31, letterSpacing: -0.2, color: C.text },
+  title2: { fontFamily: F.displayBold, fontSize: 22, lineHeight: 28, letterSpacing: -0.3, color: C.text },
   head: { fontFamily: F.head, fontWeight: '600', fontSize: 20, lineHeight: 25, letterSpacing: -0.3, color: C.text },
   headline: { fontFamily: F.head, fontWeight: '600', fontSize: 17, lineHeight: 22, letterSpacing: -0.4, color: C.text },
   body: { fontFamily: F.body, fontSize: 17, lineHeight: 22, letterSpacing: -0.4, color: C.text },
@@ -50,6 +53,10 @@ const V: Record<Variant, TextStyle> = {
   gus: { fontFamily: F.rounded, fontWeight: '600', fontSize: 18, lineHeight: 24, color: C.text, letterSpacing: -0.25 },
 };
 
-export function T({ v = 'body', color, style, maxFontSizeMultiplier = 2, ...rest }: TextProps & { v?: Variant; color?: string }) {
-  return <Text maxFontSizeMultiplier={maxFontSizeMultiplier} {...rest} style={[V[v], color ? { color } : null, style]} />;
+export function T({ v = 'body', color, style, maxFontSizeMultiplier = 2, children, ...rest }: TextProps & { v?: Variant; color?: string }) {
+  const textStyle = [V[v], color ? { color } : null, style];
+  const family = StyleSheet.flatten(textStyle).fontFamily;
+  const parts = Children.toArray(children);
+  const plain = parts.every(part => typeof part === 'string' || typeof part === 'number') ? parts.join('') : undefined;
+  return <Text maxFontSizeMultiplier={maxFontSizeMultiplier} {...rest} accessibilityLabel={rest.accessibilityLabel ?? (isKarl(family) ? plain : undefined)} style={textStyle}>{displayChildren(children, family)}</Text>;
 }

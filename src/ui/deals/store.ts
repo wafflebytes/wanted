@@ -104,7 +104,7 @@ export const deals = {
     if (!slug || !deal) return;
     set({ deciding: true, error: null });
     try {
-      const r = await api.post<{ deal: Deal }>(`/artist/${slug}/deals`, { deal: deal.id, yes });
+      const r = await api.post<{ deal: Deal }>(`/artist/${slug}/deals`, { deal: deal.id, yes, review: deal.review });
       if (yes) haptic.success();
       set({ deal: r.deal, deciding: false });
       refresh(slug);

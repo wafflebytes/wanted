@@ -1,13 +1,15 @@
 # Wanted: PRD
 
 > **Find out where you're wanted.**
-> Wanted is a two-sided touring app. For independent musicians and comedians, an agent called Gus reads Qloo's taste graph to find the neighborhoods where their crowd actually lives, the rooms those people already go to, and a route that doesn't bankrupt them. Every opened city gets an Old West **WANTED poster** for the artist ("WANTED IN COLUMBUS: MAYA ORTIZ. Reward: one sold-out show."). Fans sign it, turning Qloo's prediction into proof a booker can't ignore. Gus watches the signatures and pitches the venue the moment demand is real. "Let's ride."
+> Wanted is a two-sided touring app. For independent musicians and comedians, an agent called Gus reads Qloo's taste graph to find the neighborhoods where their crowd actually lives, the rooms those people already go to, and a route that doesn't bankrupt them. Every opened city gets an Old West **WANTED poster** for the artist ("WANTED IN COLUMBUS: MAYA ORTIZ. Reward: one sold-out show."). Fans sign it, adding consented interest beside Qloo’s cultural prediction. Gus watches for interest that warrants research; a signature is not a ticket purchase or proof of attendance. "Let's ride."
 
 Entry for the **Qloo Agentic Hackathon: "Agents, but with taste"** (qloo.devpost.com). Submissions close **Friday 30 October 2026, 11:45 PM ET (Saturday 31 October, 9:15 AM IST)**. Built with Expo as one universal app: a hosted web app (the judged demo), an Android APK, and an iPhone build with native Liquid Glass for the video.
 
 ---
 
 ## 0. How to read this document
+
+**Current-build alignment (25 Oct):** Read [the research-to-build audit](docs/BUILD-AUDIT.md) alongside this PRD. It records implemented, partial and missing work against the complete research pack. The original pitch/simulation below is not evidence of actual ticket demand, real offers or delivery. Qloo supplies cultural evidence; signatures supply consented interest; sourced operational facts and authorized counterparties supply booking truth. New implementation details are in §9.3i.
 
 - **Sections 1 to 5:** story, evidence, strategy, and why it's investable. Section 4.5 is the thesis: why this is the right problem for a taste graph.
 - **Section 9.3b to 9.3h:** the agent pattern (Predict → Prove → Act → Escalate → Remember), written to be reusable beyond touring.
@@ -30,7 +32,7 @@ Entry for the **Qloo Agentic Hackathon: "Agents, but with taste"** (qloo.devpost
 Touring builds careers for independent artists and comedians, and it has become a money-losing gamble:
 - **Ditto Music (Jan 2025):** 84% of UK independent artists say they can't afford to tour, and 62.2% have turned down tours for money reasons.
 - **Chartmetric (2022 to 2024):** the share of mid-level touring artists fell from 19% to 12%, and artists are skipping cities.
-- **Nobody is running the tour but the artist.** A tour manager costs $500 to $1,000 a week plus per diem, so by our estimate about 85% of touring indies are their own tour manager (§3.1b). Gus is the tour manager they can't afford.
+- **The artist often runs the tour.** Named self-booking accounts describe substantial admin alongside creative work. The prevalence of paid tour management in this target segment is not measured; Gus targets one useful operational job, not an unsupported percentage.
 
 The decisions that make or lose money (which cities, which neighborhoods, which room, which night, which opener) are made on guesswork:
 - Streaming dashboards show where people *listened*, not where people who'd buy a Tuesday ticket live and go out.
@@ -40,7 +42,7 @@ The decisions that make or lose money (which cities, which neighborhoods, which 
   - Both had the same cold start: an empty map until enough fans showed up.
 
 ### The insight
-Qloo already knows where an artist's taste lives, down to the neighborhood. That turns the cold start around: **the map is full on day one** (Qloo's prediction), and **fans fill in the proof** (claims). Prediction plus proof is what a booker needs to say yes.
+Qloo supplies cultural-affinity evidence at city and neighborhood level. That turns the cold start around: **the map has a prediction on day one**, and fans add consented interest. Neither alone establishes attendance, commercial viability or a booker’s willingness to agree.
 
 ### The bigger idea: agents fail at representation, not at action
 Agents can already search, negotiate and pay. What they get wrong is *what people want*. In Anthropic's Project Swap (Sep 2026), Claude agents traded books for 201 people; the agents bargained competently, yet about **85% of the value the market left on the table came from misreading preferences**, not from weak negotiation. The authors' phrase: "the limiting factor was representation."
@@ -99,7 +101,7 @@ Live music runs on guesswork, and everyone in it pays for that. Wanted takes on 
 - *"Find out where you're wanted."*
 - *"Know where your crowd lives before you book the van."*
 - *"Qloo predicts it. Fans prove it. Gus books it."*
-- *"Streaming tells you who listened. Wanted tells you who'll show up."*
+- *"Streaming tells you who listened. Wanted helps you investigate where to play next."*
 - *"Agents don't fail at doing. They fail at knowing what you want."*
 - *"Both agents at the table read the same taste graph."*
 
@@ -128,17 +130,15 @@ That is the pitch in 90 seconds.
 ## 3. The problem, with evidence
 
 ### 3.1 Touring is broken for the middle
-- **Ditto Music independent artist survey (Jan 2025):** 84% can't afford to tour; 62.2% turned down tours for financial reasons.
+- **Ditto Music UK independent artist survey (Jan 2025):** 84% can't afford to tour; 62.2% turned down tours for financial reasons.
 - **Chartmetric via Music Business Worldwide (May 2025):** mid-level touring artists fell from 19% to 12% (2022 to 2024).
 - **Ditto, global version (same survey):** 82.1% of independent artists worldwide can't afford to tour; 58.3% turned down tours for money. Quote 84% only with "UK".
 - **Pirate Studios (UK, Jul 2024, 1,700 bands, solo artists and DJs):** 72% made no profit on their last tour (48% broke even, 24% lost money); 88% name rising costs, mostly travel and beds.
 - Verify the primary links before quoting any of these on stage.
 
 ### 3.1b The artist is the tour manager (customer research, 25 Oct)
-**Fermi estimate, not a survey: about 85% (±5%) of touring independent artists act as their own tour manager.**
-- A tour manager costs about $500 to $1,000 a week plus per diem (Orphiq, Chartlex, Hypebot, music3point0).
-- If 72% of tours make no profit (Pirate) and 82% of indies can't afford to tour at all (Ditto), a paid TM is a cost almost nobody in the middle can carry. Only the top 3 to 5% of touring acts have tour staff.
-- Label it as our estimate wherever it appears. Replace it with interview numbers as soon as we have them (§12.4).
+**Self-booking is the target workflow, not a measured prevalence claim.**
+Named artist/operator accounts support the admin burden. Combining no-profit touring surveys with affordability surveys cannot establish how many touring acts employ a tour manager. The former 85% Fermi figure is unvalidated and should not be used in the pitch. Measure the actual operator workflow with design partners (§12.4).
 
 **What a tour manager does, and what Gus does instead.** This table is the product's job list; every row is built or marked.
 | TM job | What it costs the DIY artist today | Wanted |
@@ -152,7 +152,7 @@ That is the pitch in 90 seconds.
 | Advance the show, settle the night | Phone calls on show day | Later: advance sheet and settlement from the deal terms (not built) |
 | Fans who show up | Hope | Signatures, Deputies and the Bounty |
 
-**What this changes in how we pitch:** not "an AI for indie musicians" but the tour manager the other 85% never had. That's why the agent layer matters: a dashboard doesn't phone you when a deposit's about to lapse; a TM does.
+**What this changes in how we pitch:** not "an AI for indie musicians" but a reliable booking assistant for working self-booking acts. That's why the agent layer matters: a dashboard doesn't phone you when a deposit's about to lapse; a TM does.
 
 ### 3.2 Generic AI makes it worse
 - LLM place recommendations regress to famous hubs (Current Issues in Tourism, 2025).
@@ -783,6 +783,12 @@ Simon Willison's rule: an agent with private data, untrusted content and a way t
 - Outbound actions run only through scoped tools: a deal can only go to a room a tool returned, and money only through a one-time pass the artist approved.
 G8 tests all three (section 16.8).
 
+### 9.3i Current durable booking goal (25 Oct)
+
+The booking desk can hand Gus one persistent **find-support** job. A bounded worker qualifies current inventory, compares act/scene taste, prepares an exact request and saves a waiting state. Business changes atomically wake it; generation/lease fencing prevents an old worker from preparing after a pause or newer change. Approval and test-inbox saving remain separate actions. No-op replies preserve approval, missing receipts are reconciled without duplicate effects, and changed already-saved requests wait for follow-up. Missing availability is never automatically reconfirmed.
+
+This is implemented against cookie-isolated fictional operating facts with real/cached Qloo results, not real booker identity or artist contact. The custom runtime is retained; no Eve adoption is claimed. See `src/server/operations/task-runner.ts`, `docs/BUILD-AUDIT.md` and `npm run agent:smoke`. An external scheduler must still be configured for the protected drain endpoint.
+
 ### 9.4 Instructions (sketch)
 "You are Gus, a veteran tour manager. State only facts from tool results or the evidence object. Label opinions as yours. Keep lines short and funny about routes, never about people. If data is thin, say so. Never invent venues, numbers or claims."
 
@@ -904,12 +910,11 @@ create table metro_scores (sound_hash text, metro_id text, heat real, lift real,
   - "Know where your crowd lives before you book the van."
   - "Qloo predicts it. Fans prove it. Gus books it."
 - **World:** an Old West touring world, played for laughs, never cosplay-heavy: WANTED posters, Deputies, a sheriff-star "Deputy" mark, a "CAUGHT LIVE" stamp, the Rap Sheet, and Gus's sign-off "Let's ride." The glass UI stays modern; the Western flavor lives only in the artifacts and stickers.
-- **Type system (all open, OFL, Google Fonts):**
-  - **Archivo** (variable, weight and width axes): the logo in Medium with tight tracking; display headings; "WANTED" and "CAUGHT LIVE" in ExtraBold at the widest width (Expanded, wdth 125), all caps, like wood type. One family carries the brand.
-  - **Instrument Serif Regular** (no italic, tracking +1): the voice. Taglines ("Find out where you're wanted." under the wordmark), Gus's quotes, pull lines on posters ("Reward: one sold-out show"). Emphasis comes from size or color, never italics.
-  - **Chivo Mono** (same foundry as Archivo, Omnibus-Type): data. Signature numbers, dates, scores, the Rap Sheet, evidence chips.
-  - **Signatures:** rotate three handwriting fonts (Caveat, Nothing You Could Do, Homemade Apple) so the poster looks signed by different people.
-  - **UI body:** system font (SF Pro on iOS, Roboto on Android, Archivo Regular on web).
+- **Current type system (25 Oct):**
+  - **Karl ST Trial Regular/Medium/Bold:** main display titles, emphasis and hero figures. User-supplied trial; not OFL. Production and redistribution rights remain a release gate.
+  - **System body:** SF Pro on iOS, system sans on web/Android. **SF Pro Rounded** for Gus and inline missing-glyph fallbacks; the Karl trial omits most punctuation, symbols and accented letters.
+  - **Archivo Expanded:** printed poster artwork, matching existing server-generated share renders.
+  - **Chivo Mono:** technical evidence. **Caveat / Nothing You Could Do / Homemade Apple:** signatures only.
 - **Mark:** Gus's head with headset and aviators over a torn WANTED poster corner, on a sunset gradient.
 - **Every shared artifact carries:** "Made with Wanted. Find out where you're wanted."
 - **Mascot prompts:** Appendix B.
@@ -1216,6 +1221,50 @@ Playwright plus Lighthouse on an emulated mid-range phone over 4G:
 
 ---
 
+## 17. Systems continuation: measured backend and ordered ambition (25 Oct)
+
+This section supersedes current-state claims that imply the full G1–G9 suite, a real booking, a hosted scheduler, Eve integration or a live payment connector already passed. The earlier larger vision remains a roadmap. Detailed prerequisite/gate mapping: [research chapter 16](docs/research/16-SYSTEMS-AMBITIONS-AND-GATES.md).
+
+### 17.1 Agent ownership and long-running work
+
+Gus owns one show job through qualify, compare, prepare, explicit wait, current review and receipt recovery. The server offers only state-valid tools, accepts one call per completion and fences every step by lease/generation/version. Missing/expired scene evidence is an evidence wait, not a new score or invented choice. Human waits exit the request and persist; business changes atomically wake work. A pause stays paused.
+
+The waiting state and its internal attention intent commit together. One notice per generation is saved idempotently. Changes/pause retire obsolete attention, and reply waits do not nag. Due work drains on restart/scheduler invocation. No detached promise owns an effect. Hosted scheduler configuration and real push/phone channels remain release gates.
+
+### 17.2 G5: exact, uncached business-outcome proof
+
+Latest strict extended run: **12/12** named scenarios passed, **zero rejected calls**, **30 OpenRouter HTTP requests**, **zero new Qloo HTTP requests** (existing Qloo caches). This is a bounded hybrid-model run on fictional records, not operator preference or ticket uplift. The two expected bill candidates and effect counts are asserted, rather than only checking a final approval state. Rules fallback, omitted/duplicate cases, cached completions and quota failures cannot be counted as model passes. Earlier failures are retained privately.
+
+Commands: `npm run eval:llm -- --extended --strict-policy`, `npm run eval:report`. Public evidence is an allowlisted projection; raw prompts, model errors, exact action terms, receipts and credentials stay private. Synthetic state/transport tests are reported separately.
+
+### 17.3 Calls and voice are decision transport
+
+Each call stores the exact version/hash/expiry of the offer it speaks, with room/date/year/US dollar amount and simulation explicitly stated. Delayed answers must still match the current offer. Unknown local hour suppresses new ringing. Creation reserves one active call and the weekly budget transactionally. The canonical voice endpoint retrieves stored current call text; it ignores client text for that source. Long decision text is not silently cut to the generic 300-character voice limit.
+
+TTS is bounded and checked for audio MIME/length, redacted errors and cache honesty. The live Fish probe was **blocked, HTTP 402: insufficient API credit**. The subsequent OpenRouter free Fish probe succeeded: `fish-audio/s2.1-pro-free:free`, uncached MP3, 200,201 bytes, four attempts, about 9 seconds. The speech-specific API catalog and `/api/v1/audio/speech` are separate from chat completion discovery. That free rail is now first in the runtime with its own credential backoff. No current human-rated intelligibility, prosody or native playback pass is claimed. A future microphone/ASR capability needs explicit consent and exact readback/approval; ambiguous speech may not spend money.
+
+### 17.4 Commerce and financial truth
+
+Exact offer review is required before a decision. One scoped decision survives concurrent yes/yes and conflicting yes/no. Receipts survive process/acknowledgment loss; a changed offer retains the original payment history and cannot silently become held. Payment receipt, simulated held state and the Bounty/promotion continuation queue commit together. Continuation retries cannot charge again.
+
+Stripe remains **test only**, with a scope-specific provider idempotency key, exact receipt amount/currency/non-live validation and a bounded request. Old uncertain intents outside safe retention or after offer expiry need provider reconciliation, not blind reposting. No live Stripe key was configured/tested. A test PaymentIntent is not transfer to a venue, verified payee identity, counterparty agreement or settlement.
+
+Financial scenario arithmetic is integer cents: guarantee, defined after-deduction split, and greater-of versus; credited advance is not duplicate income/cost. Attendance assumptions must be operator-supplied hypothetical scenarios, never Qloo affinity/signature conversions. Written contracts, taxes, cancellation and rider obligations remain separate.
+
+### 17.5 Next ambition, in order
+
+1. One consented real operator/show/roster with authenticated owner and explicit unknowns; manual prepared artifact before outreach.
+2. General written offer/economics with payer/payee direction, currency, deduction base, holds/expiry and obligations.
+3. One permitted actual connector with verified identity, exact scope, business idempotency and receipt/webhook reconciliation.
+4. Human task evaluation: correction time, next milestone and interruption quality against the same-inventory baseline.
+5. Exact voice brief and then one consented interactive voice task, with audio failure/caption and stale-answer parity.
+6. Offline advance/day sheet, then one feasible Road Care window with explicit crew/safety needs.
+7. Outcome-backed learning with frozen holdouts and rollback, not self-approved permission or spend expansion.
+
+Eve is a candidate orchestration migration, not a prerequisite or an adopted component. A separate pinned/world-backed spike must pass the same business gates before replacing the narrow runtime. Broad shell/network tools and subagents are unnecessary for the current touring job.
+
+---
+
 ## Appendix A. Sources
 
 **Hackathon and Qloo**
@@ -1363,3 +1412,15 @@ Generated with GPT Image (ChatGPT or `gpt-image-2`/`2.5`), quality high, PNG. Pr
 | 14 | `cover.png` | 1536x1024 | opaque | Devpost thumbnail, README banner, video title card |
 
 Built in code, not images: map and heat hexes, signature scrawls (handwriting font), poster text, Signature Card and Rap Sheet layouts, OG renders, Gus expressions in chat (crops of `gus-sheet.png`).
+
+
+### 17.8 Voice execution follow-on
+
+Speech cancellation invalidates the in-flight native/web generation, aborts its fetch and fences stale playback/completion. Canonical call speech validates the exact persisted offer both before and after synthesis; local caches cannot skip that check. Response audio is byte-bounded; no silent dropping of canonical decision text. A full stored simulated call passed an uncached local HTTP speech probe (326 characters, 386,611 MP3 bytes, 12.329 seconds) using free Fish. Human intelligibility/prosody, native audible latency, ASR and true outbound calling remain separate unpassed gates.
+
+
+### 17.9 Scoped spoken preparation and durable call choice
+
+The operator planning sandbox exposes a cookie-owned exact spoken preview (GET /api/artist/[id]/brief-voice) and an explicitly requested POST using only its version/hash. Text is generated from current stored preparation, not invented by a speech model. It distinguishes operator assertions, incomplete/stale comparisons and an actual current proposal. Audio revalidates before/after synthesis; speech creates no approve/send/book/pay authority and no effect. No new UI is required for this backend capability.
+
+The scarce-call channel commits a selected yes/no before provider work. A concurrent late decline or contradictory no cannot erase or hide that choice/receipt; uncertainty is reconciled under the original scope. Client session fencing prevents old responses or timers from reviving/closing a different call. Current synthetic suite passes 226 cases; human acoustic/device checks and a live Stripe test remain separate prerequisites.

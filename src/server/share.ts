@@ -48,6 +48,7 @@ export async function cardPng(slug: string, city: string, n: number, format: 'st
   return renderCard(
     {
       artistName: artist.name,
+      cityId: city,
       cityName: metro.name,
       state: metro.state,
       claim,

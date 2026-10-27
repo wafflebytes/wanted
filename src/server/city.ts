@@ -4,6 +4,7 @@
  * open rooms with Qloo's own descriptions and hours.
  */
 import type { ActKind, DayKey, Locality, MapHex, Receipt, Room, RoomBand, Sound } from '../lib/types';
+import { venueFactsFor, type VenueFacts } from '../lib/venue-evidence';
 import { config } from './config';
 import { cityHeat, cityNeighborhoods, rooms as qlooRooms, type CityLocalities } from './qloo/api';
 import { metroById, toHexes, type Metro } from './score';
@@ -23,6 +24,7 @@ export type CityDetail = {
 };
 
 export type RoomView = Room & {
+  operationalFacts?: VenueFacts | null;
   rank: number;
   neighborhoodRank: number | null;
   openDays: DayKey[] | null;
@@ -185,6 +187,7 @@ export async function cityDetail(
   if ('data' in roomRes) {
     receipts.push(roomRes.receipt);
     ({ rooms, droppedClosed } = shapeRooms(roomRes.data, sound, neighborhoods, opts.band ?? null));
+    rooms = rooms.map((room) => ({ ...room, operationalFacts: venueFactsFor(room, metro.id) }));
     if (!rooms.length) notices.push(`The graph's quiet here: Qloo has no open ${opts.kind === 'comedy' ? 'comedy rooms' : 'music rooms'} for this Sound in ${metro.name}.`);
     if (opts.kind === 'comedy' && rooms.length < 3) notices.push('Comedy-room coverage is thinner than music in Qloo; bars that host shows are included.');
   } else notices.push('Rooms are unavailable right now (Qloo error).');

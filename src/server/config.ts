@@ -93,7 +93,11 @@ export const config = {
   },
 
   llm: {
+    /** Fast tool planner first; Super VL is the independent model fallback.
+     * Both IDs and tool support verified against OpenRouter’s catalog on 25 Oct. */
+    taskModels: ['nvidia/nemotron-3.5-lightning:free', 'nvidia/nemotron-3.5-super-vl:free'] as const,
     promptVersion: 'gus-v2',
+    taskPromptVersion: 'gus-task-v3-stale-first',
     /** OpenRouter models, tried in order. The deterministic "Gus (lite)" runs if all fail. */
     models: [
       'nvidia/nemotron-3.5-super-vl:free',

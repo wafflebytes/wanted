@@ -1,0 +1,99 @@
+/* Posters: a cork wall under a warm lamp. Posters hang on it, the numbers glow like a meter,
+   signatures are postage stamps. Dark is the main room; light is the same wall by day. */
+html.on-wall { --page: #191410; --wall-hole: #191410; }
+:root[data-theme="light"].on-wall { --page: #E6D8C0; --wall-hole: #E6D8C0; }
+@media (prefers-color-scheme: light) { html.on-wall:not([data-theme="dark"]) { --page: #E6D8C0; --wall-hole: #E6D8C0; } }
+
+.pw { position: relative; width: 100%; max-width: var(--col); margin: 0 auto; padding: calc(var(--safe-t) + var(--header-h) + 4px) var(--gutter) calc(var(--safe-b) + var(--dock-h) + 48px); }
+.pw > * { position: relative; z-index: 1; }
+.pw > .pw-ground { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(90% 46% at 50% 24%, rgba(255, 178, 102, 0.13), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .8 0 0 0 0 .55 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    var(--page);
+}
+.pw-skel { height: 360px; margin-top: 40px; border-radius: 24px; }
+.pw-empty { padding-top: 30vh; }
+
+/* ---------- the wall */
+.pw-wall { --sw: min(64vw, 256px); margin: 0 calc(var(--gutter) * -1); }
+.pw-names { position: relative; height: 40px; overflow: hidden; -webkit-mask: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); mask: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); }
+.pw-names button { position: absolute; left: 50%; top: 2px; transform-origin: 50% 70%; display: flex; align-items: baseline; gap: 5px; white-space: nowrap; font: 800 29px/1.1 var(--display); letter-spacing: -0.03em; color: var(--ink); will-change: transform, opacity; }
+.pw-names small { font: 700 13px var(--body); letter-spacing: 0.04em; color: var(--ink-3); }
+.pw-track { display: flex; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; padding-inline: calc(50% - var(--sw) / 2); }
+.pw-track::-webkit-scrollbar { display: none; }
+.pw-slide { flex: none; width: var(--sw); scroll-snap-align: center; scroll-snap-stop: always; display: grid; place-items: center; padding: 14px 0 44px; }
+.pw-poster { width: calc(var(--sw) - 22px); aspect-ratio: 2 / 3; transform-origin: 50% 8%;
+  transform: translateY(calc(var(--a, 0) * 14px)) rotate(calc(var(--d, 0) * 6deg)) scale(calc(1 - var(--a, 0) * 0.1));
+  filter: brightness(calc(1 - var(--a, 0) * 0.4)) drop-shadow(0 2px 1.5px rgba(0, 0, 0, 0.45)) drop-shadow(0 18px 18px rgba(0, 0, 0, 0.5));
+}
+.pw-poster img { width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; user-select: none; }
+.pw-poster:active img { transform: scale(0.98); transition: transform var(--t-tap) var(--ease); }
+.pw-dots { display: flex; justify-content: center; gap: 6px; height: 6px; margin-top: -24px; }
+.pw-dots i { width: 6px; height: 6px; border-radius: 3px; background: var(--ink-4); transition: width var(--t-move) var(--ease), background-color var(--t-fade); }
+.pw-dots i.ok { background: color-mix(in srgb, var(--ok) 60%, var(--ink-4)); }
+.pw-dots i.on { width: 18px; background: var(--ink); }
+
+/* ---------- where it stands */
+.pw-stand { display: flex; flex-direction: column; padding: 22px 2px 0; animation: rise var(--t-enter) var(--ease) both; }
+.pw-num { display: flex; align-items: baseline; gap: 8px; }
+.pw-num b { font: 800 46px/1 var(--display); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; color: var(--wanted-text); }
+.pw-num > span { font: 650 16px var(--display); font-weight: 600; color: var(--ink-2); }
+.pw-num.t-good b { color: var(--ok-text); }
+.pw-num.t-live b { color: var(--ink); }
+.pw-line { margin: 10px 0 18px; font-size: 16px; line-height: 1.42; color: var(--ink-2); max-width: 36ch; }
+
+/* The meter: fifty lit segments in a recessed track, like a level meter on a desk. */
+.pw-meter { display: grid; grid-template-columns: repeat(50, 1fr); gap: 2px; height: 22px; margin-top: 14px; padding: 4px; border-radius: 9px; background: var(--well-bg); box-shadow: var(--well); }
+.pw-meter i { border-radius: 1.5px; background: rgba(255, 248, 230, 0.06); }
+:root[data-theme="light"] .pw-meter i { background: rgba(20, 16, 8, 0.07); }
+.pw-meter i.on { background: linear-gradient(180deg, #FF9257, #E8500F); box-shadow: inset 0 1px 0 rgba(255, 236, 220, 0.5), 0 0 4px rgba(255, 106, 40, 0.35); animation: seg 360ms var(--ease) both; animation-delay: calc(var(--i) * 14ms + 200ms); }
+@keyframes seg { from { opacity: 0.15; } }
+
+/* Secondary actions as three keys under the main one. */
+.pw-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.pw-key { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; height: 66px; border-radius: 18px; font: 600 13px var(--body); color: var(--ink); background: var(--raise); box-shadow: var(--bevel), var(--drop); transition: transform var(--t-tap) var(--ease), box-shadow var(--t-tap) var(--ease); }
+.pw-key svg { color: var(--ink-2); }
+.pw-key:active { transform: translateY(1px) scale(0.97); box-shadow: var(--bevel), var(--drop-press); }
+
+.pw-sec { margin-top: 14px; }
+.pw-sec .fine { margin: 10px 4px 0; }
+
+/* ---------- the draw: a ticket with a torn stub */
+.pw-bounty { position: relative; display: flex; flex-direction: column; gap: 8px; margin-top: 22px; padding: 18px 18px 18px; border-radius: 22px; background: var(--raise); box-shadow: var(--bevel), var(--drop); }
+.pw-bounty::before, .pw-bounty::after { content: ""; position: absolute; top: 50%; width: 18px; height: 18px; margin-top: -9px; border-radius: 50%; background: var(--page); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45); }
+.pw-bounty::before { left: -9px; } .pw-bounty::after { right: -9px; }
+.pw-prize { font: 700 19px/1.25 var(--display); letter-spacing: -0.015em; padding-right: 8px; }
+.pw-bounty p { color: var(--ink-2); font-size: 15px; line-height: 1.42; }
+.pw-bounty p strong { color: var(--ink); font-weight: 650; }
+.pw-bounty .btn { margin-top: 6px; }
+
+/* ---------- where they signed */
+.pw-hoods { list-style: none; overflow: hidden; }
+.pw-hoods li { position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 50px; padding: 0 16px; font-size: 15.5px; }
+.pw-hoods li + li { border-top: 1px solid var(--line); }
+.pw-hoods li::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: var(--w); background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--wanted) 16%, transparent)); transform-origin: left; animation: grow 620ms var(--ease) both; animation-delay: calc(var(--i) * 60ms + 120ms); }
+@keyframes grow { from { transform: scaleX(0); } }
+.pw-hoods span, .pw-hoods b { position: relative; }
+.pw-hoods b { font: 700 16px var(--display); font-variant-numeric: tabular-nums; }
+
+/* ---------- signatures as postage stamps: cream paper, perforated edge, a little crooked */
+.pw-stamps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 10px; padding: 2px 2px 0; }
+.pw-stamp { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 12px 6px 10px; text-align: center;
+  background: #F4EAD6; color: #2A2119; border: 4px dotted var(--wall-hole, var(--page)); background-clip: border-box;
+  box-shadow: inset 0 0 0 3px #F4EAD6, inset 0 0 0 4px rgba(90, 60, 20, 0.22), 0 6px 10px -4px rgba(0, 0, 0, 0.5);
+  transform: rotate(var(--r)); animation: stamp 420ms var(--ease) both; animation-delay: calc(var(--i) * 40ms);
+}
+@keyframes stamp { from { opacity: 0; transform: rotate(var(--r)) translateY(10px) scale(0.94); } }
+.pw-stamp i { font: 600 10.5px var(--mono); font-style: normal; color: #8C7A62; }
+.pw-stamp b { font: 800 24px/1.1 var(--display); letter-spacing: -0.02em; margin-top: 2px; }
+.pw-stamp span { width: 100%; font-size: 11.5px; line-height: 1.25; color: #5E5040; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pw-stamp em { font: 700 9.5px var(--body); font-style: normal; text-transform: uppercase; letter-spacing: 0.06em; color: #A0907A; margin-top: 3px; }
+.pw-star { position: absolute; top: 6px; right: 6px; color: #D69A0A; }
+
+/* ---------- lifted off the wall */
+.pw-lift { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: calc(var(--safe-t) + 24px) 20px calc(var(--safe-b) + 24px); background: rgba(12, 9, 6, 0.74); -webkit-backdrop-filter: blur(18px) saturate(1.2); backdrop-filter: blur(18px) saturate(1.2); animation: fade var(--t-move) var(--ease) both; }
+.pw-lift img { max-width: min(88vw, 440px); max-height: 72dvh; object-fit: contain; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.6)); animation: lift 480ms var(--ease) both; }
+@keyframes lift { from { opacity: 0; transform: translateY(40px) rotate(-3deg) scale(0.86); } }
+.pw-lift-acts { display: flex; gap: 10px; animation: rise var(--t-enter) var(--ease) 120ms both; }
+.pw-lift-acts .btn { min-width: 128px; }

@@ -13,6 +13,7 @@ import { Btn, Empty } from '@/ui/components/core';
 import { GusLine } from '@/ui/components/Gus';
 import { Poster } from '@/ui/components/Poster';
 import { BountyCard } from '@/ui/components/BountyCard';
+import { StatusBanner } from '@/ui/components/Paper';
 import { SignatureCard } from '@/ui/components/SignatureCard';
 import { T } from '@/ui/components/T';
 import { useToast } from '@/ui/components/Toaster';
@@ -20,7 +21,7 @@ import { haptic } from '@/ui/haptics';
 import { invalidate, useApi, useReducedMotion } from '@/ui/hooks';
 import { Icon } from '@/ui/icons/Icon';
 import { shareLink } from '@/ui/share';
-import { C, F, R, S } from '@/ui/theme';
+import { C, F, gradient, R, S } from '@/ui/theme';
 import type { PosterState } from '@/ui/types';
 
 type SignOut = { claim: PosterState['mine'] & {}; alreadySigned: boolean; count: number; wear: 0 | 1 | 2 | 3 };
@@ -46,7 +47,7 @@ export default function SignPage() {
   const scroller = useRef<ScrollView>(null);
 
   const colW = Math.min(width - S.gutter * 2, 480);
-  const posterW = Math.min(colW, 360);
+  const posterW = Math.min(colW * 0.8, 320);
   const [contactOpen, setContactOpen] = useState(false);
 
   // The poster drops in and settles, like it was just nailed up.
@@ -157,25 +158,25 @@ export default function SignPage() {
     hexes: p.hexes,
   };
 
-  // Before signing: a small poster beside who's wanted. After: the full poster, with your name on it.
-  const hero = mine ? (
-    <Animated.View style={{ alignSelf: 'center', opacity: drop, transform: [{ translateY: drop.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] }}>
-      <Poster width={posterW} fresh={fresh} stampKey={undefined} d={posterData} />
-    </Animated.View>
-  ) : (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.lg }}>
-      <View style={{ borderRadius: 4, overflow: 'hidden' }}>
-        <Poster width={96} fresh={null} stampKey={undefined} d={posterData} />
-      </View>
-      <View style={{ flex: 1, gap: 4 }}>
-        <T v="label" color={C.amber}>
-          {p.played ? 'Caught live' : `Wanted in ${p.city.name}, ${p.city.state}`}
-        </T>
-        <T style={{ fontFamily: F.displayBlack, fontSize: 26, lineHeight: 30, letterSpacing: -0.4, color: C.text, textTransform: 'uppercase' }}>{p.artist.name}</T>
-        <T v="footnote" color={C.text2}>
-          {p.count} {p.count === 1 ? 'person has' : 'people have'} signed
-        </T>
-      </View>
+  // The poster, nailed up on the wall, with the city's warmth glowing behind it.
+  const pitch = p.show ? `Sign and you’re on the first-dibs list for ${p.city.name}.` : p.bounty && !p.played ? `Sign it. One signer in ${p.city.name} meets ${first}.` : `Sign it, and show ${first} that ${p.city.name} wants a show.`;
+  const hero = (
+    <View style={{ alignItems: 'center', gap: S.xl }}>
+      <View style={{ position: 'absolute', top: -40, width: posterW * 1.6, height: posterW * 1.6, borderRadius: posterW, opacity: 0.55, ...gradient(`radial-gradient(circle at 50% 50%, rgba(255,106,26,0.35) 0%, rgba(255,106,26,0) 62%)`) } as object} pointerEvents="none" />
+      <Animated.View style={{ opacity: drop, transform: [{ translateY: drop.interpolate({ inputRange: [0, 1], outputRange: [-24, 0] }) }, { rotate: drop.interpolate({ inputRange: [0, 1], outputRange: ['-6deg', mine ? '0deg' : '-2deg'] }) }], shadowColor: '#000', shadowOpacity: 0.75, shadowRadius: 26, shadowOffset: { width: 0, height: 16 } }}>
+        <Poster width={posterW} fresh={fresh} stampKey={undefined} d={posterData} />
+      </Animated.View>
+      {mine ? null : (
+        <View style={{ alignItems: 'center', gap: 6, paddingHorizontal: S.md }}>
+          <T v="footnote" color={C.amber} style={{ fontWeight: '600' }}>
+            {p.played ? 'Caught live' : `Wanted in ${p.city.name}, ${p.city.state}`}
+          </T>
+          <T style={{ fontFamily: F.displayBlack, fontSize: 30, lineHeight: 34, letterSpacing: -0.6, color: C.text, textAlign: 'center' }}>{p.artist.name}</T>
+          <T v="callout" color={C.text2} style={{ textAlign: 'center' }}>
+            {pitch}
+          </T>
+        </View>
+      )}
     </View>
   );
 
@@ -211,24 +212,10 @@ export default function SignPage() {
 
   const form = (
     <View style={{ gap: S.xxl }}>
-      <T v="headline">
-        {p.bounty && !p.played ? `Sign the poster. One signer in ${p.city.name} meets ${first}.` : `Sign the poster and show ${first} that ${p.city.name} wants a show.`}
-      </T>
+      <SignLine value={initials} onChange={setInitials} number={p.count + 1} city={p.city.name} />
 
       <View style={{ gap: S.sm }}>
-        <T v="label">Your initials</T>
-        <Field
-          value={initials}
-          onChangeText={(t) => setInitials(t.slice(0, 18))}
-          placeholder="e.g. JD"
-          label="Your initials or first name, written on the poster"
-          autoCapitalize="characters"
-          big
-        />
-      </View>
-
-      <View style={{ gap: S.sm }}>
-        <T v="label">Your neighborhood</T>
+        <T v="headline">Where in {p.city.name}?</T>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
           {visibleHoods.map((n) => (
             <HoodChip
@@ -319,6 +306,7 @@ export default function SignPage() {
         </View>
         <View style={{ width: colW, gap: S.xxl, paddingTop: S.lg }}>
           {hero}
+          {p.show && !p.played ? <ItsOn show={p.show} signed={!!mine} first={first} /> : null}
           {mine ? signed : form}
           {mine ? null : footer}
         </View>
@@ -334,6 +322,49 @@ export default function SignPage() {
         </View>
       )}
     </KeyboardAvoidingView>
+  );
+}
+
+/** The poster worked: the date is held. Signers hear first; everyone else is told how to. */
+function ItsOn({ show, signed, first }: { show: { room: string; date: string }; signed: boolean; first: string }) {
+  const night = new Date(`${show.date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  return (
+    <StatusBanner
+      tone="good"
+      title={`Simulated show: ${show.room}, ${night}`}
+      body={signed ? 'You signed your interest. This demo hold is not a real concert or ticket sale. First-dibs announcement copy is prepared, not sent.' : 'This is a simulated hold, not a real concert or ticket sale. Signing records interest only.'}
+    />
+  );
+}
+
+/**
+ * Where the fan signs: a strip of poster paper with a ruled line, an ✕, and their initials in
+ * handwriting as they type, numbered the way the poster will number them.
+ */
+function SignLine({ value, onChange, number, city }: { value: string; onChange: (t: string) => void; number: number; city: string }) {
+  const font = F.sig[number % 3];
+  return (
+    <View style={{ backgroundColor: C.cream, borderRadius: 18, borderCurve: 'continuous', padding: S.lg, gap: S.md, transform: [{ rotate: '-0.6deg' }], shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 14, shadowOffset: { width: 0, height: 8 } } as object}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <T style={{ fontFamily: F.displayBlack, fontSize: 11, letterSpacing: 1.6, color: C.posterRed }}>{`WANTED IN ${city.toUpperCase()}`}</T>
+        <T style={{ fontFamily: F.monoBold, fontSize: 12, color: 'rgba(58,34,19,0.65)' }}>No. {number}</T>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: S.sm, borderBottomWidth: 1.5, borderColor: 'rgba(58,34,19,0.45)', paddingBottom: 2 }}>
+        <T style={{ fontFamily: F.displayBold, fontSize: 20, color: C.posterRed, paddingBottom: 10 }}>✕</T>
+        <TextInput
+          value={value}
+          onChangeText={(t) => onChange(t.slice(0, 18))}
+          placeholder="Your initials"
+          placeholderTextColor="rgba(58,34,19,0.35)"
+          accessibilityLabel="Your initials or first name, written on the poster"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={18}
+          style={{ flex: 1, minHeight: 60, color: '#1d3a6b', fontSize: 34, fontFamily: font, outlineStyle: 'none' } as object}
+        />
+      </View>
+      <T style={{ fontFamily: F.body, fontSize: 13, color: 'rgba(58,34,19,0.7)' }}>Your initials go on the poster for everyone in {city} to see.</T>
+    </View>
   );
 }
 

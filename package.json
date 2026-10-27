@@ -37,6 +37,7 @@
     "maplibre-gl": "^5.24.0",
     "metal-fx": "^2.0.11",
     "mx-icons": "^1.1.2",
+    "next": "^16.4.3",
     "ngeohash": "^0.6.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -56,6 +57,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/ngeohash": "^0.6.8",
     "@types/react": "~19.2.2",
     "@types/react-dom": "~19.2.0",
@@ -65,7 +67,7 @@
   },
   "scripts": {
     "start": "expo start",
-    "web": "expo start --web",
+    "web": "next dev web --port 3100",
     "ios": "expo run:ios",
     "android": "expo run:android",
     "lint": "expo lint",
@@ -80,7 +82,17 @@
     "build:web": "expo export -p web",
     "serve": "expo serve",
     "icons:build": "tsx scripts/build-icons.ts",
-    "landing:build": "tsx scripts/build-landing.ts"
+    "landing:build": "tsx scripts/build-landing.ts",
+    "jobs:drain": "tsx scripts/drain-jobs.ts",
+    "test:e2e": "playwright test",
+    "desk:smoke": "tsx scripts/desk-smoke.ts",
+    "agent:smoke": "tsx scripts/agent-smoke.ts",
+    "eval:llm": "tsx evals/agent-llm.ts",
+    "eval:report": "tsx scripts/build-eval-report.ts",
+    "eval:voice": "tsx evals/voice.ts",
+    "web:build": "next build web",
+    "web:start": "next start web --port 3100",
+    "web:routes": "tsx scripts/web-routes.ts"
   },
   "private": true,
   "description": "Find out where you're wanted. Qloo predicts it. Fans prove it. Gus books it.",

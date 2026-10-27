@@ -238,7 +238,7 @@ export type InboxMessage = {
  * A date hold Gus worked out with a room's booking agent (agent to agent). Rooms don't run
  * agents yet, so Wanted runs a stand-in for each one; money only ever moves in test mode.
  */
-export type DealTerms = { date: string; day: DayKey; /** The artist's share of the door, in percent. */ split: number; deposit: number; capacity: number | null };
+export type DealTerms = { dealType?: 'door-split'; moneyDirection?: 'artist-to-venue'; basis?: 'simulation'; date: string; day: DayKey; /** The artist's share of the door, in percent. */ split: number; deposit: number; capacity: number | null };
 /** One step of the conversation: a letter between the agents, or a tool Gus ran, with what it found. */
 export type DealLetter = { from: 'gus' | 'house'; kind: 'letter' | 'tool'; text: string; tool?: string; terms: Pick<DealTerms, 'split' | 'deposit'> | null };
 export type DealPayment = {
@@ -251,6 +251,11 @@ export type DealPayment = {
   pass: { amount: number; payee: string; expiresAt: number };
 };
 export type Deal = {
+  review?: { version: number; hash: string }; // exact current offer, not a blanket authorization
+  /** All current house agents and economics are simulations, not counterparties. */
+  mode?: 'simulation';
+  version?: number;
+  offerExpiresAt?: number;
   id: string;
   city: string;
   cityName: string;
@@ -313,3 +318,23 @@ export type GusCall = {
   outcome: 'yes' | 'no' | null;
   createdAt: number;
 };
+
+/** One thing Gus does to fill the room once a date is held: done on his own, or waiting on a yes. */
+export type ShowStep = {
+  id: 'first-dibs' | 'posters' | 'podcast' | 'opener' | 'ads';
+  title: string;
+  detail: string;
+  /** Why, in a sentence: where the idea came from (Qloo, the signatures). */
+  why: string | null;
+  status: 'prepared' | 'needs_ok' | 'approved' | 'simulated' | 'skipped' | 'invalidated';
+  /** A manual package is not a provider or recipient receipt. */
+  delivery?: { channel: 'manual' | 'sandbox'; state: 'not_sent' | 'simulated'; detail: string };
+  items: { name: string; sub: string }[];
+  /** A note Gus wrote, for steps that speak for the artist. */
+  draft: string | null;
+  /** Dollars, for steps that spend. Test mode only. */
+  cost: number | null;
+  ref?: string;
+};
+/** Gus's plan for selling out a held date (PRD 9.3c). */
+export type ShowPlan = { mode?: 'simulation'; version?: number; dealId: string; city: string; cityName: string; roomName: string; date: string; signers: number; steps: ShowStep[]; createdAt: number };

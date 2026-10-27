@@ -2,27 +2,30 @@
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { File, Paths } from 'expo-file-system';
 import { apiOrigin } from './api';
+import * as Crypto from 'expo-crypto';
+import { VoiceSessionGate, VoiceCanceled } from '../lib/voice-session';
 
 export type VoiceMood = 'idle' | 'thinking' | 'proud' | 'unimpressed' | 'losing-it';
 
 let current: AudioPlayer | null = null;
+const gate = new VoiceSessionGate();
 
-function hash(s: string) {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
-  return (h >>> 0).toString(36);
-}
-
-export async function sayLine(text: string, mood: VoiceMood = 'idle', onEnd?: () => void): Promise<{ model: string | null }> {
+export async function sayLine(text: string, mood: VoiceMood = 'idle', onEnd?: () => void, source?: { artist: string; call: string }): Promise<{ model: string | null }> {
   stopVoice();
-  const file = new File(Paths.cache, `gus-${hash(`${mood}|${text}`)}.mp3`);
+  const request = gate.begin();
+  const digest = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, `${mood}|${source ? `${source.artist}:${source.call}` : text}`);
+  if (!request.active()) throw new VoiceCanceled();
+  const file = new File(Paths.cache, `gus-${digest}.mp3`);
   let model: string | null = null;
-  if (!file.exists) {
-    const res = await fetch(`${apiOrigin()}/api/voice`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text, mood }) });
+  if (source || !file.exists) { // canonical calls always revalidate server scope
+    const res = await fetch(`${apiOrigin()}/api/voice`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(source ? { ...source, mood } : { text, mood }), signal: request.signal });
     if (!res.ok) throw new Error('Gus lost his voice.');
     model = res.headers.get('X-Voice-Model');
-    file.write(new Uint8Array(await res.arrayBuffer()));
+    const audio = new Uint8Array(await res.arrayBuffer());
+    if (!request.active()) throw new VoiceCanceled();
+    file.write(audio);
   }
+  if (!request.active()) throw new VoiceCanceled();
   const player = createAudioPlayer({ uri: file.uri });
   current = player;
   const sub = player.addListener('playbackStatusUpdate', (s) => {
@@ -30,7 +33,7 @@ export async function sayLine(text: string, mood: VoiceMood = 'idle', onEnd?: ()
       sub.remove();
       player.remove();
       if (current === player) current = null;
-      onEnd?.();
+      if (request.active()) onEnd?.();
     }
   });
   player.play();
@@ -38,6 +41,7 @@ export async function sayLine(text: string, mood: VoiceMood = 'idle', onEnd?: ()
 }
 
 export function stopVoice() {
+  gate.cancel();
   if (current) {
     current.pause();
     current.remove();

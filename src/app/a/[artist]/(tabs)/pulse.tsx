@@ -16,15 +16,16 @@ import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import Head from 'expo-router/head';
 import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 import type { Deal, DealLimits, InboxMessage } from '@/lib/types';
 import type { Pulse } from '@/server/pulse';
 import { api } from '@/ui/api';
 import { useArtist } from '@/ui/artist';
+import { DemoRun } from '@/ui/components/DemoRun';
 import { Btn, Empty, Group, ListRow, Row, Section, SkewBar } from '@/ui/components/core';
 import type { GusMood } from '@/ui/components/Gus';
 import { PitchSheet, type PitchTarget } from '@/ui/components/PitchSheet';
@@ -32,6 +33,7 @@ import { ScreenHeader } from '@/ui/components/ScreenHeader';
 import { TAB_BAR_SPACE } from '@/ui/components/TabBar';
 import { T } from '@/ui/components/T';
 import { useToast } from '@/ui/components/Toaster';
+import { SignatureStamp, StatusBanner } from '@/ui/components/Paper';
 import { Roll } from '@/ui/fx/Roll';
 import { deals as dealStore, useDeals } from '@/ui/deals/store';
 import { gus } from '@/ui/gus/store';
@@ -74,7 +76,7 @@ export default function PulseScreen() {
   const { data: inbox } = useApi<{ messages: InboxMessage[] }>(slug ? `/artist/${slug}/inbox` : null, { poll: 8000 });
   const { data: crowd } = useApi<Crowd>(slug ? `/artist/${slug}/crowd` : null);
   const { data: planRes } = useApi<PlanResponse>(slug ? `/artist/${slug}/plan` : null);
-  const { data: dealRes, reload: reloadDeals } = useApi<{ deals: Deal[]; limits: DealLimits }>(slug ? `/artist/${slug}/deals` : null);
+  const { data: dealRes, reload: reloadDeals } = useApi<{ deals: Deal[]; limits: DealLimits }>(slug ? `/artist/${slug}/deals` : null, { poll: 8000 });
   const [pitch, setPitch] = useState<PitchTarget | null>(null);
   const { asking, deal: liveDeal } = useDeals();
   const [busy, setBusy] = useState<string | null>(null);
@@ -83,7 +85,11 @@ export default function PulseScreen() {
 
   const name = state?.artist.name ?? '';
   const messages = inbox?.messages ?? [];
-  const needs = messages.filter((m) => m.action && !m.read).slice(0, 2);
+  // Cards that still need the artist stay on top after they're read: an offer while it's waiting,
+  // Gus's plan for a booked show for a day. Everything else drops to "earlier" once read.
+  const open = (m: InboxMessage) =>
+    m.action?.kind === 'deal' ? dealRes?.deals.some((d) => d.id === m.action?.dealId && d.status === 'waiting') : m.action?.kind === 'show' ? Date.now() - m.createdAt < 86_400_000 : false;
+  const needs = messages.filter((m) => m.action && (!m.read || open(m))).slice(0, 2);
   const rest = messages.filter((m) => !needs.includes(m));
   const unread = messages.filter((m) => !m.read).length;
   const cityName = (id: string) => state?.opened.find((o) => o.city === id)?.name ?? prettyCity(id);
@@ -113,6 +119,8 @@ export default function PulseScreen() {
   }, [slug, unread, reloadState]);
 
   const deals = dealRes?.deals ?? [];
+  // The demo replays Burlington when the demo artist has it, else the city closest to proving.
+  const demoCity = state?.opened.some((o) => o.city === 'burlington-vt') ? 'burlington-vt' : (pulse?.signatures.cities.find((c) => c.toProof > 0)?.city ?? null);
 
   // Gus writes to the room's booking agent; the conversation runs in the deals store, so it
   // keeps going if the artist leaves this screen.
@@ -135,6 +143,10 @@ export default function PulseScreen() {
     if (m.action.kind === 'deal') {
       const d = deals.find((x) => x.id === m.action?.dealId);
       if (d) dealStore.show(d);
+      return;
+    }
+    if (m.action.kind === 'show' && m.action.dealId) {
+      router.push(`/a/${slug}/show?deal=${m.action.dealId}`);
       return;
     }
     if (m.action.kind === 'bounty' && m.action.city) {
@@ -203,6 +215,33 @@ export default function PulseScreen() {
               <Week pulse={pulse} />
             </View>
 
+            {state?.artist.isDemo ? (
+              <View style={{ paddingHorizontal: S.gutter }}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Open Gus's Booking desk" onPress={() => router.push(`/a/${slug}/desk`)} style={{ padding: 20, borderRadius: 24, backgroundColor: '#18131F', borderWidth: 1, borderColor: 'rgba(185,144,255,.3)', gap: 8 }}>
+                  <T v="caption" color={C.purpleHi}>Gus’s booking desk</T>
+                  <T v="title2">Who should share the bill?</T>
+                  <T v="footnote" color={C.text2}>Pick support that fits your sound and the night. Review the fee and date before anything goes out.</T>
+                  <T v="footnote" color={C.purpleHi}>Try a practice show →</T>
+                </Pressable>
+              </View>
+            ) : null}
+            {state?.artist.isDemo && demoCity ? (
+              <View style={{ paddingHorizontal: S.gutter }}>
+                <DemoRun
+                  slug={slug}
+                  city={demoCity}
+                  cityName={cityName(demoCity)}
+                  deal={deals.find((d) => d.city === demoCity && d.status !== 'passed' && d.status !== 'declined') ?? null}
+                  onChange={() => {
+                    reloadDeals();
+                    reload();
+                    reloadState();
+                  }}
+                />
+              </View>
+            ) : null}
+
+
             {needs.length ? (
               <View style={{ paddingHorizontal: S.gutter, gap: S.md }}>
                 {needs.map((m) => (
@@ -249,7 +288,7 @@ export default function PulseScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -S.gutter }} contentContainerStyle={{ gap: S.md, paddingHorizontal: S.gutter, paddingVertical: S.sm }}>
                   {pulse.signatures.latest.map((s, i) => (
                     <Animated.View key={`${s.number}-${s.city}`} entering={enterUp(i * 30, 6)}>
-                      <Stub s={s} tilt={i % 2 ? 1.6 : -1.4} />
+                      <SignatureStamp tilt={i % 2 ? 2 : -2} s={{ initials: s.initials, number: s.number, font: s.font, neighborhood: s.neighborhood, place: s.name, when: ago(s.at) }} />
                     </Animated.View>
                   ))}
                 </ScrollView>
@@ -354,67 +393,58 @@ export default function PulseScreen() {
   );
 }
 
-/** This week: a headline, one plain sentence, and the two-week line. The lead card Gus leans on. */
+/**
+ * This week, as Flighty's Passport would put it: the headline, one big number with how it moved,
+ * and two weeks of signatures as bars with today lit. The lead card Gus leans on.
+ */
 function Week({ pulse }: { pulse: Pulse }) {
   const s = pulse.signatures;
   const diff = s.week - s.lastWeek;
   return (
-    <View style={{ backgroundColor: C.cardHi, borderRadius: 22, borderCurve: 'continuous', padding: S.lg, gap: S.md }}>
-      <T v="footnote" color={C.amber} style={{ fontWeight: '600' }}>
-        This week
-      </T>
-      <Roll text={headline(pulse)} by="word" style={{ fontFamily: F.displayBold, fontSize: 30, lineHeight: 34, color: C.text, letterSpacing: -0.6 }} />
-      <T v="callout" color={C.text2}>
-        <T v="callout" style={{ fontWeight: '600' }}>
-          {s.week === 1 ? '1 person' : `${s.week} people`} signed
+    <View style={{ backgroundColor: C.cardHi, borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.lg }}>
+      <View style={{ gap: S.xs }}>
+        <T v="footnote" color={C.amber} style={{ fontWeight: '600' }}>
+          This week
         </T>
-        {s.lastWeek ? (diff > 0 ? `, ${diff} more than last week.` : diff < 0 ? `, ${-diff} fewer than last week.` : ', same as last week.') : '.'}
-        {s.cities[0]?.week && s.cities[0].toProof > 0 ? ` Most from ${s.cities[0].name}.` : ''}
-      </T>
-      {s.daily.some(Boolean) ? <Trend daily={s.daily} /> : null}
+        <Roll text={headline(pulse)} by="word" style={{ fontFamily: F.displayBold, fontSize: 28, lineHeight: 34, color: C.text, letterSpacing: -0.6 }} />
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: S.md }}>
+        <Roll text={String(s.week)} style={{ fontFamily: F.displayBlack, fontSize: 56, lineHeight: 62, color: C.text, letterSpacing: -1.5, fontVariant: ['tabular-nums'] }} />
+        <View style={{ paddingBottom: 9, gap: 1, flexShrink: 1 }}>
+          <T v="headline">{s.week === 1 ? 'person signed' : 'people signed'}</T>
+          {s.lastWeek ? (
+            <T v="footnote" color={diff > 0 ? C.good : diff < 0 ? C.text3 : C.text2} style={{ fontWeight: '600' }}>
+              {diff > 0 ? `↑ ${diff} on last week` : diff < 0 ? `↓ ${-diff} on last week` : 'Same as last week'}
+            </T>
+          ) : null}
+        </View>
+      </View>
+      {s.daily.some(Boolean) ? <Bars daily={s.daily} /> : null}
+      {s.cities[0]?.week && s.cities[0].toProof > 0 ? (
+        <T v="footnote" color={C.text2}>
+          Most came from {s.cities[0].name}.
+        </T>
+      ) : null}
     </View>
   );
 }
 
-/** Two weeks of signatures as a soft area line, today marked. */
-function Trend({ daily }: { daily: number[] }) {
-  const [w, setW] = useState(0);
-  const h = 56;
-  const path = useMemo(() => {
-    if (!w) return null;
-    const max = Math.max(1, ...daily);
-    const pts = daily.map((d, i) => [(i / (daily.length - 1)) * w, h - 4 - (d / max) * (h - 12)] as const);
-    // Catmull-Rom through the points, as cubic Béziers: smooth without overshooting much.
-    let line = `M ${pts[0][0]} ${pts[0][1]}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const [x0, y0] = pts[Math.max(0, i - 1)];
-      const [x1, y1] = pts[i];
-      const [x2, y2] = pts[i + 1];
-      const [x3, y3] = pts[Math.min(pts.length - 1, i + 2)];
-      line += ` C ${x1 + (x2 - x0) / 6} ${y1 + (y2 - y0) / 6}, ${x2 - (x3 - x1) / 6} ${y2 - (y3 - y1) / 6}, ${x2} ${y2}`;
-    }
-    return { line, area: `${line} L ${w} ${h} L 0 ${h} Z`, last: pts[pts.length - 1] };
-  }, [w, daily]);
+/** Two weeks of signatures as bars, Flighty-style: a quiet past, today in full colour. */
+function Bars({ daily }: { daily: number[] }) {
+  const max = Math.max(1, ...daily);
+  const h = 64;
   return (
-    <View style={{ gap: 4 }} accessible accessibilityLabel={`Signatures over two weeks, ${daily[daily.length - 1]} today`}>
-      <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ height: h }}>
-        {path ? (
-          <Svg width={w} height={h}>
-            <Defs>
-              <LinearGradient id="trend" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor={C.fans} stopOpacity={0.35} />
-                <Stop offset="1" stopColor={C.fans} stopOpacity={0} />
-              </LinearGradient>
-            </Defs>
-            <Path d={path.area} fill="url(#trend)" />
-            <Path d={path.line} stroke={C.fans} strokeWidth={2} fill="none" strokeLinecap="round" />
-            <Circle cx={path.last[0] - 4} cy={path.last[1]} r={4} fill={C.text} stroke={C.fans} strokeWidth={2} />
-          </Svg>
-        ) : null}
+    <View style={{ gap: 6 }} accessible accessibilityLabel={`Signatures over two weeks, ${daily[daily.length - 1]} today`}>
+      <View style={{ height: h, flexDirection: 'row', alignItems: 'flex-end', gap: 4 }}>
+        {daily.map((d, i) => (
+          <View key={i} style={{ flex: 1, height: Math.max(3, (d / max) * h), borderRadius: 4, borderCurve: 'continuous', backgroundColor: i === daily.length - 1 ? C.purpleHi : d ? 'rgba(180,92,240,0.42)' : C.fill2 }} />
+        ))}
       </View>
       <Row style={{ justifyContent: 'space-between' }}>
         <T v="caption">Two weeks ago</T>
-        <T v="caption">Today</T>
+        <T v="caption" color={C.purpleHi} style={{ fontWeight: '600' }}>
+          Today
+        </T>
       </Row>
     </View>
   );
@@ -433,47 +463,52 @@ function WeekSkeleton() {
 
 type CityRowData = Pulse['signatures']['cities'][number];
 
-/** The payoff: a city crossed 50. Same card shape as the Map's next move, in the proof colour. */
+/** The payoff: a city crossed 50. Flighty's status banner on top, then the one move. */
 function Proved({ cities, deal, asking, onAsk, onPitch }: { cities: CityRowData[]; deal: Deal | null; asking: boolean; onAsk: (id: string) => void; onPitch: (id: string) => void }) {
   const top = cities[0];
   const others = cities.slice(1).map((c) => c.name);
   return (
-    <View style={{ backgroundColor: '#0f1d14', borderRadius: 22, borderCurve: 'continuous', padding: S.lg, gap: S.sm, borderWidth: 1, borderColor: 'rgba(52,199,89,0.3)' }}>
-      <T v="footnote" color={C.good} style={{ fontWeight: '600' }}>
-        Proved it
-      </T>
-      <T style={{ fontFamily: F.displayBold, fontSize: 22, lineHeight: 27, color: C.text, letterSpacing: -0.4 }}>{top.name} wants you.</T>
-      <T v="callout" color={C.text2}>
-        {top.total} people signed{top.hoods.length ? `, most from ${list(top.hoods.slice(0, 2))}` : ''}. That’s enough for a booker to take you seriously.
-        {others.length ? ` ${list(others)} ${others.length > 1 ? 'have' : 'has'} too.` : ''}
-      </T>
-      <View style={{ gap: S.sm, paddingTop: S.sm }}>
-        <Btn tone="scout" full busy={asking} onPress={() => onAsk(top.city)}>
-          {deal?.status === 'held' ? `Held at ${deal.roomName}` : deal?.status === 'waiting' ? `${deal.roomName} said yes` : deal?.status === 'talking' ? `Talking to ${deal.roomName}` : asking ? 'Gus is asking…' : 'Have Gus ask for a date'}
-        </Btn>
-        <Pressable onPress={() => onPitch(top.city)} accessibilityRole="button" hitSlop={8} style={({ pressed }) => ({ alignSelf: 'center', paddingVertical: 6, opacity: pressed ? 0.5 : 1 })}>
-          <T v="headline" color={C.purpleHi}>
-            Or write to the rooms yourself
-          </T>
-        </Pressable>
-      </View>
+    <View style={{ backgroundColor: C.card, borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.md }}>
+      <StatusBanner tone="good" title={`${top.name} wants you`} body={`${top.total} people signed${top.hoods.length ? `, most from ${list(top.hoods.slice(0, 2))}` : ''}. Enough for a booker to take you seriously.`} />
+      {others.length ? (
+        <T v="footnote" style={{ paddingHorizontal: S.xs }}>
+          {list(others)} {others.length > 1 ? 'have' : 'has'} proved it too.
+        </T>
+      ) : null}
+      <Btn tone="scout" full busy={asking} onPress={() => onAsk(top.city)}>
+        {deal?.status === 'held' ? `Held at ${deal.roomName}` : deal?.status === 'waiting' ? `${deal.roomName} said yes` : deal?.status === 'talking' ? `Talking to ${deal.roomName}` : asking ? 'Gus is asking…' : 'Have Gus ask for a date'}
+      </Btn>
+      <Pressable onPress={() => onPitch(top.city)} accessibilityRole="button" hitSlop={8} style={({ pressed }) => ({ alignSelf: 'center', paddingVertical: 4, opacity: pressed ? 0.5 : 1 })}>
+        <T v="callout" color={C.purpleHi} style={{ fontWeight: '600' }}>
+          Or write to the rooms yourself
+        </T>
+      </Pressable>
     </View>
   );
 }
 
-/** A night Gus is holding, or one waiting on the artist's yes. */
+/** A night Gus is holding, or one waiting on the artist's yes, with its date as a block. */
 function HoldRow({ d, onPress }: { d: Deal; onPress: () => void }) {
-  const date = d.terms ? new Date(`${d.terms.date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+  const at = d.terms ? new Date(`${d.terms.date}T12:00:00`) : null;
   const held = d.status === 'held';
+  const tint = held ? C.good : C.purpleHi;
   return (
     <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => ({ backgroundColor: pressed ? C.fill2 : 'transparent' })}>
       <Row gap={S.md} style={{ paddingHorizontal: S.lg, paddingVertical: S.md }}>
+        <View style={{ width: 48, height: 52, borderRadius: 12, borderCurve: 'continuous', backgroundColor: held ? 'rgba(48,209,88,0.14)' : 'rgba(155,48,224,0.18)', alignItems: 'center', justifyContent: 'center' }}>
+          <T style={{ fontFamily: F.head, fontWeight: '700', fontSize: 11, color: tint, letterSpacing: 0.4 }}>{at ? at.toLocaleDateString(undefined, { month: 'short' }).toUpperCase() : '—'}</T>
+          <T style={{ fontFamily: F.displayBold, fontSize: 20, lineHeight: 24, color: C.text, fontVariant: ['tabular-nums'] }}>{at ? at.getDate() : ''}</T>
+        </View>
         <View style={{ flex: 1, gap: 2 }}>
-          <T v="body" numberOfLines={1}>
-            {d.roomName}, {d.cityName}
+          <T v="headline" numberOfLines={1}>
+            {d.roomName}
           </T>
-          <T v="footnote" numberOfLines={1} color={held ? C.good : C.fans}>
-            {date} · {held ? `Held, $${d.payment?.amount ?? 0} paid (test)` : d.status === 'talking' ? 'Gus is talking to them' : 'Waiting on you'}
+          <T v="footnote" numberOfLines={1}>
+            {d.cityName}
+            {at ? ` · ${at.toLocaleDateString(undefined, { weekday: 'long' })}` : ''}
+          </T>
+          <T v="footnote" numberOfLines={1} color={tint} style={{ fontWeight: '600' }}>
+            {held ? `Held · $${d.payment?.amount ?? 0} deposit paid (test)` : d.status === 'talking' ? 'Gus is talking to them' : 'Waiting on your OK'}
           </T>
         </View>
         <Icon name="chevron" size={14} color={C.text3} />
@@ -482,66 +517,42 @@ function HoldRow({ d, onPress }: { d: Deal; onPress: () => void }) {
   );
 }
 
-/** One city's march to proof: where it stands, what moved this week, and the next move. */
+/** One city's march to proof: a ring that fills to 50, what moved this week. */
 function CityProgress({ c, onPress }: { c: CityRowData; onPress: () => void }) {
-  const proven = c.toProof === 0;
   const pct = Math.min(1, c.total / PROOF);
+  const r = 17;
+  const len = 2 * Math.PI * r;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${c.name}. ${proven ? `Proven, ${c.total} signed. Opens the pitch.` : `${c.toProof} to go. Opens the poster.`} ${c.week} this week.`}
+      accessibilityLabel={`${c.name}. ${c.toProof} to go. Opens the poster. ${c.week} this week.`}
       onPress={onPress}
       style={({ pressed }) => ({ backgroundColor: pressed ? C.fill2 : 'transparent' })}
     >
-      <View style={{ paddingHorizontal: S.lg, paddingVertical: S.md, gap: 10 }}>
-        <Row gap={S.md}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <T v="body" numberOfLines={1}>
-              {c.name}
-            </T>
-            <T v="footnote" numberOfLines={1} color={proven ? C.good : C.text2}>
-              {proven ? 'Proven. Ready to pitch venues' : `${c.toProof} more to prove it`}
-            </T>
-          </View>
-          {/* This week's movement, stacked so the row never truncates. */}
-          {c.week ? (
-            <View style={{ alignItems: 'flex-end' }}>
-              <T v="headline" color={C.fans} style={{ fontVariant: ['tabular-nums'] }}>
-                +{c.week}
-              </T>
-              <T v="caption">this week</T>
-            </View>
-          ) : null}
-          <Icon name="chevron" size={14} color={C.text3} />
-        </Row>
-        <View style={{ height: 4, borderRadius: 2, backgroundColor: C.fill, overflow: 'hidden' }}>
-          <View style={{ width: `${pct * 100}%`, height: 4, borderRadius: 2, backgroundColor: proven ? C.good : C.fans }} />
+      <Row gap={S.md} style={{ paddingHorizontal: S.lg, paddingVertical: S.md }}>
+        <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+          <Svg width={44} height={44} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
+            <Circle cx={22} cy={22} r={r} stroke={C.fill} strokeWidth={4} fill="none" />
+            <Circle cx={22} cy={22} r={r} stroke={C.fans} strokeWidth={4} fill="none" strokeLinecap="round" strokeDasharray={`${len * pct} ${len}`} />
+          </Svg>
+          <T style={{ fontFamily: F.head, fontWeight: '700', fontSize: 12, color: C.text, fontVariant: ['tabular-nums'] }}>{c.total}</T>
         </View>
-      </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <T v="headline" numberOfLines={1}>
+            {c.name}
+          </T>
+          <T v="footnote" numberOfLines={1}>
+            {c.toProof} more to prove it
+          </T>
+        </View>
+        {c.week ? (
+          <View style={{ backgroundColor: 'rgba(48,209,88,0.14)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+            <T style={{ fontFamily: F.head, fontWeight: '700', fontSize: 13, color: C.good, fontVariant: ['tabular-nums'] }}>+{c.week}</T>
+          </View>
+        ) : null}
+        <Icon name="chevron" size={14} color={C.text3} />
+      </Row>
     </Pressable>
-  );
-}
-
-/** A signature as it lands: poster paper, the signer's own handwriting, where they are. */
-function Stub({ s, tilt }: { s: Pulse['signatures']['latest'][number]; tilt: number }) {
-  return (
-    <View
-      accessible
-      accessibilityLabel={`${s.initials}, number ${s.number}, ${s.neighborhood ? `${s.neighborhood}, ` : ''}${s.name}, ${ago(s.at)}`}
-      style={{ width: 148, padding: 12, gap: 6, backgroundColor: C.cream, borderRadius: 14, borderCurve: 'continuous', transform: [{ rotate: `${tilt}deg` }], shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } }}
-    >
-      <T numberOfLines={1} style={{ fontFamily: F.sig[s.font % 3], fontSize: 24, lineHeight: 32, color: s.number % 5 === 0 ? '#1d3a6b' : C.posterInk }}>
-        {s.initials} <T style={{ fontFamily: F.sig[s.font % 3], fontSize: 17, color: C.posterRed }}>#{s.number}</T>
-      </T>
-      <View style={{ height: 1, backgroundColor: 'rgba(58,34,19,0.18)' }} />
-      <T numberOfLines={1} style={{ fontFamily: F.body, fontSize: 13, fontWeight: '600', color: C.posterInk }}>
-        {s.neighborhood ?? s.name}
-      </T>
-      <T numberOfLines={1} style={{ fontFamily: F.body, fontSize: 12, color: 'rgba(58,34,19,0.6)' }}>
-        {s.neighborhood ? `${s.name} · ` : ''}
-        {ago(s.at)}
-      </T>
-    </View>
   );
 }
 
@@ -584,19 +595,18 @@ function portrait(c: Crowd) {
 /** A note from Gus, like a letter in the pile: who it's from, when, what he thinks, one button. */
 function Note({ m, city, busy, onAct, hi }: { m: InboxMessage; city: string | null; busy: boolean; onAct: () => void; hi?: boolean }) {
   return (
-    <View style={{ backgroundColor: hi ? '#1a1220' : C.card, borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.md, borderWidth: hi ? 1 : 0, borderColor: 'rgba(180,92,240,0.35)' }}>
+    <View style={{ backgroundColor: C.card, borderRadius: R.card, borderCurve: 'continuous', padding: S.lg, gap: S.md, overflow: 'hidden' }}>
       <Row gap={S.sm}>
-        {!m.read ? <View accessibilityLabel="Unread" style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.fans }} /> : null}
-        <T v="footnote" style={{ flex: 1 }}>
-          <T v="footnote" color={C.text} style={{ fontWeight: '600' }}>
-            From Gus
-          </T>
-          {city ? ` · ${city}` : ''} · {ago(m.createdAt)}
+        <T v="footnote" color={hi ? C.purpleHi : C.text} style={{ fontWeight: '600', flex: 1 }} numberOfLines={1}>
+          {hi ? 'Needs you' : 'From Gus'}
+          <T v="footnote">{city ? ` · ${city}` : ''}</T>
         </T>
+        <T v="caption">{ago(m.createdAt)}</T>
+        {!m.read ? <View accessibilityLabel="Unread" style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.purpleHi }} /> : null}
       </Row>
-      <T v="gus">{m.body}</T>
+      <T v="gus" style={{ fontSize: 17, lineHeight: 23 }}>{m.body}</T>
       {m.action ? (
-        <Btn tone={m.action.kind === 'pitch' ? 'action' : 'scout'} full busy={busy} onPress={onAct}>
+        <Btn tone={m.action.kind === 'pitch' ? 'action' : 'scout'} size="sm" busy={busy} onPress={onAct}>
           {m.action.label}
         </Btn>
       ) : null}

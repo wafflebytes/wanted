@@ -36,6 +36,8 @@ export default function ArtistStack() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
           <Stack.Screen name="logbook" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="desk" options={{ presentation: 'fullScreenModal' }} />
+          <Stack.Screen name="show" options={{ presentation: 'modal' }} />
         </Stack>
         <GusOverlay dockBottom={dockBottom} />
         <DealCapsule bottom={dockBottom + 10} />

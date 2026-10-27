@@ -13,13 +13,13 @@ import { cityCount, claimByDevice, proofFor, recentSignatures, wearLevel } from 
 import { config } from './config';
 import { crowdCard } from './crowd';
 import { deviceHash, id } from './crypto';
-import { one, run } from './db';
+import { all, one, run } from './db';
 import { pitchEmail, routeLines, type PitchEvidence } from './gus/agent';
 import { HttpError } from './http';
 import { cityNeighborhoods, rooms as qlooRooms } from './qloo/api';
 import { findMetro, metroById } from './score';
 import { scoreForSound, type ScoutResult } from './sound';
-import { inbox } from './watcher';
+import { inbox } from './inbox';
 
 // ---------- scout cache ----------
 
@@ -216,11 +216,22 @@ export async function posterState(slug: string, metroId: string, deviceToken: st
     played: opened.playedAt ? { at: opened.playedAt, venue: opened.playedVenue } : null,
     rank: score?.rank ?? null,
     bounty: await bountyView(artist, metroId, deviceToken ? deviceHash(deviceToken) : null),
+    show: await heldShow(artist.id, metroId),
     hexes: (city?.hexes ?? []).slice(0, 400).map((h) => {
       const [lat, lon] = cellToLatLng(h.h3);
       return { h3: h.h3, heat: h.heat, lat, lon };
     }),
   };
+}
+
+/** The held date for a city, if any: what signers hear first. Only the room and the night. */
+async function heldShow(artistId: string, metroId: string): Promise<{ room: string; date: string } | null> {
+  const rows = await all<{ body: string }>('select body from deals where artist_id = ? and city = ? order by updated_at desc', [artistId, metroId]);
+  for (const r of rows) {
+    const d = JSON.parse(r.body) as { status: string; roomName: string; terms: { date: string } | null };
+    if (d.status === 'held' && d.terms) return { room: d.roomName, date: d.terms.date };
+  }
+  return null;
 }
 
 // ---------- tour ----------

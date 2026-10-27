@@ -7,6 +7,20 @@ import { env } from './env';
 import { nodeRequire } from './node-require';
 
 export const SCHEMA = [
+  `create table if not exists deal_payment_receipts (id text primary key, artist_id text not null, deal_id text not null, scope_hash text not null, body text not null, created_at integer not null)`,
+  `create table if not exists deal_decisions (id text primary key, artist_id text not null, deal_id text not null, scope_hash text not null, outcome text not null, state text not null, run_token text, lease_until integer, body text not null, updated_at integer not null, unique(artist_id, deal_id))`,
+  `create table if not exists deal_followups (id text primary key, artist_id text not null, deal_id text not null, scope_hash text not null, state text not null, attempts integer not null default 0, run_token text, lease_until integer, error text, updated_at integer not null)`,
+  `create table if not exists gus_call_scopes (call_id text primary key, artist_id text not null, body text not null)`,
+  `create table if not exists ops_attention (id text primary key, artist_id text not null, task_id text not null, opportunity_id text not null, version integer not null, generation integer not null, state text not null, due_at integer not null, body text not null, created_at integer not null, updated_at integer not null)`,
+  `create index if not exists attention_due on ops_attention(state, due_at)`,
+  `create table if not exists ops_agent_tasks (id text primary key, artist_id text not null, opportunity_id text not null, state text not null, generation integer not null, run_token text, lease_until integer, body text not null, updated_at integer not null, unique(artist_id, opportunity_id))`,
+  `create index if not exists agent_tasks_ready on ops_agent_tasks(state, lease_until, updated_at)`,
+  `create table if not exists ops_opportunities (id text primary key, artist_id text not null, version integer not null, body text not null, updated_at integer not null)`,
+  `create table if not exists ops_actions (id text primary key, artist_id text not null, opportunity_id text not null, business_key text unique not null, body text not null, updated_at integer not null)`,
+  `create table if not exists ops_events (id text primary key, opportunity_id text not null, artist_id text not null, source_key text unique not null, body text not null, created_at integer not null)`,
+  `create table if not exists ops_effects (business_key text primary key, artist_id text not null, body text not null, created_at integer not null)`,
+  `create table if not exists gus_jobs (id text primary key, artist_id text not null, city text not null, state text not null, attempts integer not null default 0, lease_until integer, error text, created_at integer not null, updated_at integer not null)`,
+
   `create table if not exists artists (
     id text primary key,
     slug text unique not null,
@@ -252,4 +266,28 @@ export async function kvSet(key: string, value: unknown) {
     'insert into kv(key, value, updated_at) values(?, ?, ?) on conflict(key) do update set value = excluded.value, updated_at = excluded.updated_at',
     [key, JSON.stringify(value), Date.now()],
   );
+}
+
+/** Serialize local writers, and bounded retry on cross-process lock contention.
+ * Business callbacks run once, only after acquiring a write transaction.
+ * Never hold a transaction across a network provider call.
+ */
+let transactionTail: Promise<void> = Promise.resolve();
+export async function transaction<T>(fn: (tx: import('@libsql/client').Transaction) => Promise<T>): Promise<T> {
+  const previous = transactionTail;
+  let release!: () => void;
+  transactionTail = new Promise<void>((resolve) => { release = resolve; });
+  await previous;
+  let tx: import('@libsql/client').Transaction | null = null;
+  try {
+    for (let attempt = 0; !tx; attempt++) {
+      try { tx = await (await db()).transaction('write'); }
+      catch (error) {
+        if (attempt >= 5 || !String(error).includes('SQLITE_BUSY')) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 20 * 2 ** attempt));
+      }
+    }
+    const result = await fn(tx); await tx.commit(); return result;
+  } catch (error) { if (tx) await tx.rollback(); throw error; }
+  finally { tx?.close(); release(); }
 }

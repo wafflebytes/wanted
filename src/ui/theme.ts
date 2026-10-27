@@ -55,8 +55,9 @@ export const HIT = 44;
 
 /**
  * Type system, one voice everywhere:
- * - Archivo Expanded: Wanted's own voice. Screen titles, city names, and the numbers that
- *   matter (scores, signatures, ranks). Wide letterforms read like a tour poster.
+ * - Karl ST Trial Regular: main display titles, with Medium for smaller titles and
+ *   emphasis, and Bold for the wordmark and hero numbers. No synthetic weights.
+ * - Archivo Expanded: printed poster artwork only, matching the server-rendered shares.
  * - SF Pro (system): everything you read or tap. Native, Dynamic Type, no surprises.
  * - SF Pro Rounded: Gus speaking. Warm and solid, never light or italic.
  * - Chivo Mono: raw evidence only (receipts, API numbers) for people who want to probe.
@@ -65,10 +66,12 @@ export const HIT = 44;
 const SYSTEM_WEB = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif';
 const ROUNDED_WEB = 'ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif';
 export const F = {
-  logo: 'Archivo-ExpandedBlack',
-  display: 'Archivo-ExpandedExtraBold',
-  displayBlack: 'Archivo-ExpandedBlack',
-  displayBold: 'Archivo-ExpandedBold',
+  logo: 'KarlSTTrial-Bold',
+  display: 'KarlSTTrial-Regular',
+  displayBlack: 'KarlSTTrial-Bold',
+  displayBold: 'KarlSTTrial-Medium',
+  poster: 'Archivo-ExpandedExtraBold',
+  posterBlack: 'Archivo-ExpandedBlack',
   head: Platform.select({ web: SYSTEM_WEB, default: undefined }),
   bold: Platform.select({ web: SYSTEM_WEB, default: undefined }),
   body: Platform.select({ web: SYSTEM_WEB, default: undefined }),
@@ -84,6 +87,9 @@ export const F = {
 } as const;
 
 export const FONT_FILES = {
+  'KarlSTTrial-Regular': require('../../assets/fonts/KarlSTTrial-Regular.ttf'),
+  'KarlSTTrial-Medium': require('../../assets/fonts/KarlSTTrial-Medium.ttf'),
+  'KarlSTTrial-Bold': require('../../assets/fonts/KarlSTTrial-Bold.ttf'),
   'Archivo-ExpandedBold': require('../../assets/fonts/Archivo-ExpandedBold.ttf'),
   'Archivo-ExpandedExtraBold': require('../../assets/fonts/Archivo-ExpandedExtraBold.ttf'),
   'Archivo-ExpandedBlack': require('../../assets/fonts/Archivo-ExpandedBlack.ttf'),

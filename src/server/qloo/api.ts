@@ -475,3 +475,16 @@ export function searchPlace(name: string, cityQuery: string, scope?: string) {
     scope,
   });
 }
+
+/** Score ONLY a supplied mapped roster. Contacts and operational evidence never enter this query. */
+export function rankCandidateRoster(sound: SoundEntity[], pool: string[], scope?: string) {
+  if (!sound.length || !pool.length || pool.length > 50 || new Set(pool).size !== pool.length) throw new Error('Invalid supplied roster or taste context.');
+  const { params, body } = signal(sound, { 'filter.type': 'urn:entity:artist', 'filter.results.entities': pool.join(','), take: pool.length });
+  return qloo({
+    path: '/v2/insights', params, body, scope,
+    purpose: 'Cultural fit over the same supplied roster, not locality, availability or draw',
+    trimId: 'roster.affinity.v1',
+    trim: (raw: Json) => (raw.results?.entities ?? []).map((e: Json) => ({ entityId: e.entity_id as string, affinity: typeof e.query?.affinity === 'number' ? e.query.affinity : null })) as { entityId: string; affinity: number | null }[],
+    count: (d) => d.length,
+  });
+}

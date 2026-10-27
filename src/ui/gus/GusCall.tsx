@@ -20,8 +20,15 @@ import { Icon } from '../icons/Icon';
 import { fadeIn, fadeOut } from '../motion';
 import { C, F, S } from '../theme';
 import { sayLine, stopVoice } from '../voice';
+import { VoiceSessionGate } from '@/lib/voice-session';
 
 const CHECK_MS = 12_000;
+
+// Anything that knows a call is coming (the demo) can ask the overlay to check right away.
+const pokes = new Set<() => void>();
+export function checkForCall() {
+  pokes.forEach((f) => f());
+}
 
 const spoken = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
 
@@ -34,16 +41,20 @@ export function GusCallOverlay({ slug }: { slug: string }) {
   const [phase, setPhase] = useState<Phase>('ringing');
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const sessionGate = useRef(new VoiceSessionGate());
+  const session = useRef<ReturnType<VoiceSessionGate["begin"]> | null>(null);
   const handled = useRef(new Set<string>());
 
   // Check in: the server climbs the ladder and hands back a ringing call, if any.
   useEffect(() => {
     if (!slug) return;
+    sessionGate.current.cancel(); stopVoice(); setCall(null);
     let alive = true;
     const check = async () => {
       try {
         const r = await api.get<{ call: GusCall | null }>(`/artist/${slug}/call?hour=${new Date().getHours()}`);
-        if (alive && r.call && r.call.status === 'ringing' && !handled.current.has(r.call.id)) {
+        if (alive && !session.current?.active() && r.call && r.call.status === 'ringing' && !handled.current.has(r.call.id)) {
+          session.current = sessionGate.current.begin();
           setCall(r.call);
           setPhase('ringing');
           setResult(null);
@@ -52,10 +63,12 @@ export function GusCallOverlay({ slug }: { slug: string }) {
       } catch {}
     };
     check();
+    pokes.add(check);
     const t = setInterval(check, CHECK_MS);
     const sub = AppState.addEventListener('change', (s) => s === 'active' && check());
     return () => {
-      alive = false;
+      alive = false; sessionGate.current.cancel(); stopVoice();
+      pokes.delete(check);
       clearInterval(t);
       sub.remove();
     };
@@ -78,6 +91,7 @@ export function GusCallOverlay({ slug }: { slug: string }) {
   if (!call) return null;
 
   const close = () => {
+    sessionGate.current.cancel();
     stopVoice();
     handled.current.add(call.id);
     setCall(null);
@@ -85,33 +99,45 @@ export function GusCallOverlay({ slug }: { slug: string }) {
   const post = (action: 'pickup' | 'decline' | 'yes' | 'no') => api.post<{ call: GusCall; deal: Deal | null }>(`/artist/${slug}/call`, { call: call.id, action });
 
   const pickup = async () => {
-    haptic.tap();
-    setPhase('talking');
-    post('pickup').catch(() => {});
+    const active = session.current;
+    haptic.tap(); setPhase('talking');
+    let current: GusCall;
     try {
-      await sayLine(call.script, 'idle', () => setPhase((p) => (p === 'talking' ? 'asking' : p)));
+      const response = await post('pickup');
+      if (!active?.active()) return;
+      current = response.call;
+      if (current.status !== 'answered') throw new Error('This call is no longer active. Review the current offer in Fan Mail.');
+      setCall(current);
+    } catch (e) {
+      if (active?.active()) { setError(e instanceof Error ? e.message : 'The call could not be opened.'); setPhase('ringing'); }
+      return; // A rejected pickup is not a captions-based permission to decide.
+    }
+    try {
+      await sayLine(current.script, 'idle', () => { if (active?.active()) setPhase(p => p === 'talking' ? 'asking' : p); }, {artist:slug,call:current.id});
     } catch {
-      // No voice: the captions carry it.
-      setPhase('asking');
+      if (active?.active()) setPhase('asking'); // Actual TTS failure may use exact server captions.
     }
   };
   const decline = async () => {
-    haptic.tick();
-    post('decline').catch(() => {});
-    close();
+    const active = session.current; haptic.tick();
+    try { await post('decline'); if (active?.active()) close(); }
+    catch (e) { if (active?.active()) setError(e instanceof Error ? e.message : 'Call decision is unresolved. Review its receipt.'); }
   };
   const answer = async (yes: boolean) => {
+    const active = session.current;
     stopVoice();
     setPhase('paying');
     try {
       const r = await post(yes ? 'yes' : 'no');
+      invalidate(`/artist/${slug}`);
+      if (!active?.active()) return;
       if (yes) haptic.success();
       const d = r.deal;
-      setResult(yes && d?.status === 'held' ? `Done. ${d.roomName} is yours${d.terms ? ` on ${spoken(d.terms.date)}` : ''}. I paid the $${d.payment?.amount ?? d.terms?.deposit} deposit.` : 'Okay. I’ll let them know we’re passing.');
+      setResult(yes && d?.status === 'held' ? `Recorded a simulated hold${d.terms ? ` on ${spoken(d.terms.date)}` : ''}. Test deposit: ${d.payment?.amount ?? d.terms?.deposit}. No real venue agreement or settlement.` :'Recorded that you passed on this simulated offer. Nothing was sent.');
       setPhase('done');
-      invalidate(`/artist/${slug}`);
-      setTimeout(close, 3200);
+      setTimeout(() => { if (active?.active()) close(); }, 3200);
     } catch (e) {
+      if (!active?.active()) return;
       setError(e instanceof Error ? e.message : 'That didn’t go through.');
       setPhase('asking');
     }
@@ -163,7 +189,7 @@ export function GusCallOverlay({ slug }: { slug: string }) {
         </View>
       ) : phase === 'talking' || phase === 'asking' || phase === 'paying' ? (
         <View style={{ width: '100%', maxWidth: 440, gap: S.sm }}>
-          <Choice primary label={phase === 'paying' ? 'Paying…' : 'Yes, pay it'} onPress={() => answer(true)} disabled={phase === 'paying'} />
+          <Choice primary label={phase === 'paying' ? 'Paying…' : 'Yes, record test deposit'} onPress={() => answer(true)} disabled={phase === 'paying' || phase === 'talking'} />
           <Choice label="No, pass" onPress={() => answer(false)} disabled={phase === 'paying'} />
           <Pressable accessibilityRole="button" onPress={decline} hitSlop={8} style={{ alignSelf: 'center', minHeight: 44, justifyContent: 'center' }}>
             <T v="footnote" color={C.text3}>
