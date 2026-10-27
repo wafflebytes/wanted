@@ -132,6 +132,7 @@ h1 { font: 800 21px/1.15 var(--display); letter-spacing: -0.01em; margin: 2px 2p
 .dots i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--wanted); margin-right: 4px; animation: dot 1.2s var(--ease) infinite; }
 .dots i:nth-child(2) { animation-delay: 160ms; } .dots i:nth-child(3) { animation-delay: 320ms; }
 @keyframes dot { 0%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+.stage { display: block; font-size: 11.5px; color: var(--ink-3); margin-top: 4px; }
 .note { font-size: 12.5px; color: var(--ink-2); margin: 10px 4px 0; }
 @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
 </style>
@@ -143,7 +144,7 @@ h1 { font: 800 21px/1.15 var(--display); letter-spacing: -0.01em; margin: 2px 2p
     <div><b>Gus</b><span id="who">Your tour manager</span></div>
     <button class="open" id="open">Open in Wanted ↗</button>
   </div>
-  <div id="body"><div class="wait view"><img src="__ORIGIN__/art/gus-thinking.webp" alt="" /><div><b>Looking it up</b><span class="dots"><i></i><i></i><i></i></span></div></div></div>
+  <div id="body"><div class="wait view"><img src="__ORIGIN__/art/gus-thinking.webp" alt="" /><div><b>Looking it up</b><span class="dots"><i></i><i></i><i></i></span><span class="stage" id="stage">Connecting to Claude</span></div></div></div>
 </div>
 <script>
 (() => {
@@ -277,8 +278,11 @@ h1 { font: 800 21px/1.15 var(--display); letter-spacing: -0.01em; margin: 2px 2p
     ({ cities, city, deals, gus, calling })[d.view]?.(d);
   }
 
-  on['ui/notifications/tool-input'] = (p) => { if (p.arguments && p.arguments.act) state.act = p.arguments.act; };
-  on['ui/notifications/tool-result'] = show;
+  // Which step we're on, so a stuck card says where it stuck.
+  const stage = (t) => { const el = document.getElementById('stage'); if (el) el.textContent = t; };
+  let args = null, got = false, toolName = null;
+  on['ui/notifications/tool-input'] = (p) => { args = p.arguments || {}; if (args.act) state.act = args.act; stage('Waiting for Gus’s answer'); };
+  on['ui/notifications/tool-result'] = (r) => { got = true; show(r); };
   on['ui/notifications/tool-cancelled'] = () => oops('Stopped.');
   on['ui/notifications/host-context-changed'] = theme;
   on['ui/resource-teardown'] = () => ({});
@@ -286,11 +290,27 @@ h1 { font: 800 21px/1.15 var(--display); letter-spacing: -0.01em; margin: 2px 2p
   new ResizeObserver(() => notify('ui/notifications/size-changed', { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight })).observe(document.body);
 
   if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark';
-  request('ui/initialize', {
-    protocolVersion: '2026-01-26',
-    appInfo: { name: 'gus-card', version: '1.0.0' },
-    appCapabilities: { availableDisplayModes: ['inline'] },
-  }).then((r) => { theme(r && r.hostContext); notify('ui/notifications/initialized', {}); }).catch(() => {});
+  // Say hello until Claude answers (a frame can load before the host is listening).
+  let hello = false;
+  const init = (tries) => {
+    request('ui/initialize', {
+      protocolVersion: '2026-01-26',
+      appInfo: { name: 'gus-card', version: '1.1.0' },
+      appCapabilities: { availableDisplayModes: ['inline'] },
+    }).then((r) => {
+      if (hello) return;
+      hello = true;
+      const ctx = (r && r.hostContext) || {};
+      theme(ctx);
+      toolName = ctx.toolInfo && ctx.toolInfo.tool && ctx.toolInfo.tool.name;
+      notify('ui/notifications/initialized', {});
+      stage('Waiting for Gus’s answer');
+      // If the result never comes through, ask Gus for it ourselves.
+      setTimeout(() => { if (!got && toolName) { stage('Asking Gus directly'); call(toolName, args || {}, 'Looking it up'); } }, 5000);
+    }, (e) => stage('Claude said no: ' + ((e && e.message) || 'unknown')));
+    setTimeout(() => { if (!hello && tries < 4) init(tries + 1); else if (!hello) stage('Claude never answered'); }, 2500);
+  };
+  init(1);
 })();
 </script>
 </body>

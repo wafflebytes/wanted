@@ -20,7 +20,8 @@ const origin = () => process.env.WANTED_PUBLIC_ORIGIN ?? 'https://trywanted.verc
 /** MCP Apps: every tool's answer also draws as Gus's card inside Claude (src/server/mcp-view.html). */
 const UI_EXT = 'io.modelcontextprotocol/ui';
 const UI_MIME = 'text/html;profile=mcp-app';
-const VIEW_URI = 'ui://wanted/gus-card.html';
+// Versioned: Claude keeps a card's HTML by its address, so a change needs a new one.
+const VIEW_URI = 'ui://wanted/gus-card-v2.html';
 const icons = () => [{ src: `${origin()}/icon.png`, mimeType: 'image/png', sizes: ['512x512'] }];
 
 type Args = Record<string, unknown>;
