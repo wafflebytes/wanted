@@ -433,6 +433,17 @@ export default function CrowdMap(props: CrowdMapProps) {
         }
         layers.push(
           new PathLayer({
+            id: 'route-glow',
+            data: [{ path }],
+            getPath: (d: { path: [number, number][] }) => d.path,
+            getColor: [...ORANGE, dark ? 70 : 55] as [number, number, number, number],
+            getWidth: 26,
+            widthUnits: 'pixels',
+            capRounded: true,
+            jointRounded: true,
+            updateTriggers: { getPath: routeT },
+          }),
+          new PathLayer({
             id: 'route-shadow',
             data: [{ path }],
             getPath: (d: { path: [number, number][] }) => d.path,
@@ -575,8 +586,12 @@ export default function CrowdMap(props: CrowdMapProps) {
       );
     }
 
+    // On Tour the run is the only story: the heat, the pins and the fans step aside, and the
+    // route glows on a quiet map (Bump's roadtrip, Anydistance's routes).
+    const tour = !city && !!props.route?.length;
+    const QUIET = new Set(['country-hex', 'sleeper-ring', 'sleeper-pin', 'metros', 'opened-pins', 'claim-ripple', 'claims']);
     overlay.current.setProps({
-      layers: layers as never,
+      layers: (tour ? (layers as { id: string }[]).filter((l) => !QUIET.has(l.id)) : layers) as never,
       onClick: (info: { layer?: { id: string } | null; object?: unknown }) => {
         if (!info.object || !info.layer) return;
         const id = info.layer.id;

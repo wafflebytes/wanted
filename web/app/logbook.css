@@ -53,17 +53,40 @@ html.on-log { --page: #15130F; --rule: rgba(140, 170, 220, 0.07); --margin: rgba
 .lb-mandate b { color: var(--ink); font-weight: 650; font-variant-numeric: tabular-nums; }
 .lb-mandate .btn { margin-top: 4px; }
 
-/* On the shelf: earned things stand lit on a wooden ledge; the rest are shadows with how to get them. */
-.lb-shelf { margin: 4px 0 8px; animation: rise var(--t-enter) var(--ease) 60ms both; }
-.lb-shelf ul { list-style: none; display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 calc(-1 * var(--gutter)); padding: 4px var(--gutter) 6px; scrollbar-width: none;
-  background: linear-gradient(#7A5534, #4A321F) 0 84px / 100% 9px no-repeat, linear-gradient(rgba(0, 0, 0, 0.35), transparent) 0 93px / 100% 10px no-repeat; }
-.lb-shelf ul::-webkit-scrollbar { display: none; }
-.lb-shelf li { flex: none; width: 112px; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
-.lb-shelf li .art { margin-bottom: 14px; filter: brightness(0) opacity(0.22); transition: filter var(--t-fade); }
-.lb-shelf li.won .art { filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.4)); animation: shelf-in var(--t-hero) var(--ease) both; animation-delay: calc(var(--i) * 70ms + 160ms); }
-@keyframes shelf-in { from { opacity: 0; transform: translateY(-10px) scale(0.94); } }
-.lb-shelf b { font: 700 14px/1.15 var(--display); letter-spacing: -0.01em; }
-.lb-shelf em { font-style: normal; font-size: 12px; line-height: 1.25; color: var(--ink-3); }
-.lb-shelf li.won em { color: var(--ink-2); }
-:root[data-theme="light"] .lb-shelf li:not(.won) .art { filter: brightness(0) opacity(0.12); }
-@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .lb-shelf li:not(.won) .art { filter: brightness(0) opacity(0.12); } }
+/* Milestones, folded: a row with what you have and what's next; open it for the case. */
+.ms { margin: 4px 0 18px; border-radius: 22px; background: var(--raise); box-shadow: var(--bevel), var(--drop); animation: rise var(--t-enter) var(--ease) 60ms both; }
+.ms-row { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 14px; text-align: left; }
+.ms-stack { display: flex; flex: none; padding-left: 10px; }
+.ms-coin { width: 42px; height: 42px; margin-left: -12px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--wanted) 22%, var(--well-bg)), var(--well-bg) 70%); box-shadow: 0 0 0 2.5px var(--raise), inset 0 1px 2px rgba(0, 0, 0, 0.35); z-index: calc(3 - var(--i)); }
+.ms-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ms-txt b { font: 700 16px/1.2 var(--display); letter-spacing: -0.01em; }
+.ms-txt em { font-style: normal; font-size: 13px; line-height: 1.3; color: var(--ink-2); }
+.ms-chev { color: var(--ink-3); transition: transform var(--t-move) var(--ease); }
+.ms.open .ms-chev { transform: rotate(180deg); }
+.ms-case { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--t-enter) var(--ease); }
+.ms.open .ms-case { grid-template-rows: 1fr; }
+.ms-case ul { min-height: 0; overflow: hidden; list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0 10px; }
+.ms.open .ms-case ul { padding-bottom: 12px; }
+.ms-case li { opacity: 0; transform: translateY(8px); transition: opacity var(--t-move) var(--ease), transform var(--t-move) var(--ease); }
+.ms.open .ms-case li { opacity: 1; transform: none; transition-delay: calc(var(--i) * 40ms + 80ms); }
+.ms-piece { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px 10px; border-radius: 16px; text-align: center; }
+.ms-piece.won:active { transform: scale(0.97); }
+.ms-plinth { width: 78px; height: 78px; margin-bottom: 6px; border-radius: 50%; display: grid; place-items: center; background: var(--well-bg); box-shadow: var(--well); }
+.ms-piece.won .ms-plinth { background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--wanted) 26%, var(--well-bg)), var(--well-bg) 72%); }
+.ms-piece.won .art { filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.4)); }
+.ms-piece:not(.won) .art { filter: brightness(0) invert(1) opacity(0.16); }
+.ms-piece b { font: 700 13.5px/1.15 var(--display); letter-spacing: -0.01em; }
+.ms-piece em { font-style: normal; font-size: 11.5px; line-height: 1.25; color: var(--ink-3); }
+.ms-piece.won em { color: var(--ink-2); }
+:root[data-theme="light"] .ms-piece:not(.won) .art { filter: brightness(0) opacity(0.12); }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .ms-piece:not(.won) .art { filter: brightness(0) opacity(0.12); } }
+/* Looking at one: it turns to face you under a warm light. */
+.ms-look { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 24px; background: color-mix(in srgb, var(--page, #0E0D0B) 82%, transparent); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); animation: fade var(--t-move) var(--ease) both; }
+@keyframes fade { from { opacity: 0; } }
+.ms-look-in { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+.ms-look-glow { position: absolute; top: -40px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 150, 70, 0.32), transparent 65%); }
+.ms-look-in .art { position: relative; filter: drop-shadow(0 24px 22px rgba(0, 0, 0, 0.45)); animation: turn var(--t-hero) var(--ease) both; }
+@keyframes turn { from { opacity: 0; transform: perspective(600px) rotateY(-70deg) scale(0.86); } }
+.ms-look-in h3 { font: 800 30px/1.1 var(--display); letter-spacing: -0.03em; margin-top: 8px; }
+.ms-look-in p { color: var(--ink-2); font-size: 15.5px; }
+.ms-look-in .btn { margin-top: 18px; }

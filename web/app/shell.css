@@ -144,13 +144,22 @@
 .vc { position: fixed; left: 50%; bottom: calc(var(--safe-b) + 10px + var(--dock-h) + 12px); z-index: 31; width: calc(100% - 20px); max-width: calc(var(--col) - 20px); transform: translate(-50%, 24px) scale(0.96); transform-origin: 90% 100%; opacity: 0; pointer-events: none; transition: opacity var(--t-move) var(--ease), transform var(--t-enter) var(--ease); }
 .vc.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
 .vc-card { display: flex; flex-direction: column; border-radius: 28px; background: var(--card); box-shadow: var(--shadow-3), var(--rim); max-height: min(74dvh, 640px); overflow: hidden; }
-.vc-top { display: flex; align-items: center; gap: 10px; padding: 12px 12px 4px 14px; flex: none; }
-.vc-cap { flex: 1; font: 700 16px var(--display); }
+.vc-top { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 14px 0 20px; flex: none; }
+.vc-cap { flex: 1; font: 700 13px var(--display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.vc-hush { height: 30px; padding: 0 12px; border-radius: 15px; font: 600 13px var(--body); color: var(--ink-2); background: var(--veil-2); }
 .vc-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 14px; padding: 8px 20px 16px; }
-.vc-q { align-self: flex-end; max-width: 86%; padding: 9px 14px; border-radius: 20px 20px 6px 20px; background: var(--veil-2); color: var(--ink); font-size: 15.5px; line-height: 1.35; animation: rise var(--t-enter) var(--ease) both; }
+.vc-you { font-size: 15.5px; line-height: 1.4; color: var(--ink-2); animation: rise var(--t-enter) var(--ease) both; }
+.vc-you::before { content: "You  "; font: 700 11px var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.vc-listen { color: var(--ink-3); }
+.vc-aside { font: 500 16px/1.4 var(--display); color: var(--ink-2); animation: word 360ms var(--ease) both; }
 .vc-hint { color: var(--ink-2); font-size: 16px; line-height: 1.4; }
-.vc-wave { display: flex; align-items: center; justify-content: center; gap: 4px; height: 56px; }
-.vc-wave i { width: 4px; height: 100%; border-radius: 2px; background: var(--wanted); transition: transform 90ms linear; }
+.vc-fresh { display: flex; flex-direction: column; gap: 12px; }
+.vc-sugs { display: flex; flex-direction: column; gap: 6px; }
+.vc-sug { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 14px 6px 10px; border-radius: 16px; text-align: left; font: 600 15px var(--body); background: var(--bg); animation: rise var(--t-enter) var(--ease) both; animation-delay: calc(var(--i) * 50ms + 80ms); transition: transform var(--t-tap) var(--ease), background-color var(--t-fade); }
+.vc-sug em { font-style: normal; font-weight: 500; color: var(--ink-3); }
+.vc-sug:active { transform: scale(0.98); background: var(--veil-2); }
+.vc-sug.more { color: var(--ink-2); }
+.vc-sug.more svg { width: 28px; color: var(--ink-3); }
 .vc-work { border-radius: 16px; background: var(--bg); }
 .vc-work-row { display: grid; grid-template-columns: 22px 1fr 16px; gap: 10px; align-items: center; width: 100%; min-height: 48px; padding: 8px 12px; text-align: left; }
 .vc-work-txt { display: flex; flex-direction: column; min-width: 0; font-size: 15px; font-weight: 600; }
@@ -168,9 +177,39 @@
 .st-failed .vc-tick { background: var(--no-tint); color: var(--no); }
 .spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink-4); border-top-color: var(--wanted); animation: spin 700ms linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.vc-reply { font: 500 18.5px/1.42 var(--display); letter-spacing: -0.01em; color: var(--ink); text-wrap: pretty; }
-.vc-foot { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--line); }
-.vc-act { animation: rise var(--t-enter) var(--ease) 240ms both; }
+.vc-reply { font: 600 21px/1.36 var(--display); letter-spacing: -0.015em; color: var(--ink); text-wrap: pretty; }
+/* Captions: words land dim, then light as his voice reaches them. */
+.vc-reply.is-saying .sw { color: var(--ink-4); transition: color 160ms var(--ease); }
+.vc-reply.is-saying .sw.said { color: var(--ink); }
+
+/* The voice bar: keyboard · talk key · close. Motion lives only in the talk key. */
+.vc-bar { flex: none; display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 8px; padding: 8px 14px 14px; }
+.vc-bar.is-typing { grid-template-columns: 1fr 48px; padding-top: 12px; border-top: 1px solid var(--line); }
+.vc-side { width: 48px; height: 48px; color: var(--ink-2); }
+.talk-wrap { justify-self: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.talk { position: relative; width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; background: var(--raise); box-shadow: var(--bevel), var(--drop), 0 10px 24px -10px rgba(255, 90, 31, 0.55); transition: transform var(--t-tap) var(--ease); touch-action: none; -webkit-user-select: none; user-select: none; }
+.talk:active { transform: scale(0.94); }
+.talk .gus { position: relative; z-index: 1; }
+.talk-ring { position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--wanted); opacity: 0; transition: transform 90ms linear, opacity var(--t-fade); }
+.talk.is-listening .talk-ring { opacity: 0.9; }
+.talk.is-thinking .talk-ring { opacity: 0.5; border-color: var(--ink-4); border-top-color: var(--wanted); animation: spin 1s linear infinite; }
+.talk-cap { min-height: 15px; font: 600 11.5px var(--body); color: var(--ink-3); }
+
+/* Generative UI: an offer you can edit, then a tap or a hold. */
+.pc { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 20px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); animation: rise var(--t-enter) var(--ease) 260ms both; }
+.pc-k { font: 700 11px var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--wanted-text); }
+.pc-line { font: 600 18px/1.45 var(--display); letter-spacing: -0.01em; }
+.tok { display: inline-flex; align-items: center; gap: 3px; padding: 1px 9px; margin: 0 1px; border-radius: 9px; font: inherit; color: var(--ink); background: var(--veil-2); }
+.tok.edit { color: var(--wanted-text); background: color-mix(in srgb, var(--wanted) 14%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in srgb, var(--wanted) 45%, transparent); transition: background-color var(--t-fade); }
+.tok.edit svg { transform: rotate(90deg); transition: transform var(--t-move) var(--ease); }
+.tok.edit.on svg { transform: rotate(-90deg); }
+.pc-picks { display: flex; flex-wrap: wrap; gap: 6px; }
+.pc-pick { height: 36px; padding: 0 14px; border-radius: 18px; font: 600 14.5px var(--body); background: var(--raise); box-shadow: var(--bevel), var(--drop); animation: rise var(--t-move) var(--ease) both; animation-delay: calc(var(--i) * 40ms); }
+.pc-pick:active { transform: scale(0.96); }
+.hold-key { position: relative; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
+.hold-fill { position: absolute; inset: 0; background: rgba(255, 255, 255, 0.28); transform-origin: left; transform: scaleX(0); transition: transform 160ms var(--ease); }
+.hold-key.is-holding .hold-fill { transform: scaleX(1); transition: transform 700ms linear; }
+.hold-txt { position: relative; }
 .vc-err { color: var(--no); font-weight: 600; }
 .sw { display: inline; animation: word 360ms var(--ease) both; }
 @keyframes word { from { opacity: 0; filter: blur(4px); } }

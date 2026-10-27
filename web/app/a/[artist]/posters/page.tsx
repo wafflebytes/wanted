@@ -288,33 +288,46 @@ function Bounty({ slug, city, artist, b, booked }: { slug: string; city: string;
   };
   const w = b.drawn?.winner;
   return (
-    <section className="pw-sec">
-      <div className="pw-bounty">
-        <span className="kicker">The draw</span>
-        <b className="pw-prize">{b.prize}</b>
-        {w ? (
-          <p>
-            <strong>
-              {w.initials}
-              {w.neighborhood ? ` from ${w.neighborhood}` : ''}
-            </strong>{' '}
-            won it. Signer #{w.number}, picked fairly from {b.totalEntries} chances.
-          </p>
-        ) : !booked ? (
-          <p>
-            {b.signers} {b.signers === 1 ? 'person is' : 'people are'} in. Once a show here is booked, you draw the winner and Gus tells them.
-          </p>
-        ) : (
-          <>
-            <p>
-              {b.signers} people are in and the show is booked. Draw now and Gus tells the winner.
-            </p>
-            <button className="btn light block" disabled={busy} onClick={draw}>
-              {busy ? 'Drawing…' : `Draw ${artist}’s winner`}
-            </button>
-          </>
-        )}
+    <section className="pw-sec pw-draw">
+      <div className="pw-ticket-sh">
+        <div className="pw-ticket">
+          <div className="pw-bounty">
+            <span className="kicker">The draw</span>
+            <b className="pw-prize">{b.prize}</b>
+            {w ? (
+              <p>
+                <strong>
+                  {w.initials}
+                  {w.neighborhood ? ` from ${w.neighborhood}` : ''}
+                </strong>{' '}
+                won it, picked fairly from {b.totalEntries} chances.
+              </p>
+            ) : !booked ? (
+              <p>Once a show here is booked, you draw a winner and Gus tells them.</p>
+            ) : (
+              <p>The show is booked. Draw now and Gus tells the winner.</p>
+            )}
+          </div>
+          <div className="pw-stub" aria-label={w ? `Winner, signer number ${w.number}` : `${b.signers} in the draw`}>
+            {w ? (
+              <>
+                <i>Winner</i>
+                <b>#{w.number}</b>
+              </>
+            ) : (
+              <>
+                <b>{b.signers}</b>
+                <i>{b.signers === 1 ? 'is in' : 'are in'}</i>
+              </>
+            )}
+          </div>
+        </div>
       </div>
+      {booked && !w && (
+        <button className="btn light block pw-draw-go" disabled={busy} onClick={draw}>
+          {busy ? 'Drawing…' : `Draw ${artist}’s winner`}
+        </button>
+      )}
     </section>
   );
 }

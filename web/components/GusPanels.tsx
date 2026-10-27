@@ -10,7 +10,8 @@ import VoiceBeam from 'voice-glow';
 import type { Deal, LogEntry } from '@/lib/types';
 import type { ArtistState, MapData, MapMetroRow } from '@/ui/types';
 import { deals, useDeal } from '@web/lib/deals';
-import { gus, useGus } from '@web/lib/gus';
+import { gus, useGus, type GusAction } from '@web/lib/gus';
+import { haptic } from '@web/lib/haptics';
 import { useApi, useDark } from '@web/lib/hooks';
 import { Approval } from './Approval';
 import { Art, type ArtName } from './Art';
@@ -70,7 +71,7 @@ export function GusPanels({ slug, artist, waiting, entries }: { slug: string; ar
     <>
       <div className={`gp-scrim ${g.panel !== 'none' ? 'on' : ''} p-${g.panel}`} onClick={() => gus.close()} aria-hidden />
       <Tiles open={g.panel === 'tiles'} tiles={tiles} />
-      <VoiceCard open={g.panel === 'voice'} />
+      <VoiceCard open={g.panel === 'voice'} suggest={tiles.filter((t) => ['Ask rooms', 'Catch me up', 'Find an opener'].includes(t.title))} />
       <Tray open={g.panel === 'tray'} slug={slug} waiting={waiting} entries={entries} />
     </>
   );
@@ -107,7 +108,7 @@ function Tiles({ open, tiles }: { open: boolean; tiles: Tile[] }) {
       <div className="tiles-head" style={{ ['--i' as string]: tiles.length }}>
         {open && <Gus mood="talking" size={112} className="tiles-gus" />}
         <h2 className="d-30">What should I do?</h2>
-        <p className="ink-2">Tap a job, or hold my button to talk.</p>
+        <p className="ink-2">Tap a job, or just tell me.</p>
       </div>
       <div className="tiles-ask" style={{ ['--i' as string]: tiles.length - 1 }}>
         <Ask />
@@ -139,14 +140,14 @@ function Stream({ text, every = 45 }: { text: string; every?: number }) {
   );
 }
 
-function VoiceCard({ open }: { open: boolean }) {
+function VoiceCard({ open, suggest }: { open: boolean; suggest: Tile[] }) {
   const g = useGus();
   const dark = useDark();
   const [showWork, setShowWork] = useState(false);
+  const [typing, setTyping] = useState(false);
   const body = useRef<HTMLDivElement>(null);
   const live = g.phase === 'listening' || g.phase === 'thinking';
-  const caption = g.phase === 'listening' ? 'Listening' : g.phase === 'thinking' ? 'Working on it' : g.error ? 'Hmm' : 'Gus';
-  const mood = g.phase === 'listening' ? 'listening' : g.phase === 'thinking' ? 'thinking' : g.speaking ? 'talking' : g.error ? 'worried' : g.answer?.mood === 'proud' ? 'proud' : 'idle';
+  const caption = g.phase === 'listening' ? 'Listening' : g.phase === 'thinking' ? 'Working on it' : g.speaking ? 'Gus' : g.error ? 'Hmm' : g.answer ? 'Gus' : 'Talk to Gus';
   const done = g.steps.filter((s) => s.status !== 'running');
   const running = g.steps.find((s) => s.status === 'running');
   const lastFound = [...done].reverse().find((s) => s.found)?.found ?? null;
@@ -155,85 +156,288 @@ function VoiceCard({ open }: { open: boolean }) {
     setShowWork(false);
     body.current?.scrollTo({ top: 0 });
   }, [g.heard]);
-  const card = (
-    <div className="vc-card">
-      <div className="vc-top">
-        <Gus mood={mood} size={40} sticker={false} level={g.level} />
-        <span className="vc-cap">
-          <SwapLine text={caption} />
-        </span>
-        <button className="icon-btn flat" onClick={() => gus.close()} aria-label="Close">
-          <Icon name="close" size={18} />
-        </button>
-      </div>
-      <div className="vc-body" ref={body}>
-        {g.phase === 'listening' && !g.heard && (
-          <div className="vc-wave" aria-hidden>
-            {Array.from({ length: 24 }, (_, i) => (
-              <i key={i} style={{ transform: `scaleY(${0.15 + g.level * (0.4 + 0.6 * Math.abs(Math.sin(i * 1.7 + g.level * 9)))})` }} />
-            ))}
-          </div>
-        )}
-        {g.heard && (
-          <p className="vc-q" key={g.heard}>
-            {g.heard}
-          </p>
-        )}
-        {!g.heard && g.phase === 'idle' && !g.answer && !g.error && <p className="vc-hint">Ask about your cities, rooms, posters or fans. Or hold my button and talk.</p>}
-        {g.steps.length > 0 && (
-          <div className={`vc-work ${running ? 'is-running' : ''}`}>
-            <button className="vc-work-row" onClick={() => setShowWork((v) => !v)} aria-expanded={showWork}>
-              <span className="vc-tick">{running ? <i className="spin" /> : <Icon name="check" size={13} />}</span>
-              <span className="vc-work-txt">
-                <SwapLine text={running ? running.label : `Checked ${done.length} ${done.length === 1 ? 'thing' : 'things'}`} />
-                {running && lastFound ? <em key={lastFound}>{lastFound}</em> : null}
-              </span>
-              <span className={`vc-chev ${showWork ? 'up' : ''}`} aria-hidden>
-                <Icon name="forward" size={14} />
-              </span>
+  useEffect(() => {
+    if (!open) setTyping(false);
+    else if (g.noMic) setTyping(true);
+  }, [open, g.noMic]);
+  const fresh = !g.heard && g.phase === 'idle' && !g.answer && !g.error;
+  return (
+    <div className={`vc ${open ? 'on' : ''} ${live ? 'is-live' : ''}`} aria-hidden={!open} inert={!open} role="dialog" aria-label="Talk to Gus">
+      <div className="vc-card">
+        <div className="vc-top">
+          <span className="vc-cap">
+            <SwapLine text={caption} />
+          </span>
+          {g.speaking && (
+            <button className="vc-hush" onClick={() => gus.hush()}>
+              Skip
             </button>
-            {showWork && (
-              <ul className="vc-steps">
-                {g.steps.map((s) => (
-                  <li key={s.id} className={`st-${s.status}`}>
-                    <span className="vc-tick">{s.status === 'done' ? <Icon name="check" size={12} /> : s.status === 'failed' ? <Icon name="close" size={12} /> : <i className="spin" />}</span>
-                    <span>{s.label}</span>
-                    {s.found && <em>{s.found}</em>}
-                  </li>
+          )}
+        </div>
+        <div className="vc-body" ref={body} aria-live="polite">
+          {fresh && (
+            <div className="vc-fresh">
+              <p className="vc-hint">{g.noMic ? 'Your mic is off here, so type to me. Or pick one:' : 'Say it like you’d say it to your tour manager.'}</p>
+              <div className="vc-sugs">
+                {suggest.map((t, i) => (
+                  <button key={t.title} className="vc-sug" style={{ ['--i' as string]: i }} onClick={t.run}>
+                    <Art name={t.art} size={28} />
+                    <span>
+                      {t.title} <em>{t.sub}</em>
+                    </span>
+                  </button>
                 ))}
-              </ul>
-            )}
-          </div>
-        )}
-        {g.answer && (
-          <p className="vc-reply" key={g.answer.reply}>
-            <Stream text={g.answer.reply} every={40} />
-          </p>
-        )}
-        {g.answer && <Cities reply={g.answer.reply} delay={g.answer.reply.split(' ').length * 20} />}
-        {g.error && <p className="vc-err">{g.error}</p>}
-      </div>
-      <div className="vc-foot">
-        {g.answer?.action && (
-          <button className="btn hot block vc-act" key={g.answer.reply} onClick={() => gus.act(g.answer!.action!)}>
-            {g.answer.action.label}
-            <Icon name="forward" size={18} />
-          </button>
-        )}
-        <Ask autoFocus={open && g.phase === 'idle' && !g.answer} placeholder={g.answer ? 'Ask a follow-up' : 'Type to Gus'} />
+                <button className="vc-sug more" style={{ ['--i' as string]: suggest.length }} onClick={() => gus.open('tiles')}>
+                  <Icon name="grid" size={18} />
+                  <span>Everything Gus can do</span>
+                </button>
+              </div>
+            </div>
+          )}
+          {g.phase === 'listening' && !g.heard && <p className="vc-you vc-listen">Go ahead, I’m listening…</p>}
+          {g.heard && (
+            <p className="vc-you" key={g.heard}>
+              {g.heard}
+            </p>
+          )}
+          {g.aside && !g.answer && (
+            <p className="vc-aside" key={g.aside}>
+              {g.aside}
+            </p>
+          )}
+          {g.steps.length > 0 && (
+            <div className={`vc-work ${running ? 'is-running' : ''}`}>
+              <button className="vc-work-row" onClick={() => setShowWork((v) => !v)} aria-expanded={showWork}>
+                <span className="vc-tick">{running ? <i className="spin" /> : <Icon name="check" size={13} />}</span>
+                <span className="vc-work-txt">
+                  <SwapLine text={running ? running.label : `Checked ${done.length} ${done.length === 1 ? 'thing' : 'things'}`} />
+                  {running && lastFound ? <em key={lastFound}>{lastFound}</em> : null}
+                </span>
+                <span className={`vc-chev ${showWork ? 'up' : ''}`} aria-hidden>
+                  <Icon name="forward" size={14} />
+                </span>
+              </button>
+              {showWork && (
+                <ul className="vc-steps">
+                  {g.steps.map((s) => (
+                    <li key={s.id} className={`st-${s.status}`}>
+                      <span className="vc-tick">{s.status === 'done' ? <Icon name="check" size={12} /> : s.status === 'failed' ? <Icon name="close" size={12} /> : <i className="spin" />}</span>
+                      <span>{s.label}</span>
+                      {s.found && <em>{s.found}</em>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+          {g.answer && (
+            <p className={`vc-reply ${g.speaking || g.spoken < 1 ? 'is-saying' : ''}`} key={g.answer.reply}>
+              <Captions text={g.answer.reply} spoken={g.speaking ? g.spoken : g.spoken >= 1 ? 1 : -1} />
+            </p>
+          )}
+          {g.answer && <Cities reply={g.answer.reply} delay={g.answer.reply.split(' ').length * 20} />}
+          {g.answer?.action && <Proposal key={`pc${g.answer.reply}`} action={g.answer.action} />}
+          {g.error && <p className="vc-err">{g.error}</p>}
+        </div>
+        <div className={`vc-bar ${typing ? 'is-typing' : ''}`}>
+          {typing ? (
+            <>
+              <Ask autoFocus placeholder={g.answer ? 'Ask a follow-up' : 'Type to Gus'} />
+              <button className="icon-btn vc-side" onClick={() => setTyping(false)} aria-label="Talk instead">
+                <Icon name="mic" size={20} />
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="icon-btn vc-side" onClick={() => setTyping(true)} aria-label="Type instead">
+                <Icon name="keyboard" size={20} />
+              </button>
+              <TalkKey live={live} dark={dark} />
+              <button className="icon-btn vc-side" onClick={() => gus.close()} aria-label="Close">
+                <Icon name="close" size={20} />
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
+}
+
+/**
+ * The one place motion lives while you talk: Gus's face in a lit ring. The beam wraps this key
+ * only, never the words, so your eyes stay on the captions. Tap to talk (he stops when you
+ * pause), tap again to send now; hold to talk and let go when done.
+ */
+function TalkKey({ live, dark }: { live: boolean; dark: boolean }) {
+  const g = useGus();
+  const held = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listening = g.phase === 'listening';
+  const face = (
+    <button
+      className={`talk ${listening ? 'is-listening' : ''} ${g.phase === 'thinking' ? 'is-thinking' : ''}`}
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        held.current = false;
+        if (listening) return;
+        gus.press();
+        timer.current = setTimeout(() => {
+          held.current = true;
+          gus.hold();
+        }, 320);
+      }}
+      onPointerUp={() => {
+        if (timer.current) clearTimeout(timer.current);
+        if (held.current) return gus.release(true);
+        gus.set({ holding: false });
+        gus.talk();
+      }}
+      onPointerCancel={() => timer.current && clearTimeout(timer.current)}
+      onContextMenu={(e) => e.preventDefault()}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          gus.talk();
+        }
+      }}
+      aria-label={listening ? 'Send now' : 'Talk to Gus'}
+    >
+      <span className="talk-ring" style={{ transform: `scale(${1 + g.level * 0.28})` }} />
+      <Gus mood={listening ? 'listening' : g.phase === 'thinking' ? 'thinking' : g.speaking ? 'talking' : 'idle'} size={52} sticker={false} level={g.level} />
+    </button>
+  );
   return (
-    <div className={`vc ${open ? 'on' : ''} ${live ? 'is-live' : ''}`} aria-hidden={!open} inert={!open} role="dialog" aria-label="Talk to Gus">
+    <div className="talk-wrap">
       {live ? (
-        <VoiceBeam level={() => (gus.get().phase === 'listening' ? gus.get().level : 0.25 + 0.1 * Math.sin(performance.now() / 300))} theme={dark ? 'dark' : 'light'} colorVariant="sunset" type="default" style={{ borderRadius: 28 }}>
-          {card}
+        <VoiceBeam level={() => (gus.get().phase === 'listening' ? gus.get().level : 0.25 + 0.1 * Math.sin(performance.now() / 300))} theme={dark ? 'dark' : 'light'} colorVariant="sunset" type="default" style={{ borderRadius: 999 }}>
+          {face}
         </VoiceBeam>
       ) : (
-        card
+        face
+      )}
+      <span className="talk-cap">{listening ? 'Tap to send' : g.phase === 'thinking' ? '' : 'Tap or hold'}</span>
+    </div>
+  );
+}
+
+/**
+ * Gus's reply as captions: words arrive dim, then light up as his voice reaches them (karaoke,
+ * the way live captions work). Without a voice they simply arrive. `spoken` is -1 before the
+ * audio starts, 0 to 1 while he talks, and 1 after.
+ */
+function Captions({ text, spoken }: { text: string; spoken: number }) {
+  const words = text.split(/(\s+)/);
+  const count = words.filter((w) => w.trim()).length;
+  const lit = spoken < 0 ? -1 : Math.ceil(spoken * count * 1.04);
+  let n = 0;
+  return (
+    <>
+      {words.map((w, i) => {
+        if (!w.trim()) return w;
+        const k = n++;
+        return (
+          <span key={`${i}${w}`} className={`sw ${lit < 0 || k < lit ? 'said' : ''}`} style={{ animationDelay: `${k * 28}ms` }}>
+            {w}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/**
+ * Generative UI: what Gus offers to do comes back as a sentence you can edit, not a button
+ * with a fixed label (Dream Machine's prompt chips). The city is a key: tap it for the other
+ * strong cities and the offer rewrites itself. Going somewhere is a tap; anything that
+ * commits (asking a venue) is a short hold, so a stray tap never books a room.
+ */
+function Proposal({ action }: { action: GusAction }) {
+  const slug = gus.get().slug;
+  const map = useApi<MapData>(slug ? `/artist/${slug}/map` : null);
+  const [a, setA] = useState(action);
+  const [pick, setPick] = useState(false);
+  const city = 'name' in a && a.type !== 'deal' ? a.name : null;
+  const others = useMemo(
+    () => (map.data?.metros ?? []).filter((m) => m.rank !== null && m.name !== city).sort((x, y) => (x.rank ?? 99) - (y.rank ?? 99)).slice(0, 4),
+    [map.data, city],
+  );
+  const swap = (m: MapMetroRow) => {
+    haptic('tick');
+    setPick(false);
+    if (a.type === 'city') setA({ type: 'city', id: m.id, name: m.name, label: `Go to ${m.name}` });
+    else if (a.type === 'pitch') setA({ type: 'pitch', id: m.id, name: m.name, label: `Pitch ${m.name}` });
+  };
+  const Tok = ({ children, edit }: { children: React.ReactNode; edit?: boolean }) =>
+    edit && others.length ? (
+      <button className={`tok edit ${pick ? 'on' : ''}`} onClick={() => (haptic('tap'), setPick((v) => !v))} aria-expanded={pick}>
+        {children}
+        <Icon name="chevron" size={12} />
+      </button>
+    ) : (
+      <b className="tok">{children}</b>
+    );
+  let line: React.ReactNode = a.label;
+  if (a.type === 'city') line = <>Take you to <Tok edit>{a.name}</Tok> on the map</>;
+  else if (a.type === 'pitch') line = <>Write the pitch for <Tok edit>{a.name}</Tok></>;
+  else if (a.type === 'deal') line = <>Ask <Tok>{a.label.replace(/^Ask /, '').replace(/ for a date$/, '')}</Tok> in <Tok>{a.name}</Tok> for a date</>;
+  else if (a.type === 'tab') line = <>Open <Tok>{a.label.replace(/^(Go to|Open) /, '')}</Tok></>;
+  const commits = a.type === 'deal';
+  return (
+    <div className="pc">
+      <span className="pc-k">{commits ? 'Gus can do this for you' : 'Want me to'}</span>
+      <p className="pc-line">{line}</p>
+      {pick && (
+        <div className="pc-picks">
+          {others.map((m, i) => (
+            <button key={m.id} className="pc-pick" style={{ ['--i' as string]: i }} onClick={() => swap(m)}>
+              {m.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {commits ? (
+        <HoldKey label="Hold to ask" onDone={() => gus.act(a)} />
+      ) : (
+        <button className="btn hot block" onClick={() => (haptic('tap'), gus.act(a))}>
+          {a.type === 'city' ? `Go to ${a.name}` : a.type === 'pitch' ? 'Write it' : 'Go'}
+          <Icon name="forward" size={18} />
+        </button>
       )}
     </div>
+  );
+}
+
+/** Hold to confirm: the key fills in 700 ms and lands with a firm tap. Let go early and nothing happens. */
+function HoldKey({ label, onDone }: { label: string; onDone: () => void }) {
+  const [on, setOn] = useState(false);
+  const t = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stop = () => {
+    if (t.current) clearTimeout(t.current);
+    setOn(false);
+  };
+  return (
+    <button
+      className={`btn hot block hold-key ${on ? 'is-holding' : ''}`}
+      onPointerDown={(e) => {
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        haptic('tap');
+        setOn(true);
+        t.current = setTimeout(() => {
+          haptic('commit');
+          setOn(false);
+          onDone();
+        }, 700);
+      }}
+      onPointerUp={stop}
+      onPointerCancel={stop}
+      onContextMenu={(e) => e.preventDefault()}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), haptic('commit'), onDone())}
+    >
+      <span className="hold-fill" aria-hidden />
+      <span className="hold-txt">{label}</span>
+    </button>
   );
 }
 

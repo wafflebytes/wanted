@@ -9,11 +9,13 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Deal, LogEntry, Mandate } from '@/lib/types';
 import type { ArtistState } from '@/ui/types';
 import { Art, type ArtName } from '@web/components/Art';
 import { Gus } from '@web/components/Gus';
 import { Icon, type IconName } from '@web/components/Icon';
+import { haptic } from '@web/lib/haptics';
 import { useApi } from '@web/lib/hooks';
 import '../../../logbook.css';
 
@@ -170,8 +172,15 @@ export default function Logbook() {
 type Badge = { art: ArtName; title: string; won: string | null; todo: string };
 const md = (t: number) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-/** The shelf: what you've got so far, as things you'd keep. The rest wait as shadows, with how to get them. */
+/**
+ * Milestones, folded: one row says how many you have and what's next, with the ones you've
+ * earned stacked beside it. Open it for the case (Opal's milestones): earned pieces lit on
+ * their own plinth, the rest as shadows that say how to get them. Tap an earned one and it
+ * turns to face you, with when and where you got it.
+ */
 function Shelf({ opened, deals }: { opened: ArtistState['opened']; deals: Deal[] }) {
+  const [open, setOpen] = useState(false);
+  const [look, setLook] = useState<Badge | null>(null);
   const first = opened.slice().sort((a, b) => a.openedAt - b.openedAt)[0];
   const fifty = opened.find((c) => (c.proof?.signatures ?? 0) >= 50);
   const held = deals.filter((d) => d.status === 'held').sort((a, b) => a.updatedAt - b.updatedAt)[0];
@@ -183,24 +192,59 @@ function Shelf({ opened, deals }: { opened: ArtistState['opened']; deals: Deal[]
     { art: 'sold-out', title: 'Sold out', won: null, todo: 'Fill a room' },
     { art: 'back-again', title: 'Back again', won: back ? back.name : null, todo: 'Get asked back' },
   ];
-  const got = badges.filter((b) => b.won).length;
+  const won = badges.filter((b) => b.won);
+  const next = badges.find((b) => !b.won);
   return (
-    <section className="lb-shelf" aria-label="On the shelf">
-      <div className="section-h">
-        <h2>On the shelf</h2>
-        <span className="ink-3">
-          {got} of {badges.length}
+    <section className={`ms ${open ? 'open' : ''}`} aria-label="Milestones">
+      <button className="ms-row" onClick={() => (haptic('tap'), setOpen((v) => !v))} aria-expanded={open}>
+        <span className="ms-stack" aria-hidden>
+          {won.slice(-3).map((b, i) => (
+            <span key={b.art} className="ms-coin" style={{ ['--i' as string]: i }}>
+              <Art name={b.art} size={34} />
+            </span>
+          ))}
         </span>
+        <span className="ms-txt">
+          <b>
+            {won.length} of {badges.length} milestones
+          </b>
+          <em>{next ? `Next: ${next.title.toLowerCase()}. ${next.todo}.` : 'You’ve got them all.'}</em>
+        </span>
+        <span className="ms-chev" aria-hidden>
+          <Icon name="chevronDown" size={16} />
+        </span>
+      </button>
+      <div className="ms-case">
+        <ul inert={!open}>
+          {badges.map((b, i) => (
+            <li key={b.art} style={{ ['--i' as string]: i }}>
+              <button className={`ms-piece ${b.won ? 'won' : ''}`} disabled={!b.won} onClick={() => (haptic('tap'), setLook(b))} aria-label={b.won ? `${b.title}: ${b.won}` : `${b.title}, not yet: ${b.todo}`}>
+                <span className="ms-plinth">
+                  <Art name={b.art} size={64} />
+                </span>
+                <b>{b.title}</b>
+                <em>{b.won ?? b.todo}</em>
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
-      <ul>
-        {badges.map((b, i) => (
-          <li key={b.art} className={b.won ? 'won' : ''} style={{ ['--i' as string]: i }}>
-            <Art name={b.art} size={84} title={b.title} />
-            <b>{b.title}</b>
-            <em>{b.won ?? b.todo}</em>
-          </li>
-        ))}
-      </ul>
+      {look &&
+        createPortal(
+        <div className="ms-look" role="dialog" aria-label={look.title} onClick={() => setLook(null)}>
+          <div className="ms-look-in">
+            <span className="ms-look-glow" aria-hidden />
+            <Art name={look.art} size={200} />
+            <span className="kicker">Milestone</span>
+            <h3>{look.title}</h3>
+            <p>{look.won}</p>
+            <button className="btn light" onClick={() => setLook(null)}>
+              Back to the logbook
+            </button>
+          </div>
+        </div>,
+          document.body,
+        )}
     </section>
   );
 }

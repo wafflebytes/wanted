@@ -9,6 +9,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode }
 import type { Deal, LogEntry, Mandate } from '@/lib/types';
 import type { ArtistState } from '@/ui/types';
 import { deals, useDeal } from '@web/lib/deals';
+import { haptic } from '@web/lib/haptics';
 import { gus, useGus, type GusAction } from '@web/lib/gus';
 import { useApi } from '@web/lib/hooks';
 import { session } from '@web/lib/session';
@@ -218,7 +219,7 @@ function Dock({ slug, tab, badge }: { slug: string; tab: string; badge: boolean 
     return () => window.removeEventListener('resize', on);
   }, [idx]);
 
-  // Tap: the tiles. Hold: talk.
+  // Tap: talk until a pause. Hold: talk until you let go.
   const held = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const down = (e: React.PointerEvent) => {
@@ -230,6 +231,7 @@ function Dock({ slug, tab, badge }: { slug: string; tab: string; badge: boolean 
       held.current = true;
       gus.hold();
     }, 280);
+    haptic('tap');
   };
   const up = () => {
     if (timer.current) clearTimeout(timer.current);
@@ -257,10 +259,11 @@ function Dock({ slug, tab, badge }: { slug: string; tab: string; badge: boolean 
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            gus.open(g.panel === 'tiles' ? 'none' : 'tiles');
+            if (open) gus.close();
+            else gus.talk();
           }
         }}
-        aria-label="Gus. Tap for actions, hold to talk"
+        aria-label={open ? 'Close Gus' : 'Talk to Gus. Tap and speak, or hold'}
         aria-expanded={open}
       >
         <span className="gus-btn-face">

@@ -1,13 +1,15 @@
 'use client';
 /**
  * Gus on the web: one store for the island, the tiles, the voice card and the tray.
- * Hold the Gus button to talk (MediaRecorder + a level meter); tap it for the action tiles.
+ * Tap the Gus button and talk (he listens until you pause), or hold it and let go when done.
+ * The jobs he can do sit in the voice sheet as suggestions, with the full grid one tap away.
  * Every ask streams from /artist/:slug/gus: what he heard, each lookup, then an answer that
  * carries one action (a city, a tab, a room to ask).
  */
 import { useSyncExternalStore } from 'react';
 import { streamNdjson } from './api';
 import type { GusMood } from '@web/components/Gus';
+import { haptic } from './haptics';
 
 export type GusAction =
   | { type: 'tab'; tab: 'map' | 'tour' | 'pulse' | 'posters'; label: string }
@@ -32,6 +34,12 @@ type State = {
   answer: GusAnswer | null;
   error: string | null;
   speaking: boolean;
+  /** The browser said no to the mic (or has none): the sheet types instead, quietly. */
+  noMic: boolean;
+  /** How far through his spoken reply Gus is, 0 to 1: captions light up word by word with it. */
+  spoken: number;
+  /** A line Gus says while he works ("Let me look at Burlington and Ithaca"). */
+  aside: string | null;
   /** What the island says when Gus isn't mid-ask: set by the shell from deals and the logbook. */
   ambient: { words: string; mood: GusMood; tone: 'idle' | 'live' | 'ask' | 'ok' };
   /** Instant acknowledgement: a short-lived island override ("On it"). */
@@ -50,6 +58,9 @@ let state: State = {
   answer: null,
   error: null,
   speaking: false,
+  noMic: false,
+  spoken: 0,
+  aside: null,
   ambient: { words: 'Watching your cities', mood: 'idle', tone: 'idle' },
   flash: null,
   screen: 'map',
@@ -72,11 +83,13 @@ let meter: { ctx: AudioContext; raf: number; stream: MediaStream } | null = null
 let spoke = false;
 let quietSince: number | null = null;
 let startedAt = 0;
+/** Tapped rather than held: listen until a pause, no finger on the glass. */
+let handsfree = false;
 
 async function startMic() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-    if (!state.holding) {
+    if (!state.holding && !handsfree) {
       stream.getTracks().forEach((t) => t.stop());
       return set({ panel: 'tiles' });
     }
@@ -112,9 +125,11 @@ async function startMic() {
       if (meter) meter.raf = requestAnimationFrame(tick);
     };
     meter = { ctx, raf: requestAnimationFrame(tick), stream };
-    set({ phase: 'listening', panel: 'voice', error: null, answer: null, heard: null, steps: [] });
+    set({ phase: 'listening', panel: 'voice', error: null, answer: null, heard: null, steps: [], aside: null, spoken: 0 });
+    haptic('hold');
   } catch {
-    set({ panel: 'voice', phase: 'answer', error: 'Gus needs the mic to hear you. Allow it in the browser, or type instead.' });
+    handsfree = false;
+    set({ panel: 'voice', phase: 'idle', noMic: true, error: null });
   }
 }
 
@@ -138,6 +153,7 @@ let finishing = false;
 async function finish(released: boolean) {
   if (finishing || state.phase !== 'listening') return;
   finishing = true;
+  handsfree = false;
   const short = Date.now() - startedAt < 500 || !spoke;
   const blob = await stopMic();
   finishing = false;
@@ -146,6 +162,7 @@ async function finish(released: boolean) {
     if (released) return set({ phase: 'idle', panel: 'tiles' });
     return set({ phase: 'answer', error: 'I didn’t catch that. Hold me and talk, or type.' });
   }
+  haptic('heard');
   const form = new FormData();
   form.append('audio', blob, blob.type.includes('mp4') ? 'ask.m4a' : 'ask.webm');
   form.append('screen', state.screen);
@@ -160,27 +177,36 @@ async function speak(text: string, mood: string) {
     const res = await fetch('/api/voice', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text, mood: mood === 'unimpressed' ? 'unimpressed' : mood === 'proud' ? 'proud' : 'idle' }) });
     if (!res.ok) return;
     const url = URL.createObjectURL(await res.blob());
-    audio = new Audio(url);
-    set({ speaking: true });
-    audio.onended = () => set({ speaking: false });
-    await audio.play();
+    const a = new Audio(url);
+    audio = a;
+    set({ speaking: true, spoken: 0 });
+    const follow = () => {
+      if (audio !== a) return;
+      if (a.duration) set({ spoken: Math.min(1, a.currentTime / a.duration) });
+      if (!a.paused && !a.ended) requestAnimationFrame(follow);
+    };
+    a.onplay = () => requestAnimationFrame(follow);
+    a.onended = () => set({ speaking: false, spoken: 1 });
+    await a.play();
   } catch {
-    set({ speaking: false });
+    set({ speaking: false, spoken: 1 });
   }
 }
 
 // ---------- asks
 async function send(body: FormData | { text: string; screen: string }) {
   const id = ++run;
-  set({ phase: 'thinking', panel: state.panel === 'none' ? 'voice' : state.panel, error: null, answer: null, steps: [], heard: body instanceof FormData ? null : body.text });
+  set({ phase: 'thinking', panel: state.panel === 'none' || state.panel === 'tiles' ? 'voice' : state.panel, error: null, answer: null, steps: [], aside: null, spoken: 0, heard: body instanceof FormData ? null : body.text });
   let answer: GusAnswer | null = null;
   let failed: string | null = null;
   try {
     await streamNdjson<{ type: string; text?: string; step?: GusStep; answer?: GusAnswer; error?: string }>(`/artist/${state.slug}/gus?stream=1`, body, (e) => {
       if (id !== run) return;
       if (e.type === 'heard') set({ heard: e.text ?? '' });
+      else if (e.type === 'say' && e.text) set({ aside: e.text });
       else if (e.type === 'step' && e.step) {
         const s = e.step;
+        if (s.status === 'done') haptic('step');
         const i = state.steps.findIndex((x) => x.id === s.id);
         set({ steps: i < 0 ? [...state.steps, s] : state.steps.map((x, j) => (j === i ? s : x)) });
       } else if (e.type === 'answer' && e.answer) answer = e.answer;
@@ -190,9 +216,13 @@ async function send(body: FormData | { text: string; screen: string }) {
     failed = e instanceof Error ? e.message : 'Gus lost the thread.';
   }
   if (id !== run) return;
-  if (failed || !answer) return set({ phase: 'answer', error: failed ?? 'Gus lost the thread.' });
+  if (failed || !answer) {
+    haptic('error');
+    return set({ phase: 'answer', error: failed ?? 'Gus lost the thread.' });
+  }
   const a = answer as GusAnswer;
-  set({ phase: 'answer', answer: a });
+  haptic('answer');
+  set({ phase: 'answer', answer: a, spoken: 0 });
   speak(a.reply, a.mood);
   // Still holding when the answer lands: he just takes you there (links always ask first).
   if (state.holding && a.action && a.action.type !== 'link') act(a.action);
@@ -201,6 +231,9 @@ async function send(body: FormData | { text: string; screen: string }) {
 function act(a: GusAction) {
   set({ panel: 'none', phase: 'idle', answer: null });
   navigate(a);
+  // Say what he just did, where you'll look: the island.
+  const did = a.type === 'city' ? `Opened ${a.name}` : a.type === 'pitch' ? `Writing ${a.name}’s pitch` : a.type === 'deal' ? `Asking ${a.label.replace(/^Ask /, '').replace(/ for a date$/, '')}` : a.type === 'tab' ? `Here’s ${a.label.replace(/^(Go to|Open) /, '')}` : null;
+  if (did) gus.flash(did, 2400);
 }
 
 export const gus = {
@@ -219,6 +252,19 @@ export const gus = {
   press() {
     set({ holding: true });
   },
+  /** Tap to talk: open the sheet and listen until a pause. Tapping again sends it now. */
+  talk() {
+    if (state.phase === 'listening') return void finish(false);
+    audio?.pause();
+    set({ speaking: false, panel: 'voice' });
+    handsfree = true;
+    startMic();
+  },
+  /** Stop his voice mid-sentence (the captions finish at once). */
+  hush() {
+    audio?.pause();
+    set({ speaking: false, spoken: 1 });
+  },
   /** Held long enough: open the mic. */
   hold() {
     audio?.pause();
@@ -227,7 +273,12 @@ export const gus = {
   },
   release(wasHold: boolean) {
     set({ holding: false });
-    if (!wasHold) return set({ panel: state.panel === 'tiles' ? 'none' : 'tiles' });
+    if (!wasHold) {
+      // Voice first: a tap talks. Tapping again sends what he heard; on an open sheet it closes.
+      if (state.phase === 'listening') return void finish(false);
+      if (state.panel === 'voice' || state.panel === 'tiles') return gus.close();
+      return gus.talk();
+    }
     if (state.phase === 'listening') finish(true);
   },
   ask(text: string) {

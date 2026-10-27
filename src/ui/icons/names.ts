@@ -79,6 +79,8 @@ export const ICON_NAMES = {
   mail: 'sms',
   danger: 'danger',
   idea: 'lamp-charge',
+  keyboard: 'keyboard',
+  grid: 'element-3',
 } as const;
 
 export type IconName = keyof typeof ICON_NAMES;

@@ -75,6 +75,8 @@ import { variants as i_sort } from 'mx-icons/components/sort';
 import { variants as i_mail } from 'mx-icons/components/sms';
 import { variants as i_danger } from 'mx-icons/components/danger';
 import { variants as i_idea } from 'mx-icons/components/lamp-charge';
+import { variants as i_keyboard } from 'mx-icons/components/keyboard';
+import { variants as i_grid } from 'mx-icons/components/element-3';
 
 type V = { variant: string; Component: ComponentType<{ size?: number | string; color?: string }> }[];
 const pick = (v: V) => {
@@ -158,4 +160,6 @@ export const MX = {
   mail: pick(i_mail),
   danger: pick(i_danger),
   idea: pick(i_idea),
+  keyboard: pick(i_keyboard),
+  grid: pick(i_grid),
 } as const;
