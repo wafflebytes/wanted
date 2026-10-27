@@ -157,13 +157,23 @@ offers, the venue's change letter. Tech pass: an advance desk (email thread per 
 answers with source), places from Qloo ranked per person with hard filters, a settle-up check
 against the door count.
 
+### 3.6b The road (built)
+
+`/a/[artist]/road/[stop]`, from the Tour hero ("18 h to Asheville. Gus found a better way.") and from any drive of 8 h or more in the run list. One long leg, three honest ways, each as the nights between the two shows and one number for what it does to your money:
+
+- **Play the city on the way** (usually Gus's pick). Off the tour, 25–75% along the leg, within ~140 km of the line, the city that loves your sound most (Qloo city score; signers count double). On the demo tour: Burlington to Asheville, 18 h, 4 dark nights. Gus picks Harrisonburg, VA: 1 h out of the way, splits the 12 h first drive, about 80 people at the door. Hold to ask rooms there (real: `deals.ask`, the same agent loop as the map). Shows where that crowd hangs (Qloo places) and an opener with the same crowd.
+- **Drive it**: two days of 9 h, a room halfway.
+- **Fly**: three fares plus borrowed backline, and the honest catch when the van is needed at the next stop ("The van stays in Burlington, and you need it in Charlottesville on Sun."). Struck through, never hidden.
+
+Real: tour dates, km and hours, the city pick and its score, hang spots, openers, the ask. Fixture until wired (labelled on screen as Gus's guesses): fares and flight times, gas price, room rate, the door guess. Tech pass: a fares API for the fly lane, a room-booking hold for the drive lane, door guess from the room's real capacity and the city's signers.
+
 ### 3.7 Next jobs for Gus, by demo value
 
 Ranked by how much real friction they remove times how well they show in two minutes.
 
 | Job | What it looks like | Qloo's part | Rung |
 |---|---|---|---|
-| Fly or drive | A long leg shows two lanes: 11 h in the van vs $214 flight + van shuttle, with what each does to the next day's load-in | none; honest | 0, then 3 to buy |
+| ~~Fly or drive~~ (built as 3.6b, with a third lane: play the city on the way) | A long leg shows two lanes: 11 h in the van vs $214 flight + van shuttle, with what each does to the next day's load-in | none; honest | 0, then 3 to buy |
 | Settle up | After the set: the room's count vs the ticket scanner vs your split, one line if it matches, an amber card if not | none | 0 |
 | Guest list and rider | The four names and the rider go to the room; "sent" is not "acknowledged" until the room says so | none | 2 |
 | Conflict radar | "A Sour Widows show is two blocks away that night": same-night shows that share your crowd, not every show | taste similarity of the other bill | 0 |

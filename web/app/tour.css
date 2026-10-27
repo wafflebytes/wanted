@@ -68,7 +68,10 @@
 .tr-cell { min-width: 0; display: flex; flex-direction: column; padding-right: 8px; }
 .tr-stop + .tr-stop .tr-row { border-top: 1px solid var(--line); }
 .tr-drive { display: flex; align-items: center; gap: 6px; height: 30px; font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
-.tr-drive.long { color: var(--no); }
+.tr-drive.long { color: var(--no); position: relative; text-align: left; }
+.tr-drive.long::after { content: ""; position: absolute; inset: -7px -8px; }
+.tr-drive em { margin-left: 4px; padding: 4px 8px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--wanted) 14%, transparent); color: var(--wanted-text); font: 700 11.5px/1 var(--body); font-style: normal; }
+.tr-drive em + * { color: var(--wanted-text); }
 .tr-stop + .tr-stop .tr-drive + .tr-row { border-top: 0; }
 .tr-row { display: flex; align-items: center; gap: 6px; min-height: 64px; }
 .tr-stop.is-new .tr-row { animation: tr-flash 1600ms var(--ease) both; border-radius: var(--r-s); }
@@ -88,3 +91,10 @@
 
 /* A held night: its row opens the show day. */
 .tr-held { display: inline; font: 700 11px/1 var(--body) !important; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ok-text) !important; margin-right: 2px; }
+
+/* The longest drive, raised into the hero: it opens the road. */
+.th-road { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin-top: 2px; padding: 10px 14px; border-radius: var(--r-m, 16px); text-align: left; background: color-mix(in srgb, var(--wanted) 12%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wanted) 30%, transparent); color: var(--ink); font: 500 14.5px/1.3 var(--body); transition: transform 120ms var(--ease); }
+.th-road:active { transform: translateY(1px); }
+.th-road > :first-child, .th-road > :last-child { flex: none; color: var(--wanted-text); }
+.th-road span { flex: 1; }
+.th-road b { font-weight: 700; }

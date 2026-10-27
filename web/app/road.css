@@ -1,0 +1,86 @@
+/* The road: one long leg. A ride-trace map, three ways as keys with one number each, the
+   nights between the two shows as a strip. Shares .sd-* sections with Show day. */
+
+.rd { width: 100%; max-width: var(--col); margin: 0 auto; padding: calc(var(--safe-t) + var(--header-h) + 8px) var(--gutter) calc(var(--safe-b) + var(--dock-h) + 48px); display: flex; flex-direction: column; gap: 22px; }
+
+.rd-hero { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 4px 4px 0; animation: rise var(--t-enter) var(--ease) both; }
+.rd-back { position: relative; align-self: flex-start; display: grid; place-items: center; width: 36px; height: 36px; margin: 0 0 6px -6px; border-radius: 50%; color: var(--ink-2); background: var(--veil-1, transparent); }
+.rd-back::after { content: ""; position: absolute; inset: -4px; }
+.rd-hero h1 { font: 800 34px/1.02 var(--display); letter-spacing: -0.035em; margin-top: 4px; text-wrap: balance; }
+.rd-hero h1 i { font-style: normal; color: var(--ink-3); font-weight: 700; }
+.rd-stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; font: 550 14px/1.3 var(--body); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.rd-stats b { font: 750 17px/1 var(--display); color: var(--ink); margin-left: 8px; }
+.rd-stats b:first-child { margin-left: 0; }
+.rd-say { margin-top: 8px; font: 500 16px/1.42 var(--body); color: var(--ink); max-width: 38ch; text-wrap: pretty; }
+
+/* The map: a recessed screen with the leg as a lit trace. */
+.rd-art { position: relative; margin: 0; border-radius: var(--r-l); background: var(--well-bg); box-shadow: var(--well); overflow: hidden; animation: rise var(--t-enter) var(--ease) 80ms both; }
+.rd-art svg { display: block; width: 100%; height: auto; }
+.rd-art::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(circle, color-mix(in srgb, var(--ink) 9%, transparent) 1px, transparent 1.2px); background-size: 14px 14px; pointer-events: none; }
+.rd-other { fill: color-mix(in srgb, var(--ink) 22%, transparent); }
+.rd-line, .rd-line-glow { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: rd-draw 900ms var(--ease) 80ms forwards; }
+.rd-line { stroke: var(--ink); stroke-width: 3.5; }
+.rd-line.air { stroke-dasharray: 0.012 0.018; stroke-dashoffset: 0; animation: rd-fade 520ms var(--ease) both; }
+.rd-line-glow { stroke: var(--wanted); stroke-width: 9; opacity: 0.55; }
+.lane-fly .rd-line-glow { stroke: #4C7FD6; animation: rd-fade 520ms var(--ease) both; stroke-dasharray: none; stroke-dashoffset: 0; opacity: 0.35; }
+.lane-drive .rd-line-glow { stroke: var(--ink-3); opacity: 0.3; }
+@keyframes rd-draw { to { stroke-dashoffset: 0; } }
+@keyframes rd-fade { from { opacity: 0; } }
+.rd-end circle { fill: var(--card); stroke: var(--ink); stroke-width: 3; }
+.rd-end text, .rd-via text { font: 700 12.5px var(--body); fill: var(--ink); paint-order: stroke; stroke: var(--well-bg-solid, var(--page)); stroke-width: 4px; stroke-linejoin: round; }
+.rd-via circle { fill: var(--ink-3); transition: r var(--t-move) var(--ease), fill var(--t-move) var(--ease); }
+.rd-via text { fill: var(--ink-3); transition: fill var(--t-move) var(--ease); }
+.rd-via.on circle { fill: var(--wanted); stroke: var(--card); stroke-width: 2.5; animation: rd-pop 420ms var(--ease) 700ms both; }
+.rd-via.on text { fill: var(--wanted-text); }
+@keyframes rd-pop { from { transform: scale(0.4); opacity: 0; } }
+.rd-via.on circle { transform-box: fill-box; transform-origin: center; }
+.rd-half { fill: var(--card); stroke: var(--ink-3); stroke-width: 2; animation: rd-fade 300ms var(--ease) 700ms both; }
+.rd-art figcaption { position: absolute; left: 14px; top: 12px; }
+.rd-times { display: flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums; animation: rd-up 420ms var(--ease) both; }
+.rd-times b { font: 800 28px/1 var(--display); letter-spacing: -0.03em; color: var(--ink); }
+.rd-times em { font: 600 13px/1 var(--body); font-style: normal; color: var(--ink-3); }
+.rd-times i { align-self: center; width: 36px; height: 2px; margin: 0 8px; border-radius: 2px; background: linear-gradient(90deg, var(--ink-3) 50%, transparent 0) 0 0 / 6px 2px; }
+@keyframes rd-up { from { opacity: 0; transform: translateY(6px); filter: blur(3px); } }
+
+/* Three ways: raised keys, the chosen one lit. One number each. */
+.rd-lanes { display: flex; flex-direction: column; gap: 8px; animation: rise var(--t-enter) var(--ease) 140ms both; }
+.rd-lane { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 12px; min-height: 68px; padding: 12px 16px 12px 12px; text-align: left; border-radius: var(--r-m, 18px); background: var(--card); box-shadow: var(--shadow-1), var(--rim); transition: box-shadow var(--t-move) var(--ease), transform 120ms var(--ease), background var(--t-move) var(--ease); }
+.rd-lane:active { transform: translateY(1px); }
+.rd-lane.on { box-shadow: var(--shadow-1), inset 0 0 0 2px var(--ink); }
+.rd-lane-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--veil-2); color: var(--ink-2); transition: background var(--t-move) var(--ease), color var(--t-move) var(--ease); }
+.rd-lane.on .rd-lane-ic { background: var(--ink); color: var(--card); }
+.rd-lane-t { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.rd-lane-t b { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font: 700 16.5px/1.2 var(--display); letter-spacing: -0.01em; color: var(--ink); }
+.rd-lane-t > span { font: 500 13.5px/1.35 var(--body); color: var(--ink-2); text-wrap: pretty; }
+.rd-lane.no .rd-lane-t > span { color: var(--ask-text); }
+.rd-lane.no .rd-net { color: var(--ink-3); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.rd-pick { white-space: nowrap; padding: 3px 7px; border-radius: var(--r-pill); background: var(--wanted); color: #fff; font: 700 10.5px/1 var(--body); font-style: normal; letter-spacing: 0.04em; text-transform: uppercase; }
+.rd-net { font: 800 19px/1 var(--display); letter-spacing: -0.02em; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.rd-net.up { color: var(--ok-text); }
+
+/* The nights between the two shows, as a strip of days. */
+.rd-nights { list-style: none; margin: 0; padding: 12px 8px; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 4px; border-radius: var(--r-l); background: var(--card); box-shadow: var(--shadow-1), var(--rim); }
+.rd-night { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; padding: 8px 2px 10px; border-radius: 14px; text-align: center; animation: rd-up 360ms var(--ease) calc(var(--i) * 60ms) both; }
+.rd-night em { font: 650 11px/1 var(--body); font-style: normal; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.rd-night b { font: 800 20px/1.1 var(--display); color: var(--ink); font-variant-numeric: tabular-nums; }
+.rd-night i { width: 8px; height: 8px; margin: 3px 0 2px; border-radius: 50%; background: var(--line-2); }
+.rd-night strong { font: 700 13px/1.15 var(--body); color: var(--ink); white-space: nowrap; }
+.rd-night span { font: 500 11px/1.2 var(--body); color: var(--ink-3); overflow-wrap: anywhere; }
+.rd-night.k-off strong { color: var(--ink-3); }
+.rd-night.k-off i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line-2); }
+.rd-night.k-drive i { background: var(--ink-2); }
+.rd-night.k-fly i { background: #4C7FD6; }
+.rd-night.k-there { opacity: 0.55; }
+.rd-night.k-there i { background: var(--ink); }
+.rd-night.k-show { background: color-mix(in srgb, var(--wanted) 14%, transparent); }
+.rd-night.k-show i { background: var(--wanted); box-shadow: 0 0 0 4px color-mix(in srgb, var(--wanted) 25%, transparent); }
+.rd-night.k-show strong { color: var(--wanted-text); }
+.rd-plan { padding: 0 6px; font: 600 15px/1.4 var(--body); color: var(--ink); text-wrap: pretty; animation: rd-up 360ms var(--ease) 120ms both; }
+.rd-arrive { display: flex; gap: 10px; align-items: flex-start; padding: 0 6px; font: 500 14.5px/1.4 var(--body); color: var(--ink-2); animation: rd-up 360ms var(--ease) both; }
+.rd-arrive > :first-child { flex: none; margin-top: 1px; color: var(--ink-3); }
+.rd-arrive.no { color: var(--ask-text); }
+.rd-arrive.no > :first-child { color: var(--ask-text); }
+
+.rd-go { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+.rd-go .wide { width: 100%; }
+.rd-fine { text-align: center; font: 500 12.5px/1.3 var(--body); color: var(--ink-3); }

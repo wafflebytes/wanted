@@ -85,6 +85,7 @@ export default function TourPage() {
 
   const fixes = (plan?.roasts ?? []).filter((r) => r.fix && r.card && !skipped.has(r.id)).sort((a, b) => b.severity - a.severity);
   const hours = Math.round((plan?.stops ?? []).reduce((n, s) => n + s.driveHoursFromPrev, 0));
+  const longLeg = (plan?.stops ?? []).slice(1).sort((a, b) => b.driveHoursFromPrev - a.driveHoursFromPrev).find((x) => x.driveHoursFromPrev >= 8) ?? null;
   const first = plan?.stops[0];
   const last = plan?.stops[plan.stops.length - 1];
 
@@ -117,6 +118,15 @@ export default function TourPage() {
         {plan.stops.length} nights · {first!.city} to {last!.city}
       </p>
       <RunStrip stops={plan.stops} moved={moved} />
+      {longLeg && (
+        <button className="th-road" onClick={() => router.push(`/a/${slug}/road/${longLeg.metroId}`)}>
+          <Icon name="van" size={18} />
+          <span>
+            <b>{Math.round(longLeg.driveHoursFromPrev)} h to {longLeg.city}.</b> Gus found a better way.
+          </span>
+          <Icon name="forward" size={14} />
+        </button>
+      )}
       <div className="th-score">
         <Ring value={plan.total} gain={gain} />
         <p>
@@ -181,6 +191,7 @@ export default function TourPage() {
             onLock={() => run({ kind: 'lock', stopIndex: i, locked: !s.locked }, `lock${i}`, s.locked ? `Unlocked ${s.city}` : `Locked ${s.city}`)}
             held={heldIn[s.metroId]?.roomName ?? null}
             onOpen={() => router.push(heldIn[s.metroId] ? `/a/${slug}/show/${heldIn[s.metroId].id}` : `/a/${slug}?city=${s.metroId}`)}
+            onRoad={() => router.push(`/a/${slug}/road/${s.metroId}`)}
           />
         ))}
       </ol>
@@ -239,7 +250,7 @@ function Fix({ r, i, step, busy, disabled, onTake, onSkip }: { r: Roast; i: numb
   );
 }
 
-function Stop({ s, i, isNew, busy, held, onLock, onOpen }: { s: TourStop; i: number; isNew: boolean; busy: boolean; held: string | null; onLock: () => void; onOpen: () => void }) {
+function Stop({ s, i, isNew, busy, held, onLock, onOpen, onRoad }: { s: TourStop; i: number; isNew: boolean; busy: boolean; held: string | null; onLock: () => void; onOpen: () => void; onRoad: () => void }) {
   const d = day(s.date);
   const long = s.driveHoursFromPrev >= 8;
   return (
@@ -248,12 +259,21 @@ function Stop({ s, i, isNew, busy, held, onLock, onOpen }: { s: TourStop; i: num
         {i + 1}
       </span>
       <div className="tr-cell">
-        {i > 0 && (
-          <span className={`tr-drive ${long ? 'long' : ''}`}>
-            <Icon name="van" size={13} />
-            {s.driveHoursFromPrev < 1 ? 'Under an hour' : `${Math.round(s.driveHoursFromPrev)} h`} in the van
-          </span>
-        )}
+        {i > 0 &&
+          (long ? (
+            // A long drive is a decision, not a fact: it opens the road, where Gus lays out the ways.
+            <button className="tr-drive long" onClick={onRoad}>
+              <Icon name="van" size={13} />
+              {Math.round(s.driveHoursFromPrev)} h in the van
+              <em>Gus has a better way</em>
+              <Icon name="forward" size={12} />
+            </button>
+          ) : (
+            <span className="tr-drive">
+              <Icon name="van" size={13} />
+              {s.driveHoursFromPrev < 1 ? 'Under an hour' : `${Math.round(s.driveHoursFromPrev)} h`} in the van
+            </span>
+          ))}
         <div className="tr-row">
           <button className="tr-main" onClick={onOpen}>
             <span className="tr-what">

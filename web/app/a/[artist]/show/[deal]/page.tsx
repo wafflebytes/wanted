@@ -149,7 +149,7 @@ function Sheet0({ day, setDay, slug, deal }: { day: Day; setDay: (d: Day) => voi
               {open === r.id && r.id === 'dinner' && <Dinner day={day} window={window} />}
               {open === r.id && r.id !== 'dinner' && (
                 <p className="sd-why">
-                  {r.src ? `${WHO_LABEL[r.who] === 'The room' ? day.room : WHO_LABEL[r.who]} said so · ${r.src}` : r.who === 'road' ? `Leaves time for a stop and the border-free route. ${day.road.drive} door to door.` : r.id === 'hang' ? 'Qloo says your crowd here already goes there. Gus will invite the signers.' : 'Gus will do this one for you.'}
+                  {r.src ? `${WHO_LABEL[r.who] === 'The room' ? day.room : WHO_LABEL[r.who]} said so · ${r.src}` : r.who === 'road' ? `Leaves time for a stop and the border-free route. ${day.road.drive} door to door.` : r.id === 'hang' ? 'Your crowd here already goes there. Gus will invite the signers.' : 'Gus will do this one for you.'}
                 </p>
               )}
             </li>

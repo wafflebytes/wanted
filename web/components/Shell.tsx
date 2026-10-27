@@ -255,7 +255,8 @@ function Dock({ slug, tab, badge }: { slug: string; tab: string; badge: boolean 
   const g = useGus();
   const nav = useRef<HTMLElement>(null);
   const [pill, setPill] = useState<{ x: number; w: number } | null>(null);
-  const idx = TABS.findIndex((t) => t.key === tab);
+  // A show's day and a leg of the road live under the tour.
+  const idx = TABS.findIndex((t) => t.key === (tab === 'show' || tab === 'road' ? 'tour' : tab));
   useLayoutEffect(() => {
     const el = nav.current?.querySelectorAll<HTMLAnchorElement>('a')[idx];
     if (!el) return setPill(null);
