@@ -391,6 +391,11 @@ img.gus { -webkit-touch-callout: none; }
 .pblur > i, .pblur > b { position: absolute; inset: 0; }
 .pblur-bottom { bottom: 0; height: calc(var(--safe-b) + var(--dock-h) + 46px); }
 .pblur-bottom > b { background: linear-gradient(to bottom, transparent 20%, color-mix(in srgb, var(--page, var(--bg)) 28%, transparent)); }
+/* Installed to the Home Screen there's no Safari toolbar to hide what scrolls under the dock, so the
+   page settles into its own colour there, like an iOS tab bar's scroll edge. */
+@media (display-mode: standalone) {
+  .pblur-bottom > b { background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--page, var(--bg)) 82%, transparent) 42%, var(--page, var(--bg)) 70%); }
+}
 .pblur-top { top: 0; height: calc(var(--safe-t) + var(--header-h) + 22px); }
 .pblur-top > b { background: none; }
 .pblur-top.off { opacity: 0; }

@@ -232,8 +232,10 @@ function Welcome() {
 
       {step === 'who' && (
         <section className="wl-hero" key="who">
-          <Gus mood="wave" size={220} className="wl-gus" label="Gus, your tour manager" />
-          <span className="wl-tag">Gus, your tour manager</span>
+          <div className="wl-who">
+            <span className="wl-tag">Gus, your tour manager</span>
+            <Gus mood="wave" size={220} className="wl-gus" label="Gus, your tour manager" />
+          </div>
           <h1>Find the cities that want you.</h1>
           <p>I read where your listeners live, put a WANTED poster up in their city, and ask venues for a date once enough of them sign.</p>
           <div className="wl-acts">

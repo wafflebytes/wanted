@@ -37,15 +37,16 @@ const ICON = { ok: 'check', wrong: 'close', unverified: 'info' } as const;
 export function PlainChatbot({ slug, city, name }: { slug: string; city: string; name: string }) {
   const [r, setR] = useState<Report | null>(null);
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState(false);
+  const [err, setErr] = useState<false | 'failed' | 'busy'>(false);
   const run = () => {
     haptic('tap');
     setBusy(true);
     setErr(false);
     api
       .post<Report>(`/artist/${slug}/without-qloo`, { focusCity: city })
-      .then(setR)
-      .catch(() => setErr(true))
+      // No model answered (every key out for the day): say so instead of "0 of 0".
+      .then((x) => (x.rooms.length + x.neighborhoods.length ? setR(x) : setErr('busy')))
+      .catch(() => setErr('failed'))
       .finally(() => setBusy(false));
   };
   const named = r ? [...r.rooms, ...r.neighborhoods] : [];
@@ -64,7 +65,11 @@ export function PlainChatbot({ slug, city, name }: { slug: string; city: string;
               {busy ? 'Asking and checking…' : 'Compare'}
             </button>
             {busy && <p className="plain-wait shimmer">This takes under a minute.</p>}
-            {err && <p className="plain-wait ink-2">That didn’t come back. Try again in a minute.</p>}
+            {err && (
+              <p className="plain-wait ink-2">
+                {err === 'busy' ? 'The chatbot isn’t taking questions right now. Try again later.' : 'That didn’t come back. Try again in a minute.'}
+              </p>
+            )}
           </>
         ) : (
           <>
