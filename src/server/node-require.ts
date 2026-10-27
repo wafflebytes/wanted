@@ -9,7 +9,16 @@ type NodeModule = typeof import('node:module');
 
 let cached: NodeJS.Require | null = null;
 
+/**
+ * A host can hand over modules it bundled itself (the web app does, so Next ships them to
+ * Vercel); anything it doesn't name falls back to Node's resolver.
+ */
+type Provided = Record<string, () => unknown>;
+const provided = () => (globalThis as { __wantedModules?: Provided }).__wantedModules;
+
 export function nodeRequire<T = unknown>(id: string): T {
+  const own = provided()?.[id];
+  if (own) return own() as T;
   if (!cached) {
     const mod = process.getBuiltinModule('node:module') as NodeModule;
     cached = mod.createRequire(`${process.cwd()}/package.json`);

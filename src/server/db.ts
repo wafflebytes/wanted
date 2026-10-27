@@ -212,8 +212,9 @@ let ready: Promise<void> | null = null;
 
 function connect(): Client {
   if (client) return client;
-  const { createClient } = nodeRequire<typeof import('@libsql/client')>('@libsql/client');
   const url = env.databaseUrl;
+  // A remote database (Turso) talks over HTTP and needs no native SQLite binary.
+  const { createClient } = nodeRequire<typeof import('@libsql/client')>(url.startsWith('file:') ? '@libsql/client' : '@libsql/client/web');
   if (url.startsWith('file:')) {
     const fs = process.getBuiltinModule('node:fs') as typeof import('node:fs');
     const path = process.getBuiltinModule('node:path') as typeof import('node:path');
