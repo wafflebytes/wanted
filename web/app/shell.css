@@ -387,7 +387,7 @@ img.gus { -webkit-touch-callout: none; }
 .pblur-bottom { bottom: 0; height: calc(var(--safe-b) + var(--dock-h) + 46px); }
 .pblur-bottom > b { background: linear-gradient(to bottom, transparent 20%, color-mix(in srgb, var(--page, var(--bg)) 28%, transparent)); }
 .pblur-top { top: 0; height: calc(var(--safe-t) + var(--header-h) + 22px); }
-.pblur-top > b { background: linear-gradient(to top, transparent 50%, color-mix(in srgb, var(--page, var(--bg)) 20%, transparent)); }
+.pblur-top > b { background: none; }
 .pblur-top.off { opacity: 0; }
 .pblur-top { transition: opacity var(--t-move) var(--ease); }
 

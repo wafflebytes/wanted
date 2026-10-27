@@ -3,7 +3,7 @@
  * content melts as it reaches the dock (or the header) and reads as "there's more under here".
  */
 // Gentle: the header only needs a hint, the dock a little more.
-const LAYERS = { top: [0.5, 1, 2], bottom: [0.5, 1, 2, 4] };
+const LAYERS = { top: [] as number[], bottom: [0.5, 1, 2, 4] };
 
 export function ProgressiveBlur({ side }: { side: 'top' | 'bottom' }) {
   const layers = LAYERS[side];

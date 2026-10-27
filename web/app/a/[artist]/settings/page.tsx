@@ -62,6 +62,10 @@ export default function Settings() {
     } catch {}
     setFeel({ kind, on });
   }, []);
+  // Settings opens at the top; the shell stays mounted between tabs, so the last tab's scroll would carry over.
+  useEffect(() => {
+    if (!location.hash) window.scrollTo(0, 0);
+  }, []);
   // Arriving from "Change what Gus can do" lands on that section.
   useEffect(() => {
     if (m && location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' });
