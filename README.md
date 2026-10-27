@@ -1,106 +1,123 @@
 # Wanted
 
-**Find out where you're wanted.** Gus is the tour manager indie musicians and comedians can't afford. He reads Qloo's taste graph to find where an act's crowd actually lives, block by block, puts a WANTED poster up in those cities, and when enough fans sign, he books the room and starts selling the show. Built for the Qloo Agentic Hackathon, "Agents, but with taste."
+**Gus is an AI tour manager for independent musicians, and he runs on Qloo's taste graph.** He finds the cities and neighborhoods where an act's sound already has fans. He puts a WANTED poster up there for fans to sign. Once a city proves itself, he asks the rooms that fit for a date, haggles inside the artist's limits and brings back one yes-or-no. Built for the Qloo Agentic Hackathon, "Agents, but with taste."
 
-**Live demo:** https://wanted-qloo.vercel.app (web, works on a phone). The same app runs natively on iPhone from this repo.
+- **Try it:** https://wanted-qloo.vercel.app/a/maya-ortiz?tour=1 (a 90-second guided tour from Gus; works on a phone)
+- **A fan's side:** https://wanted-qloo.vercel.app/w/maya-ortiz/burlington-vt
+- **Gus in Claude or ChatGPT:** add `https://wanted-qloo.vercel.app/api/mcp` as a custom connector
+- **For AI readers:** [`/llms.txt`](https://wanted-qloo.vercel.app/llms.txt) and [`/llms-full.txt`](https://wanted-qloo.vercel.app/llms-full.txt)
 
-## Booking desk: the focused workflow
+## The problem
 
-From **Fan Mail**, open **Who should share the bill?** Or use `/a/maya-ortiz/desk` locally.
+A singer-songwriter with 30,000 monthly listeners has fans in 200 cities and no idea which ten would fill a 150-cap room on a Tuesday. Without a booking agent, the answer comes from a streaming dashboard, guesswork and cold emails sent four to six months out. In Ditto's survey of 1,500 independent artists, 82% said they couldn't afford to tour. On the other side, NIVA found 64% of independent US stages lost money in 2024. A bad guess costs both of them.
 
-Gus compares the same four illustrative candidates against your sound and an example scene, explains the trade-off, and brings back the artist, date and support fee for your exact OK. Nothing is sent until the separate **Save to test inbox** step. No real artist is contacted and no money moves.
+Wanted is for the act in the middle: 5k to 80k monthly listeners, self-managed, playing 100 to 400 cap rooms. Our first focus is the Northeast and Midwest, where cities are close together and DIY rooms are plenty.
 
-Change the scene from left-field to indie/folk without changing the roster or budget. In the tested case, the choice changes from Thundercat to Lucy Dacus. The optional sound-reference check also exposes sensitivity instead of manufacturing confidence. These are taste comparisons, not ticket-sales validation.
+## What Gus does
 
-**Work through a booker’s reply** lets you paste a redacted excerpt, review a suggested date/support budget, correct it and apply only the chosen fields to the practice show. The pasted text stays on the device; only reviewed fields and a fingerprint are posted. This is not verified inbox identity or real booking authority.
+1. **Hears your sound.** Paste a Spotify, Apple Music, Bandcamp or YouTube link. Gus resolves the act and a few artists it sounds like into Qloo entities.
+2. **Finds where you're wanted.** Every US metro is scored for that sound with Qloo's heatmap, then normalized against a panel of 20 other acts, so a city isn't hot just because it's big. "Sleepers" are cities with far more fans than their size predicts. Inside each city he ranks the neighborhoods and the rooms that fit.
+3. **Puts up a poster.** Fans sign a city's WANTED poster with their neighborhood. Each signature is opt-in proof that checks the prediction.
+4. **Asks rooms.** At fifty signatures he writes to the rooms Qloo ranks for the act. He skips rooms that are dark that night and trades letters with each booker inside the artist's limits: the smallest share of the door, the biggest deposit, nights to avoid.
+5. **Brings back one decision.** The offer sits next to the artist's floor. A yes pays a deposit against that exact offer, in test mode. If the terms change, the yes is void.
+6. **Fills the room and settles up.** He tells the signers first and puts posters where the crowd hangs out. He finds an opener who shares the crowd and keeps the day sheet. Afterwards he checks the room's count against the door.
 
-Optional practice controls simulate a changed date/budget or a lost send result. Old approvals stop; the original receipt can be recovered without another message. **Updates** shows the saved record in plain words; technical evidence is available separately. See [the audience/UX decisions](docs/ARTIST-UX.md).
+Gus works when no screen is open. Calls to rooms move forward on the server as time passes, plus a cron sweep (`src/server/ambient.ts`). The first visit lands with work already in progress: a call underway, an offer waiting and a date held, shown in the app's Dynamic Island.
 
-`npm run typecheck`, `npm test`, and `npm run desk:smoke` verify the contracts and live local API. `npm run test:e2e` contains phone-sized browser coverage, but Chrome launch is currently blocked in this local environment. Run `npm run build:web` for the production export.
+## Why this needs an agent, and why it needs Qloo
 
-## Gus can own the bill job
+Routing a tour is a long job with lots of waiting: score cities, wait for proof, write to rooms, wait for replies, haggle, decide, promote. An artist can't sit on it for months, and an agent can. It also needs judgment at every step, and that judgment comes from taste, which a plain LLM doesn't have.
 
-From the booking desk, choose **Let Gus handle the bill**. He qualifies the supplied list, compares your sound with the scene, prepares an exact request, and waits. Pause or resume the job without losing work. Changed dates block on availability; budget changes replan or ask for a choice. Your OK and saving to the test inbox remain separate. Saved requests that later change stop for follow-up rather than being silently replaced.
+We measured that. For the same question ("where's my crowd in this city, which rooms on a Tuesday"), we checked a general chatbot's answers against Qloo over 8 cities ([evals/qloo-vs-chatbot.md](evals/qloo-vs-chatbot.md)):
 
-`npm run agent:smoke` exercises the live local API with isolated cases. `npm run gauntlet -- --integration` runs typecheck, contract/state tests, production export, both API workflows and Qloo signal-sensitivity. None of those gates measures real operator preference or ticket uplift.
-
-Gus now uses a real, bounded OpenRouter tool loop: inspect the show, compare the qualified bill, prepare, recover or establish a justified wait. Qualification, bill-policy selection and exact authorization remain server-enforced, not model guesses. Technical evidence identifies the responding models, cache status, accepted/rejected steps and any fallback. The planner has a 90-second parent deadline and checks its current lease/version between steps.
-
-`npm run eval:llm -- --extended --strict-policy` runs 12 named uncached model scenarios; rules fallback fails that gate. The latest run passed all 12 with zero rejected tool calls, 30 OpenRouter HTTP requests and no new Qloo HTTP requests (existing Qloo caches). That is one fixture run, not human preference, real draw or ticket-demand validation. An operator-supplied credential pool is private/deduplicated; limited or invalid slots back off, and all slots limited means honest unavailability. No paid model upgrade is automatic. Earlier failed runs stay private. `npm run eval:report` publishes only allowlisted counts/labels to `evals/report.md` and the local `/evals` screen.
-
-The human wait now commits a generation/version-scoped internal attention outbox. Restart/concurrent drains save one inbox notice; pause/changes cancel stale notices and reply waits do not nag. Phone calls store the exact offer they spoke, reserve the active/weekly budget transactionally and refuse delayed answers to changed terms. Unknown local hour suppresses new ringing.
-
-Voice tries **OpenRouter's free Fish S2.1 Pro speech route** first, then direct Fish if available. `npm run eval:voice` returned an uncached 200,201-byte MP3 in about 9 seconds. The direct Fish rail returned HTTP 402, insufficient API credit. Canonical call speech reads server-stored current text and does not silently truncate the decision. Human pronunciation/prosody/native playback remain untested.
-
-Legacy simulated venue-deposit decisions now require exact `{version, hash}` review. A persisted choice, provider idempotency key and separate original receipt prevent conflicting decisions or replacement payments. Receipt, held simulation and Bounty/promotion continuation commit together; failed continuation is retryable without another charge. Stripe remains test-only and was **not live-tested** in this increment because no test key is configured. A test PaymentIntent is not a venue transfer, counterparty agreement or settlement.
-
-The integer-cent `showEconomics` engine models explicit guarantee, defined net split and greater-of versus scenarios, crediting advances without double counting. It accepts hypothetical ticket counts, not Qloo/signature demand forecasts. The optional local `/economics` scratchpad does not post financial entries to providers or the server. See [the backend ambition/gate map](docs/research/16-SYSTEMS-AMBITIONS-AND-GATES.md) and PRD §17.
-
-A persisted lease/generation/retry budget protects each bounded run. `npm run jobs:drain` resumes queued, interrupted and due work. For deployment, configure an external scheduler to call `GET /api/cron/gus` with `Authorization: Bearer $CRON_SECRET` (32+ characters); the endpoint denies missing/weak authorization. A hosted schedule is not configured by this code change. No raw provider/fan data belongs in public reports.
-
-The full research-to-build audit and ordered next gaps are in [docs/BUILD-AUDIT.md](docs/BUILD-AUDIT.md). Current operating facts and the inbox remain fictional/local-only. Real operator authority, qualified real roster and a permitted delivery connector remain the next gates.
-
-## Try it in two minutes
-
-1. Open the demo and tap **Skip** (or go through the four intro cards). You land on Maya Ortiz's map, a demo act. The heat is Qloo's prediction of where her crowd lives.
-2. Tap any city to see the neighborhoods, the rooms Qloo ranks for her taste, and who her fans are.
-3. Go to **Fan Mail**. The top card, **Watch Gus work on his own**, plays fans signing Burlington's poster until it fills. Then Gus takes over without being asked: he finds venues, skips the ones closed that night, asks three for a hold, and brings back the best offer.
-4. Tap **Have Gus call me about it**. Gus rings, says the offer out loud, and you say yes or no. The deposit is paid in test mode.
-5. Tap **See how he fills the room**. Gus has already told the fans who signed, and picked poster spots in the neighborhoods where the crowd hangs out. He asks before he pitches a podcast those fans listen to, invites an opener who shares the crowd, or spends on ads.
-6. Tap **See Burlington's poster as a fan** to see the other side: the signers get first dibs on tickets, and one of them wins a meet-up at soundcheck.
-7. Open **Gus's Logbook** (Fan Mail) for everything he did, in plain words, and the few things he may do without asking.
-
-You can also type in any act on the first screen to get your own map.
-
-## What makes it Qloo-powered
-
-Without Qloo, Gus is guessing. Each city sheet has a **Without Qloo** switch that shows what a plain LLM says for the same question, marked against Qloo's answer.
-
-| What Gus does | Qloo call |
+| | Plain chatbot |
 |---|---|
-| Finds the acts you sound like | `/search`, entities by ID |
-| Ranks every US city for your crowd, against a panel of 20 other acts | `/v2/insights` with `filter.type=urn:heatmap` |
-| Finds the neighborhoods inside a city | `urn:heatmap` scoped to the city |
-| Ranks music and comedy rooms for your taste, with the reason | `urn:entity:place` + `feature.explainability` |
-| Picks poster spots where your crowd hangs out | `urn:entity:place` in the top neighborhoods, hang-out tags |
-| Learns who your fans are | `urn:demographics`; cross-domain `tv_show`, `movie`, `brand`, `podcast`; `urn:tag` |
-| Finds an opener who shares your crowd | `urn:entity:artist` / `person` with a popularity cap, then `/v2/analysis/compare` |
-| Aims ads at the right people | demographics + cross-domain shows |
+| Rooms that hold up | 17 of 37 (46%) |
+| Rooms that are wrong (closed for good, dark that night, another city) | 5 of 37 |
+| Neighborhoods Qloo ranks in the top 10 for the sound | 5 of 24 |
+| Cities nobody plays yet that it never mentioned | 11, including Ithaca, Missoula and Bellingham |
 
-## The agent pattern
+The same check is in the app: every city sheet has **Ask a chatbot instead?**, which runs it live and shows what holds up.
 
-**Predict → Prove → Act → Escalate → Remember.**
+## How Wanted uses Qloo
 
-- **Predict:** Qloo says where demand should be, so the map is full on day one.
-- **Prove:** fans sign a poster. A signature is consent-based proof, and it checks the prediction.
-- **Act:** Gus books inside limits the artist sets: biggest deposit, smallest cut of the door. Every payment uses a one-time pass for an exact amount, payee and deadline.
-- **Escalate:** he reaches the artist in proportion to the stakes: a Logbook line, a note, a question, a review card, and rarely a phone call. He respects quiet hours.
-- **Remember:** every action and outcome goes in the Logbook.
+All calls go through [`src/server/qloo/api.ts`](src/server/qloo/api.ts), and each answer keeps a receipt.
 
-Privacy: fans' neighborhoods and contacts never go to Qloo or any AI model. Gus only queries Qloo with the act's taste and Qloo's own neighborhood names.
+| What Gus needs | Qloo call | Where it decides |
+|---|---|---|
+| The act and who it sounds like | `/search`, entities by ID or Spotify ID | onboarding, [`src/server/sound.ts`](src/server/sound.ts) |
+| Every US city ranked for the crowd | `/v2/insights`, `filter.type=urn:heatmap`, normalized against a panel | the map, [`src/server/score.ts`](src/server/score.ts) |
+| Neighborhoods inside a city | `urn:heatmap` scoped to the city | city sheet, poster spots |
+| Rooms that fit the act's taste, and why | `urn:entity:place` with `feature.explainability`, plus hours | city sheet, which rooms he asks |
+| Where to put posters | `urn:entity:place` in the top neighborhoods, hang-out tags | fill the room |
+| Who the fans are | `urn:demographics`; cross-domain `podcast`, `tv_show`, `movie`, `brand`; `urn:tag` | city sheet, Fan Mail, ads |
+| An opener who shares the crowd | `urn:entity:artist` with a popularity cap, then `/v2/analysis/compare` | Gus's `openers` tool |
 
-## Run it locally
+## How Gus is built
+
+```mermaid
+flowchart LR
+  A[Artist: app, voice, Claude via MCP] --> L
+  subgraph Gus
+    L[Tool loop on OpenRouter<br/>up to 4 turns] --> T[Tools: top_cities, city_fit,<br/>rooms, openers, crowd, fan_proof]
+    T --> G[Grounding check:<br/>every place named came from a lookup]
+    G -->|fails| R[Rules planner answers<br/>from the same lookups]
+  end
+  T --> Q[(Qloo Insights)]
+  T --> D[(Signatures, deals, limits<br/>libSQL)]
+  W[Ambient tick + cron] --> D
+  D --> P[Policy on the server:<br/>limits, exact-offer hash,<br/>one-time pass, test payments]
+  P --> A
+```
+
+- **Lookups.** Gus answers from six lookups backed by Qloo or the act's own data ([`src/server/gus/ask.ts`](src/server/gus/ask.ts)). His answers stream: each lookup shows as it runs, then a sentence or two and one next step.
+- **Grounding.** Any reply that names a city or room no lookup returned is dropped, and a rules planner answers from the lookups instead ([`src/server/gus/grounding.ts`](src/server/gus/grounding.ts)).
+- **Follow-ups.** The app sends the last few turns, so "book me a room there" and "actually make it 250" know what they refer to.
+- **Money.** Limits live in Gus's mandate and are enforced on the server. Each offer carries a hash of its exact terms. A yes approves that hash and mints a one-time pass for that amount, payee and 48 hours, paid idempotently ([`src/server/deals.ts`](src/server/deals.ts), [`src/server/deal-scope.ts`](src/server/deal-scope.ts)). Agent payments elsewhere work the same way: a challenge, an exact approval the model can't give, then a scoped payment.
+- **Reaching you.** He picks how loudly to reach you by the stakes: a Logbook line, a note, a question, a review card, and now and then a phone call in Gus's own voice. He keeps quiet hours.
+- **Outside the app.** The MCP server ([`src/server/mcp.ts`](src/server/mcp.ts)) gives Claude or ChatGPT `where_am_i_wanted`, `city_brief`, `deals`, `ask_gus` and `ask_rooms`. None of them can approve or pay.
+- **Fan privacy.** Signatures, names and contacts never go to Qloo or to a model. Gus sees counts by city and neighborhood.
+
+## Evals
+
+| Eval | Result | Run it |
+|---|---|---|
+| [Asking Gus](evals/gus.md): 16 live questions through the app's route, uncached model, live Qloo | 16 of 16 ran the right lookup, offered a fitting next step and stayed short | `npm run eval:gus` |
+| [Qloo against a plain chatbot](evals/qloo-vs-chatbot.md): 8 cities | 46% of the chatbot's rooms hold up | `npm run eval:chatbot` |
+| [Agent gate](evals/report.md): 12 policy scenarios | 12 of 12, no rejected tool calls | `npm run eval:llm -- --extended --strict-policy` |
+| Unit and policy tests | 234 pass | `npm test` |
+| Production smoke: pages, JSON, share images, MCP, time budgets | | `npm run smoke:prod` |
+
+The Gus eval now has 25 cases: single questions, questions that need two or more lookups, and follow-ups that only make sense with the turn before. Every number and name in an answer is checked against the raw lookups, and each case runs several times for a pass rate. Writing these evals caught real bugs, all now fixed. "Portland Maine" picked Oregon. Gus didn't know a poster needs fifty signatures. He'd offer to ask a room with no button to do it.
+
+Not measured yet: real artist outcomes, ticket sales and real venue replies.
+
+## What's real and what's simulated
+
+| Real | Simulated, and labeled in the app |
+|---|---|
+| Every Qloo call: city scores, neighborhoods, rooms, crowds, openers | Venue bookers and their replies (stand-ins that answer from templates and policy) |
+| Fan signatures and the poster pages | The demo act's signatures (flagged as demo) |
+| Gus's tool loop, his streaming answers and his voice | Deposits (Stripe test mode or a sandbox ledger, never live money) |
+| The MCP connector, approvals and payment policy | Notes to podcasts and openers aren't really sent |
+
+## Run it
 
 ```bash
 npm install
-cp .env.example .env   # add QLOO_API_KEY; the others are optional
-npm run seed           # demo act and cached Qloo data
-npm run web            # http://localhost:8081
+cp .env.example .env   # QLOO_API_KEY is required; the rest are optional
+npm run seed           # the demo act and cached Qloo data
+npm run web            # http://localhost:3100
 ```
 
-iPhone: `npx expo prebuild -p ios`, then `npm run ios` (a Debug build, so it loads JS from Metro).
-
-Environment:
-
 - `QLOO_API_KEY` (required)
-- `OPENROUTER_API_KEY` / `OPENROUTER_API_KEYS` (Gus’s tool planning and lines; explicitly labeled rules/template fallback)
-- `FISH_AUDIO_API_KEY` (optional direct voice rail; OpenRouter free Fish speech is first)
-- `STRIPE_SECRET_KEY` (test key only; live keys are refused)
-- `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` (hosted database; defaults to a local file)
+- `OPENROUTER_API_KEY` or `OPENROUTER_API_KEYS` (Gus's tool loop, writing and voice; without it, a rules planner answers and says so)
+- `STRIPE_SECRET_KEY` (test keys only; live keys are refused)
+- `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` (hosted database; defaults to a local file)
 
-Stack: Expo SDK 57 (one codebase for web and iOS), Expo Router API routes, libSQL/Turso, MapLibre + deck.gl, Reanimated.
+**Stack.** The web app is Next.js 16 in `web/`. The iPhone app is Expo in `src/app`, with TestFlight next. Both use the same TypeScript server (`src/server`) and API routes. libSQL on Turso, MapLibre and deck.gl for the map, OpenRouter for models, Qloo Insights for taste.
 
-Test mode: no real money moves, and Gus's notes to podcasts and openers aren't really sent. Demo signatures are labeled as demo data everywhere.
+**Research.** The customer, touring and market research behind the product is in [docs/research](docs/research).
 
 ## License
 
