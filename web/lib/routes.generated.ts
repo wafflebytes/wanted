@@ -9,6 +9,7 @@ export const routes: { re: RegExp; params: string[]; load: () => Promise<RouteMo
   { re: /^scout\/run$/, params: [], load: () => import("../../src/app/api/scout/run+api") as Promise<RouteModule> },
   { re: /^artists$/, params: [], load: () => import("../../src/app/api/artists+api") as Promise<RouteModule> },
   { re: /^health$/, params: [], load: () => import("../../src/app/api/health+api") as Promise<RouteModule> },
+  { re: /^mcp$/, params: [], load: () => import("../../src/app/api/mcp+api") as Promise<RouteModule> },
   { re: /^settings$/, params: [], load: () => import("../../src/app/api/settings+api") as Promise<RouteModule> },
   { re: /^voice$/, params: [], load: () => import("../../src/app/api/voice+api") as Promise<RouteModule> },
   { re: /^artist\/([^\/]+)\/brief$/, params: ["id"], load: () => import("../../src/app/api/artist/[id]/brief+api") as Promise<RouteModule> },
