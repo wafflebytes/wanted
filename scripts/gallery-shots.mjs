@@ -1,89 +1,40 @@
 /**
- * Phone screenshots of the real app for the Devpost gallery. Uses the installed Chrome.
+ * Real iPhone Safari screenshots of the app for the Devpost gallery, from a booted iOS Simulator
+ * (Safari reaches the dev server at localhost). Each screen is taken in light and dark.
  *
- *   BASE=http://localhost:3100 node scripts/gallery-shots.mjs <outDir>
+ *   DEVICE=<udid> BASE=http://localhost:3100 node scripts/gallery-shots.mjs <outDir>
+ *
+ * Two screens need taps, so take them by hand in light mode and save them to <outDir>:
+ *   gus.png      Gus button, keyboard, "Which Burlington rooms are open on a Tuesday?"
+ *   chatbot.png  /a/maya-ortiz?city=ithaca-ny, scroll to "Ask a chatbot instead?", Compare
  */
-import { chromium } from 'playwright';
+import { execFileSync } from 'node:child_process';
 
-const BASE = process.env.BASE ?? 'http://localhost:3100';
 const out = process.argv[2] ?? '.data/gallery';
-const only = process.env.ONLY?.split(',');
-const scheme = process.env.SCHEME === 'dark' ? 'dark' : 'light';
-const b = await chromium.launch({ channel: 'chrome' });
-const page = async () => {
-  // iPhone 16 points and safe areas, so the app leaves room for the status bar and home indicator the frame draws
-  const p = await b.newPage({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 3, colorScheme: scheme });
-  await p.addInitScript(() => document.addEventListener('DOMContentLoaded', () => {
-    const s = document.createElement('style');
-    s.textContent = ':root { --safe-t: 59px !important; --safe-b: 34px !important; }';
-    document.head.append(s);
-  }));
-  return p;
-};
-const tap = (p, re) => p.evaluate((src) => {
-  const re = new RegExp(src);
-  const el = [...document.querySelectorAll('button,a,[role=button]')].find((e) => re.test((e.getAttribute('aria-label') ?? '') + ' ' + e.textContent.trim()) && e.getClientRects().length);
-  if (!el) throw new Error('no ' + src);
-  el.click();
-}, re.source);
-const home = async (p) => {
-  await p.goto(`${BASE}/a/maya-ortiz`, { waitUntil: 'networkidle', timeout: 90000 });
-  await p.waitForTimeout(3500);
+const BASE = process.env.BASE ?? 'http://localhost:3100';
+const dev = process.env.DEVICE ?? 'booted';
+const sim = (...a) => execFileSync('xcrun', ['simctl', ...a], { stdio: 'ignore' });
+const wait = (s) => execFileSync('sleep', [String(s)]);
+
+const screens = {
+  home: '/a/maya-ortiz',
+  city: '/a/maya-ortiz?city=ithaca-ny',
+  deal: '/a/maya-ortiz?deal=d_qIlCZb4xnJW6',
+  fan: '/w/maya-ortiz/burlington-vt',
+  posters: '/a/maya-ortiz/posters',
+  logbook: '/a/maya-ortiz/logbook',
 };
 
-const shots = {
-  home: async (p) => home(p),
-  city: async (p) => {
-    await home(p);
-    await tap(p, /^ *\d*Ithaca/);
-    await p.waitForTimeout(5000);
-  },
-  chatbot: async (p) => {
-    await home(p);
-    await tap(p, /^ *\d*Ithaca/);
-    await p.waitForTimeout(3000);
-    await tap(p, /^ *Compare$/);
-    await p.waitForSelector('.plain.is-done', { timeout: 90000 });
-    await p.locator('.section-h', { hasText: 'chatbot instead' }).evaluate((e) => e.scrollIntoView({ block: 'start' }));
-    await p.waitForTimeout(800);
-  },
-  deal: async (p) => {
-    await home(p);
-    await tap(p, /^ *Review$/);
-    await p.waitForTimeout(3500);
-  },
-  gus: async (p) => {
-    await home(p);
-    await p.locator('button.gus-btn').press('Enter');
-    await p.waitForTimeout(1500);
-    await tap(p, /Type instead/).catch(() => {});
-    await p.waitForTimeout(500);
-    const ask = p.locator('.vc.on input[aria-label="Ask Gus"]');
-    await ask.fill('Which Burlington rooms are open on a Tuesday?');
-    await ask.press('Enter');
-    await p.waitForTimeout(20000);
-  },
-  fan: async (p) => {
-    await p.goto(`${BASE}/w/maya-ortiz/burlington-vt`, { waitUntil: 'networkidle', timeout: 90000 });
-    await p.waitForTimeout(2500);
-  },
-  posters: async (p) => {
-    await p.goto(`${BASE}/a/maya-ortiz/posters`, { waitUntil: 'networkidle', timeout: 90000 });
-    await p.waitForTimeout(2500);
-  },
-};
-
-for (const [name, run] of Object.entries(shots)) {
-  if (only && !only.includes(name)) continue;
-  const p = await page();
-  try {
-    await run(p);
-    await p.screenshot({ path: `${out}/${name}${scheme === 'dark' ? '-dark' : ''}.png` });
-    console.log('ok', name);
-  } catch (e) {
-    console.log('ERR', name, String(e).split('\n')[0]);
-  } finally {
-    await p.close();
+// 9:41, full bars, no charging bolt
+sim('status_bar', dev, 'override', '--time', '9:41', '--batteryState', 'discharging', '--batteryLevel', '100', '--cellularBars', '4', '--wifiBars', '3', '--dataNetwork', 'wifi');
+for (const mode of ['light', 'dark']) {
+  sim('ui', dev, 'appearance', mode);
+  for (const [name, path] of Object.entries(screens)) {
+    // A fresh query each time so Safari loads the page instead of restoring it
+    sim('openurl', dev, `${BASE}${path}${path.includes('?') ? '&' : '?'}r=${mode}-${Date.now()}`);
+    wait(13); // the map and the city sheet take a while in dev
+    const file = `${out}/${name}${mode === 'dark' ? '-dark' : ''}.png`;
+    sim('io', dev, 'screenshot', file);
+    console.log('ok', file);
   }
 }
-await b.close();

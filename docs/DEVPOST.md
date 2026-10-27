@@ -79,4 +79,4 @@ qloo, typescript, next.js, react, expo, openrouter, libsql, turso, maplibre, dec
 
 ## Image gallery
 
-Upload [docs/gallery](gallery) in order: `0-cover.jpg` as the thumbnail, then cards 1 to 7. They're 3:2, alternate light and dark, and put real app screenshots in an iPhone frame with our own art (`node scripts/gallery-shots.mjs <dir>` and again with `SCHEME=dark`, then `node scripts/gallery-cards.mjs <dir> docs/gallery`).
+Upload [docs/gallery](gallery) in order: `0-cover.jpg` as the thumbnail, then cards 1 to 8. They're 3:2 and alternate light and dark. Each one is a real iPhone Safari screenshot from the iOS Simulator, shown without a device frame: just the screen and its rounded corners, sitting on the page's own colour so Safari's bars, the app and the card read as one surface (`node scripts/gallery-shots.mjs <dir>` for the screens, then `node scripts/gallery-cards.mjs <dir> docs/gallery`).
