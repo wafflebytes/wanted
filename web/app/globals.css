@@ -171,9 +171,9 @@
 /* ---------- base */
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; padding: 0; }
-html { background: var(--bg); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html { background: var(--page, var(--bg)); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
-  min-height: 100dvh; background: var(--bg); color: var(--ink);
+  min-height: 100dvh; background: var(--page, var(--bg)); color: var(--ink);
   font: 400 15px/1.45 var(--body); letter-spacing: -0.005em;
   -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
   overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent;
@@ -187,10 +187,16 @@ img, svg { display: block; }
 .num { font-family: var(--display); font-variant-numeric: tabular-nums; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* Seamless mobile Safari: strips the colour of the page under the status bar and home bar. */
-.edge-top, .edge-bottom { position: fixed; left: 0; right: 0; z-index: 100; pointer-events: none; background: var(--edge, var(--bg)); transition: background-color var(--t-move) var(--ease); }
-.edge-top { top: 0; height: var(--safe-t); }
-.edge-bottom { bottom: 0; height: var(--safe-b); }
+/* Seamless mobile Safari (Josh Puckett, with Joe Bell's fade): a 5px solid strip of the page colour at each
+   edge for Safari to sample, fading into the page, so the map and the walls run behind the status bar and
+   home bar instead of stopping under a flat band. */
+.edge-top, .edge-bottom { --edge-c: var(--edge, var(--page, var(--bg))); position: fixed; left: 0; right: 0; height: 0; z-index: 100; pointer-events: none; }
+.edge-top { top: 0; } .edge-bottom { bottom: 0; }
+.edge-top::after, .edge-bottom::after, .edge-top::before, .edge-bottom::before { content: ''; position: absolute; left: 0; right: 0; }
+.edge-top::after, .edge-bottom::after { height: 12px; background: var(--edge-c); }
+.edge-top::after { top: -7px; } .edge-bottom::after { bottom: -7px; }
+.edge-top::before { top: 5px; height: 8px; background: linear-gradient(to bottom, var(--edge-c), color-mix(in srgb, var(--edge-c) 0%, transparent)); }
+.edge-bottom::before { bottom: 5px; height: 6px; background: linear-gradient(to top, var(--edge-c), color-mix(in srgb, var(--edge-c) 0%, transparent)); }
 
 /* ---------- type */
 .display { font-family: var(--display); font-weight: 800; letter-spacing: -0.025em; line-height: 1.05; }

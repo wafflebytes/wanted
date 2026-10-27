@@ -26,8 +26,12 @@ export const viewport: Viewport = {
   ],
 };
 
-/** Applies a saved theme before paint, so a dark-mode visitor never sees a cream flash. */
-const themeBoot = `try{var t=localStorage.getItem('wanted-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}`;
+/** Applies a saved theme and the page's ground before paint, so a dark-mode visitor never sees a cream flash
+ *  and Safari samples the wall, Fan Mail or Logbook colour for its bars on first load (the pages' effects add it too late). */
+const themeBoot = `try{var t=localStorage.getItem('wanted-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}try{var p=location.pathname,g=/^\\/w\\//.test(p)||/\\/posters$/.test(p)?'on-wall':/\\/pulse$/.test(p)?'on-mail':/\\/logbook$/.test(p)?'on-log':'';if(g)document.documentElement.classList.add(g)}catch(e){}`;
+
+/** Keeps theme-color on the page's own colour (a wall, Fan Mail, the Logbook, light or dark), so Safari's bars match it. */
+const edgeSync = `(function(){var h=document.documentElement;function s(){var c=getComputedStyle(h),v=(c.getPropertyValue('--edge')||c.getPropertyValue('--page')||c.getPropertyValue('--bg')).trim();if(!v)return;document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.removeAttribute('media');m.setAttribute('content',v)})}s();new MutationObserver(s).observe(h,{attributes:true,attributeFilter:['class','data-theme','style']});matchMedia('(prefers-color-scheme: dark)').addEventListener('change',s)})()`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -36,10 +40,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
       </head>
       <body>
-        {/* Josh Puckett's seamless Safari: strips painted with the page colour sit under Safari's bars. */}
+        {/* Josh Puckett's seamless Safari: thin strips of the page colour for Safari to sample under its bars. */}
         <div className="edge-top" aria-hidden />
         {children}
         <div className="edge-bottom" aria-hidden />
+        <script dangerouslySetInnerHTML={{ __html: edgeSync }} />
       </body>
     </html>
   );

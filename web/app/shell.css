@@ -358,7 +358,7 @@ img.gus { -webkit-touch-callout: none; }
 .stage { position: fixed; inset: 0; z-index: 0; background: var(--bg); opacity: 0; visibility: hidden; transition: opacity var(--t-enter) var(--ease), visibility 0s linear var(--t-enter); }
 .stage.on { opacity: 1; visibility: visible; transition: opacity var(--t-enter) var(--ease), visibility 0s; }
 .stage .crowd-map { position: absolute; inset: 0; }
-.stage-veil { position: absolute; inset: 0 0 auto; height: calc(var(--safe-t) + 110px); pointer-events: none; background: linear-gradient(var(--bg), color-mix(in srgb, var(--bg) 0%, transparent)); opacity: 0.9; }
+.stage-veil { position: absolute; inset: 0 0 auto; display: none; }
 .stage .crowd-map { opacity: 0; transition: opacity 700ms var(--ease); }
 .stage.painted .crowd-map { opacity: 1; }
 .maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--card) 70%, transparent) !important; color: var(--ink-3) !important; font: 11px var(--body) !important; border-radius: var(--r-s) !important; }
@@ -385,9 +385,9 @@ img.gus { -webkit-touch-callout: none; }
 .pblur { position: fixed; left: 0; right: 0; z-index: 22; pointer-events: none; }
 .pblur > i, .pblur > b { position: absolute; inset: 0; }
 .pblur-bottom { bottom: 0; height: calc(var(--safe-b) + var(--dock-h) + 46px); }
-.pblur-bottom > b { background: linear-gradient(to bottom, transparent 20%, color-mix(in srgb, var(--page, var(--bg)) 72%, transparent)); }
+.pblur-bottom > b { background: linear-gradient(to bottom, transparent 20%, color-mix(in srgb, var(--page, var(--bg)) 28%, transparent)); }
 .pblur-top { top: 0; height: calc(var(--safe-t) + var(--header-h) + 22px); }
-.pblur-top > b { background: linear-gradient(to top, transparent 15%, color-mix(in srgb, var(--page, var(--bg)) 80%, transparent)); }
+.pblur-top > b { background: linear-gradient(to top, transparent 50%, color-mix(in srgb, var(--page, var(--bg)) 20%, transparent)); }
 .pblur-top.off { opacity: 0; }
 .pblur-top { transition: opacity var(--t-move) var(--ease); }
 
