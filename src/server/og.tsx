@@ -260,6 +260,57 @@ export async function renderPoster(d: PosterData, format: 'story' | 'wide' | 'po
   );
 }
 
+// ---------- announcements: the artist's own story posts ----------
+
+/**
+ * What the artist posts when something happens: the draw is picked, or the city got its show.
+ * Story size (1080 x 1920), the city's own poster as the hero, one big line, and the link fans
+ * use to sign, so every post brings in the next city's signatures.
+ */
+export type AnnounceData = PosterData &
+  ({ kind: 'winner'; number: number; neighborhood: string | null; prize: string; entries: number } | { kind: 'booked'; venue: string; date: string });
+
+export async function renderAnnounce(d: AnnounceData): Promise<Buffer> {
+  const portrait = await portraitFor({ portrait: d.portrait, imageUrl: d.imageUrl });
+  const first = d.artistName.split(' ')[0];
+  const s = 700 / POSTER_W;
+  const kicker = d.kind === 'winner' ? `THE ${d.cityName.toUpperCase()} DRAW` : `${d.cityName.toUpperCase()}, YOU DID IT`;
+  const stamp = d.kind === 'winner' ? 'WINNER' : 'BOOKED';
+  return render(
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 1080, height: 1920, backgroundColor: '#140a04' }}>
+      <img src={img('backdrop')} width={1080} height={1920} style={{ position: 'absolute', left: 0, top: 0, objectFit: 'cover' }} />
+      <div style={{ position: 'absolute', left: 0, top: 0, width: 1080, height: 1920, backgroundColor: 'rgba(10,5,2,0.62)' }} />
+      <div style={{ display: 'flex', marginTop: 130, transform: 'rotate(-2.5deg)' }}>
+        <Poster d={d} s={s} portrait={portrait} />
+      </div>
+      <div style={{ position: 'absolute', top: 640, left: 260, display: 'flex', padding: '14px 40px', border: `8px solid ${POSTER_RED}`, borderRadius: 18, transform: 'rotate(-14deg)', fontFamily: 'Archivo Expanded', fontWeight: 900, fontSize: 92, letterSpacing: 6, color: POSTER_RED, backgroundColor: 'rgba(255,240,220,0.08)' }}>{stamp}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 80, width: 920, position: 'relative', color: '#fff7e8' }}>
+        <div style={{ display: 'flex', fontFamily: 'Chivo Mono', fontSize: 30, letterSpacing: 4, color: '#ffcf6b' }}>{kicker}</div>
+        {d.kind === 'winner' ? (
+          <>
+            <div style={{ display: 'flex', fontFamily: 'Archivo Expanded', fontWeight: 900, fontSize: 210, lineHeight: 1, marginTop: 10 }}>{`#${d.number}`}</div>
+            <div style={{ display: 'flex', fontFamily: 'Archivo', fontWeight: 700, fontSize: 48, marginTop: 6, textAlign: 'center' }}>{d.neighborhood ? `from ${d.neighborhood}, you won.` : 'You won.'}</div>
+            <div style={{ display: 'flex', fontFamily: 'Archivo', fontWeight: 500, fontSize: 36, marginTop: 18, opacity: 0.9, textAlign: 'center', lineHeight: 1.25 }}>{d.prize}</div>
+            <div style={{ display: 'flex', fontFamily: 'Archivo', fontWeight: 500, fontSize: 28, marginTop: 22, opacity: 0.7, textAlign: 'center' }}>{`Picked fairly from ${d.entries} chances. Check your number on the poster.`}</div>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', fontFamily: 'Archivo Expanded', fontWeight: 900, fontSize: 92, lineHeight: 1, marginTop: 18, textAlign: 'center' }}>{d.date}</div>
+            <div style={{ display: 'flex', fontFamily: 'Archivo', fontWeight: 700, fontSize: 52, marginTop: 16, textAlign: 'center' }}>{`${first} at ${d.venue}`}</div>
+            <div style={{ display: 'flex', fontFamily: 'Archivo', fontWeight: 500, fontSize: 36, marginTop: 20, opacity: 0.9, textAlign: 'center', lineHeight: 1.25 }}>{`${d.count} of you signed for this. You hear first.`}</div>
+          </>
+        )}
+        <div style={{ display: 'flex', marginTop: 40, padding: '20px 44px', borderRadius: 999, backgroundColor: '#ff6a1a', fontFamily: 'Archivo', fontWeight: 700, fontSize: 36, color: '#1a0c03' }}>
+          {d.kind === 'winner' ? 'Your city next? Sign a poster' : 'Not your city yet? Sign a poster'}
+        </div>
+        <div style={{ display: 'flex', marginTop: 20, fontFamily: 'Chivo Mono', fontSize: 28, color: '#ffd27a' }}>{d.link.replace(/^https?:\/\//, '')}</div>
+      </div>
+    </div>,
+    1080,
+    1920,
+  );
+}
+
 // ---------- signature card ----------
 
 export type CardData = {

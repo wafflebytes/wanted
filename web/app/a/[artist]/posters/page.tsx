@@ -16,6 +16,8 @@ import { Icon } from '@web/components/Icon';
 import { Reel } from '@web/components/Reel';
 import { api } from '@web/lib/api';
 import { gus } from '@web/lib/gus';
+import { shareStory } from '@web/lib/share';
+import { deals } from '@web/lib/deals';
 import { mutate, useApi } from '@web/lib/hooks';
 import '../../../posters.css';
 
@@ -30,15 +32,17 @@ const ago = (t: number) => {
 };
 const img = (slug: string, city: string, w = 640, v = 0) => `/img/poster/${slug}/${city}?w=${w}&v=${v}`;
 
-type Stand = { tone: 'fans' | 'good' | 'live'; big: string; unit: string; line: string; cta: { label: string; icon: 'share' | 'building' | 'check'; run: 'share' | 'rooms' | 'offer' } };
+type Stand = { tone: 'fans' | 'good' | 'live'; big: string; unit: string; line: string; cta: { label: string; icon: 'share' | 'building' | 'check'; run: 'share' | 'rooms' | 'offer' | 'booked' } };
 
 /** Where a city stands, as one number and one sentence, with the one thing to do about it. */
 function standing(o: OpenedCity, live: Deal | null, p: PosterState | undefined): Stand {
   const n = p?.count ?? o.proof?.signatures ?? 0;
   const share = { label: `Share the ${o.name} poster`, icon: 'share' as const, run: 'share' as const };
   if (o.playedAt) return { tone: 'live', big: String(n), unit: 'signed', line: `You played ${o.name}${o.playedVenue ? ` at ${o.playedVenue}` : ''}. Every fan’s card has the stamp.`, cta: share };
-  if (live?.status === 'held' && live.terms) return { tone: 'good', big: nightOf(live.terms.date), unit: '', line: `Held at ${live.roomName}. You keep ${live.terms.split}% of the door. Signers hear first.`, cta: share };
-  if (p?.show) return { tone: 'good', big: nightOf(p.show.date), unit: '', line: `You’re on at ${p.show.room}. Everyone who signed hears first.`, cta: share };
+  // A booked city is news: the post that says so is the next city's poster.
+  const booked = { label: `Post that ${o.name} is booked`, icon: 'share' as const, run: 'booked' as const };
+  if (live?.status === 'held' && live.terms) return { tone: 'good', big: nightOf(live.terms.date), unit: '', line: `Held at ${live.roomName}. You keep ${live.terms.split}% of the door. Signers hear first.`, cta: booked };
+  if (p?.show) return { tone: 'good', big: nightOf(p.show.date), unit: '', line: `You’re on at ${p.show.room}. Everyone who signed hears first.`, cta: booked };
   if (live?.status === 'waiting') return { tone: 'good', big: 'Yes', unit: `from ${live.roomName}`, line: `They offered ${live.terms ? nightOf(live.terms.date) : 'a night'}. It’s waiting on your OK.`, cta: { label: 'Look at the offer', icon: 'check', run: 'offer' } };
   if (live?.status === 'talking') return { tone: 'fans', big: String(n), unit: 'signed', line: `Gus is talking to ${live.roomName} now. He’ll bring you the best offer.`, cta: share };
   if (n >= PROOF || o.proof?.crossed) return { tone: 'good', big: String(n), unit: 'signed', line: `That’s enough for a booker to take you seriously. Time to ask rooms.`, cta: { label: `Ask rooms in ${o.name}`, icon: 'building', run: 'rooms' } };
@@ -84,7 +88,11 @@ export default function PostersPage() {
   const s = o ? standing(o, live, p) : null;
   const go = (run: Stand['cta']['run']) => {
     if (run === 'share') return share();
-    if (run === 'offer') return gus.open('tray');
+    if (run === 'booked') return shareStory(`/img/story/${slug}/${o!.city}?kind=booked`, `${o!.city}-booked`, { text: `${o!.name}, you did it. See you there.`, url });
+    if (run === 'offer') {
+      if (live) deals.show(live);
+      return gus.open('room');
+    }
     router.push(`/a/${slug}?city=${o!.city}`);
   };
 
@@ -126,10 +134,10 @@ export default function PostersPage() {
               <Icon name="link" size={20} />
               Copy link
             </button>
-            <a className="pw-key" href={img(slug, o.city, 1080) + '&format=story'} download={`wanted-${o.city}-story.webp`}>
+            <button className="pw-key" onClick={() => shareStory(img(slug, o.city, 1080) + '&format=story&type=jpg', `wanted-${o.city}`, { text: `${o.name}, sign this and I’ll come play.`, url })}>
               <Icon name="layers" size={20} />
               Story size
-            </a>
+            </button>
             <a className="pw-key" href={`/w/${slug}/${o.city}`} target="_blank" rel="noreferrer">
               <Icon name="eye" size={20} />
               Fan page
@@ -323,6 +331,12 @@ function Bounty({ slug, city, artist, b, booked }: { slug: string; city: string;
           </div>
         </div>
       </div>
+      {w && (
+        <button className="btn hot block pw-draw-go" onClick={() => shareStory(`/img/story/${slug}/${city}?kind=winner`, `${city}-winner`, { text: `Signer #${w.number}${w.neighborhood ? ` from ${w.neighborhood}` : ''}, you won the draw. Check your number.`, url: `${location.origin}/w/${slug}/${city}` })}>
+          <Icon name="share" bold size={18} />
+          Post the winner
+        </button>
+      )}
       {booked && !w && (
         <button className="btn light block pw-draw-go" disabled={busy} onClick={draw}>
           {busy ? 'Drawing…' : `Draw ${artist}’s winner`}

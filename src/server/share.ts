@@ -3,7 +3,9 @@ import { getArtist, openedCities } from './artists';
 import { claimByNumber, proofFor, recentSignatures, cityCount, wearLevel } from './claims';
 import { env } from './env';
 import { HttpError } from './http';
-import { renderCard, renderPoster, renderRapSheet } from './og';
+import { renderAnnounce, renderCard, renderPoster, renderRapSheet, type AnnounceData } from './og';
+import { bountyView } from './bounty';
+import { dealsFor } from './deals';
 import { metroById } from './score';
 import { loadPlan } from './service';
 
@@ -94,4 +96,41 @@ export async function rapSheetPng(slug: string) {
     neighborhoods: hoods.size,
     headline: `Wanted in ${hoods.size} neighborhoods${bestName ? `; ${bestName} brought the most signatures` : ''}.`,
   });
+}
+
+/** The artist's story post for a moment: the draw's winner, or the date a city got. */
+export async function announcePng(slug: string, city: string, kind: 'winner' | 'booked') {
+  const artist = await getArtist(slug);
+  const metro = metroById(city);
+  const opened = artist ? (await openedCities(artist.id)).find((c) => c.city === city) : null;
+  if (!artist || !metro || !opened) throw new HttpError(404, 'No such poster.');
+  const count = await cityCount(artist.id, city);
+  const base = {
+    artistName: artist.name,
+    cityId: city,
+    cityName: metro.name,
+    state: metro.state,
+    count,
+    wear: wearLevel(count),
+    topNeighborhoods: opened.topNeighborhoods,
+    signatures: await recentSignatures(artist.id, city, 28),
+    played: !!opened.playedAt,
+    portrait: artist.portrait,
+    imageUrl: artist.imageUrl,
+    // Every post points at the artist's posters, so the next city can start signing.
+    link: posterLink(artist.slug, city),
+    isDemo: artist.isDemo,
+  };
+  let d: AnnounceData;
+  if (kind === 'winner') {
+    const b = await bountyView(artist, city, null);
+    if (!b.drawn) throw new HttpError(404, 'No winner yet.');
+    d = { ...base, kind, number: b.drawn.winner.number, neighborhood: b.drawn.winner.neighborhood, prize: b.prize, entries: b.totalEntries };
+  } else {
+    const held = (await dealsFor(artist.id)).find((x) => x.city === city && x.status === 'held');
+    if (!held?.terms) throw new HttpError(404, 'Nothing booked here yet.');
+    const date = new Date(`${held.terms.date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }).toUpperCase();
+    d = { ...base, kind, venue: held.roomName, date };
+  }
+  return renderAnnounce(d);
 }
