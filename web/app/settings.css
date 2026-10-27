@@ -1,0 +1,39 @@
+/* Settings: grouped rows on the page ground, iOS-style, with the material rule for every control. */
+.st { position: relative; width: 100%; max-width: var(--col); margin: 0 auto; padding: calc(var(--safe-t) + var(--header-h) + 4px) var(--gutter) calc(var(--safe-b) + 48px); }
+.st section { animation: rise var(--t-enter) var(--ease) both; }
+.st-top { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px 4px; }
+.st-top h1 { font: 800 34px/1.05 var(--display); letter-spacing: -0.035em; }
+
+.st-group { list-style: none; overflow: hidden; border-radius: 20px; background: var(--card); box-shadow: var(--shadow-1), var(--rim); }
+.st-group > li + li { border-top: 1px solid var(--line); }
+.st-row { display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 12px 16px; }
+a.st-row { color: inherit; transition: background-color var(--t-fade); }
+a.st-row:active { background: var(--veil); }
+.st-row.col { flex-direction: column; align-items: stretch; gap: 10px; }
+.st-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.st-t b { font-weight: 600; font-size: 16px; line-height: 1.3; }
+.st-t em, .st-hint { font-style: normal; font-size: 13.5px; line-height: 1.38; color: var(--ink-2); }
+.st-slide-h { flex-direction: row; align-items: baseline; justify-content: space-between; }
+.st-slide-h output { font: 700 20px var(--display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--wanted-text); }
+.st-hint { margin-top: -4px; }
+.st-av { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font: 800 14px var(--display); color: var(--key-fg); background: var(--key); box-shadow: var(--key-bevel), var(--drop); }
+.st-av.add { color: var(--ink-2); background: var(--well-bg); box-shadow: var(--well); }
+.st-on { color: var(--wanted-text); }
+.st-saved { font: 600 13px var(--body); color: var(--ink-3); transition: opacity var(--t-fade); }
+.st-saved.saved { color: var(--ok-text); }
+.st-foot { margin: 10px 4px 0; font-size: 13px; line-height: 1.4; color: var(--ink-3); }
+
+.st-quiet { display: flex; align-items: center; gap: 10px; padding: 12px; }
+.st-hour { flex: 1; position: relative; display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: 14px; background: var(--well-bg); box-shadow: var(--well); }
+.st-hour span { font: 600 11.5px var(--body); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); }
+.st-hour select { appearance: none; -webkit-appearance: none; border: 0; background: none; padding: 0; font: 700 20px var(--display); letter-spacing: -0.02em; color: var(--ink); cursor: pointer; }
+.st-hour select:focus-visible { outline: 2px solid var(--wanted); outline-offset: 4px; border-radius: 4px; }
+
+.st-theme { height: 44px; }
+
+.st-ios { display: flex; gap: 14px; margin-top: 32px; padding: 18px; border-radius: 22px; background: var(--raise); box-shadow: var(--bevel), var(--drop); }
+.st-ios > svg { flex: none; margin-top: 1px; }
+.st-ios div { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.st-ios b { font: 700 17px/1.25 var(--display); letter-spacing: -0.01em; }
+.st-ios p { font-size: 14.5px; line-height: 1.42; color: var(--ink-2); margin-bottom: 4px; }
+.tab-settings .hdr-btn { visibility: hidden; }

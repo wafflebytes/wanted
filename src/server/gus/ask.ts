@@ -369,7 +369,7 @@ async function liteAgent(ctx: Ctx, heard: string): Promise<Omit<GusAnswer, 'hear
     const best = [...map.proof].sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))[0];
     if (!best) return { reply: 'No posters up yet. Put one up where your crowd is and let them prove it.', mood: 'idle', action: TABS.posters };
     const m = metros.find((x) => x.id === best.city);
-    const r = best.ratio ? ` That’s ${best.ratio}x what Qloo expected.` : '';
+    const r = best.ratio ? ` That’s ${best.ratio}x what a city that size usually gives.` : '';
     return { reply: `${m?.name ?? best.city} is pulling hardest: ${best.signatures} signatures.${r}`, mood: best.crossed ? 'proud' : 'idle', action: m ? { type: 'pitch', id: m.id, name: m.name, label: `Pitch ${m.name}` } : TABS.posters };
   }
   if (/(sleeper|surprise|underrated|hidden|overlooked)/.test(t)) {

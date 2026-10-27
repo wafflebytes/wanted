@@ -75,8 +75,8 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 
 (Tour and Posters done. Dark is the main mode: design there first, then check light. Use the material system above for every new control. Judge product and copy as well as pixels: one job per screen, one primary key, plain musician words.)
 
-1. Fan Mail (`/pulse`, airmail-paper ground): big reel number, live sign-up trace from `signatures.daily`, booking desk card using `Approval`, latest signatures, chatter.
-2. Logbook (lined-paper ground): diary by day, who-dot. Settings: acts, limits sliders via POST `/logbook {mandate}` and `/deals {limits}`, quiet hours, theme toggle writing `wanted-theme`, iOS note with Apple logo + GitHub.
+1. ~~Fan Mail~~ (landed, session 5): airmail letter with how the week felt + reel number + scrubbable 14-day trace on a recessed screen; "For you" notes (deduped, one key each); Almost there; latest signatures with wax seals; posts as a postcard row; Earlier folded. `plain()` rewrites old stored copy (Qloo, Bounty, "(Demo data.)").
+2. ~~Logbook and Settings~~ (landed, session 5): ruled diary by day with who-dots (You, Gus, A venue, Fans) and an Everything / Needed you switch; the mandate as one paragraph with a key to Settings. Settings: acts, autoAsk switch, venues-at-once segment, deposit and door-cut sliders (debounced POST `/logbook {mandate}`), calls switch, quiet hours, theme, iOS note. Shared `.seg`, `.switch`, `.range` controls live in `globals.css`. "Add an act" is hidden until Welcome exists; `/` redirects to the last act (or the demo act).
 3. Known issues above.
 4. Splash (`/`), Welcome (port `src/app/welcome.tsx`), fan poster page `/w/[artist]/[city]` (sign + receipt).
-5. Verify every screen at 375 px dark + light; delete `/lab`; tell the user the Vercel build must become `next build web`.
+5. Verify every screen at 375 px dark + light; delete `/lab`. Vercel: `vercel.json` now builds `next build web` and main deploys fine, but the project's production branch is `ui-overhaul-iphone16`, so main lands as a protected Preview until the user switches it.
