@@ -47,6 +47,7 @@ You can ask Gus anything along the way, by typing or out loud. He looks things u
 - **Big cities.** Raw heatmap scores just rank big cities first. Normalizing against a panel of other acts is what made the sleepers show up.
 - **Making up places.** Early on, the model would confidently name venues that don't exist. That's why the grounding check is strict. Our eval against a plain chatbot shows the problem: only 46% of its suggested rooms held up against Qloo, and some were closed for good or dark that night.
 - **Eval bugs.** Writing evals found bugs we hadn't seen. "Portland Maine" resolved to Oregon. Gus didn't know a poster needs fifty signatures. He'd offer to ask a room without the button that does it.
+- **Cards in Claude.** Gus's cards in Claude sat on "Looking it up" for a while. The card introduced itself with the wrong field name, so Claude never sent it the answer, and Claude kept the broken card by its address. A new address and a card that asks Gus itself if the answer never arrives fixed it.
 - **Free model limits.** Running the graded eval used up a day's free model quota on every key we had. Gus now falls back to rules and says so, and the eval skips those answers instead of grading them.
 
 ### Accomplishments that we're proud of
@@ -76,7 +77,8 @@ qloo, typescript, next.js, react, expo, openrouter, libsql, turso, maplibre, dec
 
 - https://trywanted.vercel.app/a/maya-ortiz?tour=1
 - https://github.com/wafflebytes/wanted
+- Gus in Claude or ChatGPT: add `https://trywanted.vercel.app/api/mcp` as a custom connector, no sign-in
 
 ## Image gallery
 
-Upload [docs/gallery](gallery) in order: `0-cover.jpg` as the thumbnail, then cards 1 to 12. They're 3:2 and alternate light and dark. Cards 0 to 7 are real iPhone Safari screenshots of trywanted.vercel.app from the iOS Simulator, shown without a device frame. Cards 8 to 10 explain how Gus works, why taste data matters and the loop that pays the band, drawn with the app's own art. Card 11 is Gus answering in Claude (drop `claude.png` into the shots folder to build it), and card 12 has a QR code for the live demo. Build with `node scripts/gallery-shots.mjs <dir>`, then `node scripts/gallery-cards.mjs <dir> docs/gallery`.
+Upload [docs/gallery](gallery) in order: `0-cover.jpg` as the thumbnail, then cards 1 to 12. They're 3:2 and alternate light and dark. Cards 0 to 7 are real iPhone Safari screenshots of trywanted.vercel.app from the iOS Simulator, shown without a device frame. Cards 8 to 10 explain how Gus works, why taste data matters and the loop that pays the band, drawn with the app's own art. Card 11 is Gus answering as a card in the Claude iPhone app (`claude.png` in the shots folder), and card 12 has a QR code for the live demo. Build with `node scripts/gallery-shots.mjs <dir>`, then `node scripts/gallery-cards.mjs <dir> docs/gallery`.

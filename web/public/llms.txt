@@ -2,11 +2,11 @@
 
 > Wanted is an agent-native tour manager for independent musicians. Its agent, Gus, uses Qloo's taste graph to predict which US cities (and which neighborhoods in them) love an act's sound. He puts up a WANTED poster in those cities that fans sign as proof. Once a city proves itself, he negotiates a date with the room inside limits the artist sets, and brings back one decision to approve. Built for the Qloo Agentic Hackathon ("Agents, but with taste").
 
-- Live app (works on a phone): https://wanted-qloo.vercel.app
-- Demo act: https://wanted-qloo.vercel.app/a/maya-ortiz
-- A fan's view of a poster: https://wanted-qloo.vercel.app/w/maya-ortiz/burlington-vt
+- Live app (works on a phone): https://trywanted.vercel.app
+- Demo act: https://trywanted.vercel.app/a/maya-ortiz
+- A fan's view of a poster: https://trywanted.vercel.app/w/maya-ortiz/burlington-vt
 - Source (MIT): https://github.com/wafflebytes/wanted
-- Full detail for agents: https://wanted-qloo.vercel.app/llms-full.txt
+- Full detail for agents: https://trywanted.vercel.app/llms-full.txt
 
 ## What a judge or agent should know first
 
@@ -28,8 +28,9 @@
 
 ## Gus as an MCP connector
 
-- Endpoint: `https://wanted-qloo.vercel.app/api/mcp` (remote MCP, streamable HTTP, no sign-in). Add it as a custom connector in Claude or ChatGPT.
+- Endpoint: `https://trywanted.vercel.app/api/mcp` (remote MCP, streamable HTTP, no sign-in). Add it as a custom connector in Claude or ChatGPT.
 - Tools: `where_am_i_wanted`, `city_brief`, `deals`, `ask_gus` (Gus runs his own Qloo lookups and answers), `ask_rooms` (starts a negotiation; it never pays).
+- In Claude the answers come back as cards (an MCP App) you can tap: open a city, then send Gus to ask the room.
 - Money never moves through the connector. A deposit needs the artist's yes in the app, on the exact offer they reviewed (`src/server/mcp.ts`).
 
 ## Public JSON API (read-only for the demo act)

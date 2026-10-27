@@ -2,10 +2,10 @@
 
 **Gus is an AI tour manager for independent musicians, and he runs on Qloo's taste graph.** He finds the cities and neighborhoods where an act's sound already has fans. He puts a WANTED poster up there for fans to sign. Once a city proves itself, he asks the rooms that fit for a date, haggles inside the artist's limits and brings back one yes-or-no. Built for the Qloo Agentic Hackathon, "Agents, but with taste."
 
-- **Try it:** https://wanted-qloo.vercel.app/a/maya-ortiz?tour=1 (a 90-second guided tour from Gus; works on a phone)
-- **A fan's side:** https://wanted-qloo.vercel.app/w/maya-ortiz/burlington-vt
-- **Gus in Claude or ChatGPT:** add `https://wanted-qloo.vercel.app/api/mcp` as a custom connector
-- **For AI readers:** [`/llms.txt`](https://wanted-qloo.vercel.app/llms.txt) and [`/llms-full.txt`](https://wanted-qloo.vercel.app/llms-full.txt)
+- **Try it:** https://trywanted.vercel.app/a/maya-ortiz?tour=1 (a 90-second guided tour from Gus; works on a phone)
+- **A fan's side:** https://trywanted.vercel.app/w/maya-ortiz/burlington-vt
+- **Gus in Claude or ChatGPT:** add `https://trywanted.vercel.app/api/mcp` as a custom connector
+- **For AI readers:** [`/llms.txt`](https://trywanted.vercel.app/llms.txt) and [`/llms-full.txt`](https://trywanted.vercel.app/llms-full.txt)
 
 ## The problem
 
@@ -75,7 +75,7 @@ flowchart LR
 - **Follow-ups.** The app sends the last few turns, so "book me a room there" and "actually make it 250" know what they refer to.
 - **Money.** Limits live in Gus's mandate and are enforced on the server. Each offer carries a hash of its exact terms. A yes approves that hash and mints a one-time pass for that amount, payee and 48 hours, paid idempotently ([`src/server/deals.ts`](src/server/deals.ts), [`src/server/deal-scope.ts`](src/server/deal-scope.ts)). Agent payments elsewhere work the same way: a challenge, an exact approval the model can't give, then a scoped payment.
 - **Reaching you.** He picks how loudly to reach you by the stakes: a Logbook line, a note, a question, a review card, and now and then a phone call in Gus's own voice. He keeps quiet hours.
-- **Outside the app.** The MCP server ([`src/server/mcp.ts`](src/server/mcp.ts)) gives Claude or ChatGPT `where_am_i_wanted`, `city_brief`, `deals`, `ask_gus` and `ask_rooms`. None of them can approve or pay.
+- **Outside the app.** The MCP server ([`src/server/mcp.ts`](src/server/mcp.ts)) gives Claude or ChatGPT `where_am_i_wanted`, `city_brief`, `deals`, `ask_gus` and `ask_rooms`, plus three starter prompts. In Claude each answer is a card in the chat, an MCP App ([`src/server/mcp-view.html`](src/server/mcp-view.html)): tap a city to open it, then send Gus to ask the room. None of the tools can approve or pay.
 - **Fan privacy.** Signatures, names and contacts never go to Qloo or to a model. Gus sees counts by city and neighborhood.
 
 ## Evals

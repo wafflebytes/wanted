@@ -2,14 +2,14 @@
 
 > Wanted is a tour manager for independent musicians, run by an agent called Gus. Gus uses Qloo's taste graph to find the US cities, and the neighborhoods inside them, where an act's sound already has fans. He puts a WANTED poster up in those cities, fans sign it, and once a city proves itself he negotiates a date with a room that fits, inside limits the artist set. The artist makes one decision: yes or no on an exact offer. Built for the Qloo Agentic Hackathon.
 
-Short version: https://wanted-qloo.vercel.app/llms.txt
+Short version: https://trywanted.vercel.app/llms.txt
 
 ## Try it
 
-- App (made for a phone, works on desktop): https://wanted-qloo.vercel.app
-- Demo act with a guided tour from Gus: https://wanted-qloo.vercel.app/a/maya-ortiz?tour=1
-- A fan's poster page: https://wanted-qloo.vercel.app/w/maya-ortiz/burlington-vt
-- Gus as an MCP connector: https://wanted-qloo.vercel.app/api/mcp
+- App (made for a phone, works on desktop): https://trywanted.vercel.app
+- Demo act with a guided tour from Gus: https://trywanted.vercel.app/a/maya-ortiz?tour=1
+- A fan's poster page: https://trywanted.vercel.app/w/maya-ortiz/burlington-vt
+- Gus as an MCP connector: https://trywanted.vercel.app/api/mcp
 - Source (MIT): https://github.com/wafflebytes/wanted
 
 ## Who it's for
@@ -74,13 +74,15 @@ Every city sheet has "Ask a chatbot instead?". It puts the same question (where'
 
 ## Gus in Claude or ChatGPT (MCP)
 
-`https://wanted-qloo.vercel.app/api/mcp` is a remote MCP server: streamable HTTP, stateless, JSON responses, no sign-in. Add it as a custom connector. Every tool takes an optional `act` slug (default `maya-ortiz`).
+`https://trywanted.vercel.app/api/mcp` is a remote MCP server: streamable HTTP, stateless, JSON responses, no sign-in. Add it as a custom connector. Every tool takes an optional `act` slug (default `maya-ortiz`).
 
 - `where_am_i_wanted`: ranked cities, with heat percentile, sleepers and signatures. Read-only.
 - `city_brief`: neighborhoods, fitting rooms with likely size and open nights, signatures. Read-only.
 - `deals`: every date in talks, with terms and whether they sit inside the artist's limits. Read-only.
 - `ask_gus`: a question for Gus; he runs his own lookups and answers with what he checked. Read-only.
 - `ask_rooms`: sends Gus to ask a room in a city. Starts a negotiation, never pays.
+
+In Claude, every tool answers as a card in the chat (an MCP App, `ui://wanted/gus-card-v2.html`): the ranked cities, one city with its neighborhoods and the rooms' open nights, the deals, or Gus's reply with what he checked. Tapping a city opens it and "Send Gus to ask" calls `ask_rooms`, all without leaving the conversation. Other clients get the same answer as text and structured content. The server also lists starter prompts: `where_am_i_wanted`, `plan_a_night` and `whats_waiting`.
 
 There's no tool that approves or pays. That happens in the app, by the artist, against the exact offer.
 

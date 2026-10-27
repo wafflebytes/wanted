@@ -73,8 +73,8 @@ const cards = [
   },
   {
     name: '11-in-claude', kicker: 'Gus in Claude', title: 'Ask him from Claude too.',
-    body: 'Add Gus as a connector and ask where you should play next. Paying always comes back to Wanted for your yes.',
-    screens: ['claude'], wide: true, optional: true,
+    body: 'Add Gus as a connector and he answers as a card: 26 of 50 signed in Burlington, where your crowd lives, the rooms that fit. Paying always comes back to Wanted for your yes.',
+    screens: ['claude'], optional: true,
   },
   {
     name: '12-try-gus', kicker: 'Try it', title: 'Meet Gus on your phone.',
