@@ -158,6 +158,28 @@ function VoiceCard({ open, suggest }: { open: boolean; suggest: Tile[] }) {
     setShowWork(false);
     body.current?.scrollTo({ top: 0 });
   }, [g.heard]);
+  // Content melts into the composer only while there's more below, and an offered action
+  // scrolls fully into view, so its button is never cut off under the bar.
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const el = body.current;
+    if (!el) return;
+    const on = () => setMore(el.scrollHeight - el.scrollTop - el.clientHeight > 4);
+    on();
+    el.addEventListener('scroll', on, { passive: true });
+    const ro = new ResizeObserver(on);
+    ro.observe(el);
+    [...el.children].forEach((c) => ro.observe(c));
+    const mo = new MutationObserver(() => ([...el.children].forEach((c) => ro.observe(c)), on()));
+    mo.observe(el, { childList: true, subtree: true });
+    return () => (el.removeEventListener('scroll', on), ro.disconnect(), mo.disconnect());
+  }, []);
+  const action = g.answer?.action ? g.answer.reply : null;
+  useEffect(() => {
+    if (!action) return;
+    const t = setTimeout(() => body.current?.querySelector('.vc-body > :last-child')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 420);
+    return () => clearTimeout(t);
+  }, [action]);
   useEffect(() => {
     if (!open) setTyping(false);
     else if (g.noMic) setTyping(true);
@@ -176,7 +198,7 @@ function VoiceCard({ open, suggest }: { open: boolean; suggest: Tile[] }) {
             </button>
           )}
         </div>
-        <div className="vc-body" ref={body} aria-live="polite">
+        <div className={`vc-body ${more ? 'has-more' : ''}`} ref={body} aria-live="polite">
           {fresh && (
             <div className={`vc-fresh ${g.intro ? 'is-intro' : ''}`}>
               {g.intro ? (

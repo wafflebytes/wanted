@@ -204,7 +204,8 @@
 .vc-top { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 14px 0 20px; flex: none; }
 .vc-cap { flex: 1; font: 700 13px var(--display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
 .vc-hush { height: 30px; padding: 0 12px; border-radius: var(--r-m); font: 600 13px var(--body); color: var(--ink-2); background: var(--veil-2); }
-.vc-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 14px; padding: 8px 20px 16px; }
+.vc-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 14px; padding: 8px 20px 16px; scroll-padding-bottom: 16px; }
+.vc-body.has-more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 44px), transparent); }
 .vc-you { font-size: 15.5px; line-height: 1.4; color: var(--ink-2); animation: rise var(--t-enter) var(--ease) both; }
 .vc-you::before { content: "You  "; font: 700 11px var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
 .vc-listen { color: var(--ink-3); }
@@ -241,7 +242,7 @@
 
 /* The voice bar: keyboard · talk key · close. Motion lives only in the talk key. */
 .vc-bar { flex: none; display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 8px; padding: 8px 14px 14px; }
-.vc-bar.is-typing { grid-template-columns: 1fr 48px; padding-top: 12px; border-top: 1px solid var(--line); }
+.vc-bar.is-typing { grid-template-columns: 1fr 48px; padding-top: 6px; }
 .vc-side { width: 48px; height: 48px; color: var(--ink-2); }
 .talk-wrap { justify-self: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .talk { position: relative; width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; background: var(--raise); box-shadow: var(--bevel), var(--drop), 0 10px 24px -10px rgba(255, 90, 31, 0.55); transition: transform var(--t-tap) var(--ease); touch-action: none; -webkit-user-select: none; user-select: none; }
