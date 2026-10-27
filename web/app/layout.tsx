@@ -7,7 +7,7 @@ import './shell.css';
 export const metadata: Metadata = {
   title: 'Wanted',
   description: "Find out where you're wanted. Fans prove it. Gus books it.",
-  icons: { apple: '/apple-touch-icon.png' },
+  appleWebApp: { title: 'Wanted', statusBarStyle: 'black-translucent' },
 };
 
 export const viewport: Viewport = {

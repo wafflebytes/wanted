@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Deal, InboxMessage } from '@/lib/types';
 import type { Pulse } from '@/server/pulse';
 import type { ArtistState } from '@/ui/types';
+import { Art } from '@web/components/Art';
 import { Icon, type IconName } from '@web/components/Icon';
 import { Reel } from '@web/components/Reel';
 import { api } from '@web/lib/api';
@@ -120,6 +121,7 @@ export default function FanMail() {
         <div className="fm-ground" />
         {pulse.error ? (
           <div className="empty fm-empty">
+            <Art name="mail" size={120} />
             <h3>The mail’s late.</h3>
             <p>Gus couldn’t pick it up just now. It usually comes through in a minute.</p>
             <button className="btn light" onClick={() => mutate(`/artist/${slug}/pulse`)}>

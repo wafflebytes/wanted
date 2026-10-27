@@ -9,7 +9,10 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import type { LogEntry, Mandate } from '@/lib/types';
+import type { Deal, LogEntry, Mandate } from '@/lib/types';
+import type { ArtistState } from '@/ui/types';
+import { Art, type ArtName } from '@web/components/Art';
+import { Gus } from '@web/components/Gus';
 import { Icon, type IconName } from '@web/components/Icon';
 import { useApi } from '@web/lib/hooks';
 import '../../../logbook.css';
@@ -34,6 +37,8 @@ const plain = (s: string) => s.replace(/\s*\(Demo data\.?\)/gi, '').replace(/\bB
 export default function Logbook() {
   const slug = useParams<{ artist: string }>().artist;
   const book = useApi<{ entries: LogEntry[]; mandate: Mandate }>(`/artist/${slug}/logbook`, { every: 6000 });
+  const artist = useApi<ArtistState>(`/artist/${slug}`);
+  const dealList = useApi<{ deals: Deal[] }>(`/artist/${slug}/deals`);
   const [only, setOnly] = useState<'all' | 'you'>('all');
 
   useEffect(() => {
@@ -73,6 +78,7 @@ export default function Logbook() {
       <div className="lb-ground" />
 
       <header className="lb-hero">
+        <Gus mood={entries.length ? 'working' : 'waiting'} size={132} className="lb-gus" />
         <span className="kicker">Gus’s logbook</span>
         {entries.length ? (
           <>
@@ -96,6 +102,8 @@ export default function Logbook() {
           ))}
         </div>
       </header>
+
+      {artist.data && <Shelf opened={artist.data.opened} deals={dealList.data?.deals ?? []} />}
 
       {entries.length > 0 && (
         <div className="seg lb-seg" role="tablist">
@@ -156,5 +164,43 @@ export default function Logbook() {
         </section>
       )}
     </main>
+  );
+}
+
+type Badge = { art: ArtName; title: string; won: string | null; todo: string };
+const md = (t: number) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+/** The shelf: what you've got so far, as things you'd keep. The rest wait as shadows, with how to get them. */
+function Shelf({ opened, deals }: { opened: ArtistState['opened']; deals: Deal[] }) {
+  const first = opened.slice().sort((a, b) => a.openedAt - b.openedAt)[0];
+  const fifty = opened.find((c) => (c.proof?.signatures ?? 0) >= 50);
+  const held = deals.filter((d) => d.status === 'held').sort((a, b) => a.updatedAt - b.updatedAt)[0];
+  const back = opened.find((c) => c.playedAt && c.openedAt > c.playedAt);
+  const badges: Badge[] = [
+    { art: 'poster', title: 'First poster', won: first ? `${first.name}, ${md(first.openedAt)}` : null, todo: 'Put a poster up' },
+    { art: 'fifty', title: 'Fifty signed', won: fifty ? fifty.name : null, todo: 'Get 50 in one city' },
+    { art: 'booked', title: 'First date held', won: held ? `${held.roomName}, ${held.cityName}` : null, todo: 'Say yes to a room' },
+    { art: 'sold-out', title: 'Sold out', won: null, todo: 'Fill a room' },
+    { art: 'back-again', title: 'Back again', won: back ? back.name : null, todo: 'Get asked back' },
+  ];
+  const got = badges.filter((b) => b.won).length;
+  return (
+    <section className="lb-shelf" aria-label="On the shelf">
+      <div className="section-h">
+        <h2>On the shelf</h2>
+        <span className="ink-3">
+          {got} of {badges.length}
+        </span>
+      </div>
+      <ul>
+        {badges.map((b, i) => (
+          <li key={b.art} className={b.won ? 'won' : ''} style={{ ['--i' as string]: i }}>
+            <Art name={b.art} size={84} title={b.title} />
+            <b>{b.title}</b>
+            <em>{b.won ?? b.todo}</em>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

@@ -9,6 +9,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Roast, TourPlan, TourStop } from '@/lib/types';
 import { Art } from '@web/components/Art';
+import { Gus } from '@web/components/Gus';
 import { Icon } from '@web/components/Icon';
 import { Sheet } from '@web/components/Sheet';
 import { ApiError, streamNdjson } from '@web/lib/api';
@@ -102,7 +103,7 @@ export default function TourPage() {
     </button>
   ) : (
     <div className="th">
-      <Art name="van" size={118} className="th-obj" />
+      <Gus mood={busy ? 'working' : fixes.length ? 'thinking' : 'proud'} size={124} className="th-obj" />
       <span className="kicker k-hot">Your run</span>
       <h2 className="th-title">
         {md(first!.date)}

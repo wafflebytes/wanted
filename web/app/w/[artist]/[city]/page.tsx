@@ -7,6 +7,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { PosterState } from "@/ui/types";
+import { Art } from '@web/components/Art';
 import { Icon } from "@web/components/Icon";
 import { Reel } from "@web/components/Reel";
 import { api, ApiError } from "@web/lib/api";
@@ -66,6 +67,7 @@ export default function FanPoster() {
       <main className="fp">
         <div className="pw-ground" />
         <div className="empty fp-empty">
+          <Art name="binoculars" size={128} />
           <h3>No poster here.</h3>
           <p>The link might be old, or the act took this one down.</p>
           <a className="btn light" href="/">

@@ -49,3 +49,6 @@ web/next-env.d.ts
 
 # Trial fonts: licensed for local use only, never publish
 assets/fonts/KarlSTTrial-*
+
+# Raw art renders (60 MB); scripts/build-art.py turns them into web/public/art
+new-assets-gus/

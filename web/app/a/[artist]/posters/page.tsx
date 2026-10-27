@@ -11,6 +11,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Deal } from '@/lib/types';
 import type { ArtistState, OpenedCity, PosterState } from '@/ui/types';
+import { Art } from '@web/components/Art';
 import { Icon } from '@web/components/Icon';
 import { Reel } from '@web/components/Reel';
 import { api } from '@web/lib/api';
@@ -93,6 +94,7 @@ export default function PostersPage() {
       <main className="pw">
         <div className="pw-ground" />
         <div className="empty pw-empty">
+          <Art name="stapler" size={128} />
           <h2 className="d-24">No posters up yet.</h2>
           <p className="ink-2">Open a city on the map and Gus prints a WANTED poster for it. Fans sign it to bring you there.</p>
           <button className="btn hot" onClick={() => router.push(`/a/${slug}`)}>

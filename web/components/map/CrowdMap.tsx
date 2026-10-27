@@ -168,8 +168,8 @@ function halftone<T extends { h3: string }>(hexes: T[], value: (h: T) => number,
   });
 }
 
-const STAR = (fill: string) =>
-  `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"><path d="M12 2.6l2.7 5.6 6.1.8-4.4 4.3 1.1 6.1L12 16.5l-5.5 2.9 1.1-6.1-4.4-4.3 6.1-.8z" fill="${fill}" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>`)}`;
+/** The rendered pushpins (web/public/art, 256 px, point at the bottom centre). */
+const PIN = (name: 'pin-city' | 'pin-sleeper' | 'pin-booked') => ({ url: `/art/${name}.webp`, id: name, width: 256, height: 256, anchorY: 250, mask: false });
 
 const ORANGE: RGB = [255, 90, 31];
 
@@ -381,13 +381,13 @@ export default function CrowdMap(props: CrowdMapProps) {
           updateTriggers: { getRadius: phase, getLineColor: phase },
         }),
         new IconLayer({
-          id: 'sleeper-star',
-          data: sleepers,
+          id: 'sleeper-pin',
+          data: sleepers.filter((m) => !opened.has(m.id)),
           getPosition: (d: MapMetro) => [d.lon, d.lat],
-          getIcon: () => ({ url: STAR('#F2B705'), id: 'star', width: 64, height: 64, mask: false }),
-          getSize: narrow ? 18 : 22,
+          getIcon: () => PIN('pin-sleeper'),
+          getSize: narrow ? 30 : 36,
           sizeUnits: 'pixels',
-          getPixelOffset: [0, narrow ? -16 : -22],
+          pickable: true,
         }),
         new ScatterplotLayer({
           id: 'metros',
@@ -401,6 +401,17 @@ export default function CrowdMap(props: CrowdMapProps) {
           lineWidthMinPixels: 2,
           pickable: true,
           updateTriggers: { getFillColor: [zoom, props.opened.join(), dark], getRadius: props.opened.join() },
+        }),
+        // A pushpin in every city with a poster up; its point lands on the city's dot.
+        new IconLayer({
+          id: 'opened-pins',
+          data: scored.filter((m) => opened.has(m.id)),
+          getPosition: (d: MapMetro) => [d.lon, d.lat],
+          getIcon: () => PIN('pin-city'),
+          getSize: narrow ? 30 : 36,
+          sizeUnits: 'pixels',
+          pickable: true,
+          updateTriggers: { data: props.opened.join() },
         }),
       );
       if (!props.route?.length) {
@@ -567,7 +578,7 @@ export default function CrowdMap(props: CrowdMapProps) {
         if (!info.object || !info.layer) return;
         const id = info.layer.id;
         const o = info.object as Record<string, unknown>;
-        if (id === 'metros' || id === 'metro-labels') props.onPick({ kind: 'metro', id: String(o.id) });
+        if (id === 'metros' || id === 'metro-labels' || id === 'opened-pins' || id === 'sleeper-pin') props.onPick({ kind: 'metro', id: String(o.id) });
         else if (id === 'rooms' || id === 'room-labels') props.onPick({ kind: 'room', id: String(o.id) });
         else if (id === 'hoods') props.onPick({ kind: 'neighborhood', id: String(o.name) });
       },

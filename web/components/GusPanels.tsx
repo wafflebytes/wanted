@@ -63,7 +63,7 @@ export function GusPanels({ slug, artist, waiting, entries }: { slug: string; ar
       },
     },
     { art: 'logbook', title: 'Catch me up', sub: 'What you missed', tint: 'var(--t-sand)', run: () => (gus.open('voice'), gus.ask('Catch me up. What happened while I was away?')) },
-    { art: 'dial', title: 'Your limits', sub: 'What I do alone', tint: 'var(--t-mint)', run: go('/settings#limits') },
+    { art: 'dial', title: 'Your limits', sub: 'What I do alone', tint: 'var(--t-mint)', run: go('/settings#gus') },
   ];
 
   return (
@@ -105,6 +105,7 @@ function Tiles({ open, tiles }: { open: boolean; tiles: Tile[] }) {
   return (
     <div className={`tiles ${open ? 'on' : ''}`} aria-hidden={!open} inert={!open}>
       <div className="tiles-head" style={{ ['--i' as string]: tiles.length }}>
+        {open && <Gus mood="talking" size={112} className="tiles-gus" />}
         <h2 className="d-30">What should I do?</h2>
         <p className="ink-2">Tap a job, or hold my button to talk.</p>
       </div>

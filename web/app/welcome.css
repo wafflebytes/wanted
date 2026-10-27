@@ -13,8 +13,11 @@
 
 /* ---------- the first screen */
 .wl-hero { display: flex; flex-direction: column; animation: rise var(--t-enter) var(--ease) both; }
-.wl-van { align-self: center; margin-bottom: 8px; filter: drop-shadow(0 20px 18px rgba(0, 0, 0, 0.45)); animation: van-park 900ms var(--ease) both; }
-@keyframes van-park { from { opacity: 0; transform: translateX(-60px); } }
+.wl-gus { align-self: center; filter: drop-shadow(0 22px 20px rgba(0, 0, 0, 0.42)); }
+.wl-hero > .wl-gus { margin-bottom: 4px; animation: gus-arrive var(--t-hero) var(--ease) both; }
+@keyframes gus-arrive { from { opacity: 0; transform: translateY(16px) scale(0.97); } }
+.wl-tag { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px 0 8px; margin-bottom: 12px; border-radius: 7px; font: 700 12.5px var(--display); letter-spacing: 0.01em; color: #fff; background: linear-gradient(#FF7A3D, #F0500F); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 14px -6px rgba(255, 90, 31, 0.7); }
+.wl-tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.4); }
 .wl-hero h1 { font: 800 40px/1.02 var(--display); letter-spacing: -0.04em; text-wrap: balance; }
 .wl-hero > p { margin-top: 12px; font-size: 16.5px; line-height: 1.45; color: var(--ink-2); max-width: 34ch; }
 .wl-acts { display: flex; flex-direction: column; gap: 10px; margin-top: 28px; }
@@ -84,19 +87,19 @@
 .wl-picks b { font: 700 17px var(--display); letter-spacing: -0.01em; }
 .wl-picks span { font-size: 13px; color: var(--ink-3); }
 .wl-picks em { grid-column: 2 / -1; font-style: normal; font-size: 13px; color: var(--ok-text); }
-.wl-van-top { margin-bottom: -18px; z-index: 2; animation: none; }
+.wl-gus-top { margin-bottom: -14px; z-index: 2 !important; }
 
 /* ---------- splash: the road on a table. Objects drift in and settle around Gus (0–700 ms),
    the wordmark rolls up letter by letter (300–800 ms), then everything clears (1100–1400 ms). */
 .sp { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; align-content: center; gap: 28px; cursor: default; }
 .sp > * { position: relative; z-index: 1; }
 .sp > .wl-ground { position: fixed; inset: 0; z-index: 0; }
-.sp-table { position: relative; width: 104px; height: 104px; }
+.sp-table { position: relative; width: 150px; height: 150px; }
 .sp-obj { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) translate(var(--x), var(--y)) rotate(var(--r)); filter: drop-shadow(0 14px 14px rgba(0, 0, 0, 0.35)); animation: sp-drift var(--t-hero) var(--ease) both; animation-delay: calc(var(--i) * 60ms); }
 @keyframes sp-drift { from { opacity: 0; transform: translate(-50%, -50%) translate(calc(var(--x) * 1.5), calc(var(--y) * 1.5)) rotate(calc(var(--r) * 2.5)) scale(0.92); } }
 .sp-gus { position: absolute; inset: 0; display: grid; place-items: center; filter: drop-shadow(0 22px 20px rgba(0, 0, 0, 0.45)); animation: sp-settle var(--t-hero) var(--ease) 120ms both; }
 @keyframes sp-settle { from { opacity: 0; transform: translateY(-18px) scale(1.06); } }
-.sp-word { display: flex; overflow: hidden; padding: 0 4px 6px; margin-top: 64px; font: 800 52px/1 var(--display); letter-spacing: -0.045em; }
+.sp-word { display: flex; overflow: hidden; padding: 0 4px 6px; margin-top: 40px; font: 800 52px/1 var(--display); letter-spacing: -0.045em; }
 .sp-word span { display: inline-block; animation: sp-roll var(--t-enter) var(--ease) both; animation-delay: calc(300ms + var(--i) * 40ms); }
 @keyframes sp-roll { from { transform: translateY(105%); opacity: 0; } }
 .sp.out > :not(.wl-ground) { opacity: 0; transform: scale(0.98); transition: opacity var(--t-move) var(--ease), transform var(--t-move) var(--ease); }

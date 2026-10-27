@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { ActEntity, RoomBand } from '@/lib/types';
 import { Art, type ArtName } from '@web/components/Art';
-import { Gus } from '@web/components/Gus';
+import { Gus, type GusMood } from '@web/components/Gus';
 import { Icon } from '@web/components/Icon';
 import { api, streamNdjson } from '@web/lib/api';
 import { defaultStart, session } from '@web/lib/session';
@@ -69,13 +69,16 @@ export default function Page() {
   return <Welcome />;
 }
 
+/** What Gus is doing above each Welcome card. */
+const STEP_MOOD: Partial<Record<Step, GusMood>> = { fan: 'proud', link: 'listening', sound: 'thinking', rooms: 'working' };
+
 /** Things from the road, drifting onto the table around Gus. Offsets are from the centre. */
 const DRIFT: { name: ArtName; x: number; y: number; r: number; size: number }[] = [
-  { name: 'poster', x: -112, y: -132, r: -9, size: 92 },
-  { name: 'mail', x: 116, y: -118, r: 11, size: 76 },
-  { name: 'ticket', x: -124, y: 34, r: 14, size: 70 },
-  { name: 'cassette', x: 122, y: 40, r: -12, size: 72 },
-  { name: 'pin', x: 4, y: -176, r: 0, size: 56 },
+  { name: 'poster', x: -118, y: -118, r: -9, size: 96 },
+  { name: 'mail', x: 120, y: -104, r: 11, size: 80 },
+  { name: 'ticket', x: -128, y: 56, r: 14, size: 84 },
+  { name: 'cassette', x: 126, y: 58, r: -12, size: 84 },
+  { name: 'pick', x: 2, y: -132, r: -14, size: 40 },
 ];
 
 /** At most 1.4 s: the objects settle, the wordmark rolls up, then it clears. Tap to skip. */
@@ -102,7 +105,7 @@ function Splash({ onDone }: { onDone: () => void }) {
           </span>
         ))}
         <span className="sp-gus">
-          <Gus mood="proud" size={104} />
+          <Gus mood="wave" size={150} />
         </span>
       </div>
       <h1 className="sp-word">
@@ -229,9 +232,10 @@ function Welcome() {
 
       {step === 'who' && (
         <section className="wl-hero" key="who">
-          <Art name="van" size={180} className="wl-van" />
+          <Gus mood="wave" size={220} className="wl-gus" label="Gus, your tour manager" />
+          <span className="wl-tag">Gus, your tour manager</span>
           <h1>Find the cities that want you.</h1>
-          <p>Gus reads where your listeners live, puts a WANTED poster up in their city, and asks venues for a date once enough of them sign.</p>
+          <p>I read where your listeners live, put a WANTED poster up in their city, and ask venues for a date once enough of them sign.</p>
           <div className="wl-acts">
             <button className="btn hot block" onClick={() => go('link')}>
               I make music
@@ -247,7 +251,7 @@ function Welcome() {
         </section>
       )}
 
-      {step !== 'who' && step !== 'run' && <Art name="van" size={132} className="wl-van wl-van-top" />}
+      {step !== 'who' && step !== 'run' && <Gus mood={STEP_MOOD[step] ?? 'idle'} size={150} className="wl-gus wl-gus-top" />}
       {step !== 'who' && (
         <section className="wl-card" key={step}>
           {step !== 'run' && (
@@ -268,7 +272,6 @@ function Welcome() {
 
           {step === 'fan' && (
             <>
-              <Gus mood="proud" size={84} />
               <h2>Good. Fans are how this works.</h2>
               <p>When an act you like puts up a WANTED poster for your city, sign it. Fifty signatures and Gus asks the venues for a date. You hear first.</p>
               <button className="btn hot block" onClick={() => router.push(`/a/${DEMO}/posters`)}>
@@ -279,7 +282,6 @@ function Welcome() {
 
           {step === 'link' && (
             <>
-              <Gus mood="thinking" size={72} />
               <h2>Where can I hear you?</h2>
               <p>Paste a Spotify, Apple Music, Bandcamp, SoundCloud or YouTube link. Or just type your name.</p>
               <form
@@ -355,7 +357,7 @@ function Welcome() {
 
           {step === 'run' && (
             <div className="wl-run" aria-live="polite">
-              <Gus mood={run.picks.length ? 'proud' : 'thinking'} size={92} />
+              <Gus mood={run.picks.length ? 'proud' : 'working'} size={150} />
               <h2>{run.title}</h2>
               {run.line && <p>{run.line}</p>}
               {run.picks.length > 0 ? (

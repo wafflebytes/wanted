@@ -1,20 +1,52 @@
 'use client';
 /**
- * Soft-lit 3D objects (the Airbnb-2025 language), drawn as SVG until the generated art lands.
- * When `/art/<name>.png` is listed in ART_FILES (docs/design/ASSET-PROMPTS.md), it wins.
+ * Soft-lit 3D objects (the Airbnb-2025 language). Rendered art lives in web/public/art (built
+ * from the generated set by scripts/build-art.py); FILES says which render each name uses. The
+ * SVG drawings stay as the fallback for the few names that have no render yet.
  * Every object sits on the same light: key from the top left, a warm bounce from below,
  * a soft contact shadow, one orange accent.
  */
 import { useId, type ReactNode } from 'react';
 
-/** PNGs that exist in web/public/art. Add a name here when its render is dropped in. */
-const ART_FILES = new Set<string>([]);
-
 export type ArtName =
   | 'map' | 'van' | 'poster' | 'mail' | 'logbook' | 'pass' | 'dial'
   | 'ticket' | 'pick' | 'cassette'
   | 'room' | 'route' | 'mic' | 'reply' | 'phone' | 'coin' | 'megaphone' | 'stapler'
-  | 'seal' | 'pin';
+  | 'seal' | 'pin' | 'pin-booked' | 'pin-sleeper' | 'receipt'
+  | 'fifty' | 'booked' | 'back-again' | 'sold-out'
+  | 'amp' | 'binoculars' | 'stage';
+
+/** Which render in web/public/art each name uses. */
+const FILES: Partial<Record<ArtName, string>> = {
+  map: 'act-room',
+  poster: 'badge-first-poster',
+  mail: 'empty-mail',
+  logbook: 'empty-logbook',
+  dial: 'self-approved',
+  ticket: 'obj-ticket',
+  pick: 'obj-pick',
+  cassette: 'obj-cassette',
+  room: 'pin-room',
+  route: 'act-route',
+  mic: 'act-mics',
+  reply: 'act-reply',
+  phone: 'act-phone',
+  coin: 'act-deposit',
+  megaphone: 'act-megaphone',
+  stapler: 'act-staple',
+  seal: 'self-approved',
+  pin: 'pin-city',
+  'pin-booked': 'pin-booked',
+  'pin-sleeper': 'pin-sleeper',
+  receipt: 'receipt-paper',
+  fifty: 'badge-fifty',
+  booked: 'badge-booked',
+  'back-again': 'badge-back-again',
+  'sold-out': 'badge-sold-out',
+  amp: 'empty-offline',
+  binoculars: 'empty-search',
+  stage: 'empty-shows',
+};
 
 type Draw = (u: (s: string) => string) => ReactNode;
 
@@ -63,7 +95,7 @@ const Defs = ({ u }: { u: (s: string) => string }) => (
   </defs>
 );
 
-const DRAW: Record<ArtName, Draw> = {
+const DRAW: Partial<Record<ArtName, Draw>> = {
   poster: (u) => (
     <>
       {shadow(u, 62, 108, 34, 5)}
@@ -387,14 +419,15 @@ const DRAW: Record<ArtName, Draw> = {
 export function Art({ name, size = 76, className, style, title }: { name: ArtName; size?: number; className?: string; style?: React.CSSProperties; title?: string }) {
   const id = useId().replace(/:/g, '');
   const u = (s: string) => `${s}-${id}`;
-  if (ART_FILES.has(name)) {
+  const file = FILES[name];
+  if (file || !DRAW[name]) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={`/art/${name}.png`} width={size} height={size} alt={title ?? ''} className={className} style={style} draggable={false} />;
+    return <img src={`/art/${file ?? name}.webp`} width={size} height={size} alt={title ?? ''} aria-hidden={title ? undefined : true} className={`art ${className ?? ''}`} style={style} draggable={false} />;
   }
   return (
     <svg viewBox="0 0 120 120" width={size} height={size} className={className} style={style} role={title ? 'img' : undefined} aria-hidden={title ? undefined : true} aria-label={title}>
       <Defs u={u} />
-      {DRAW[name](u)}
+      {DRAW[name]!(u)}
     </svg>
   );
 }

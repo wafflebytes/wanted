@@ -65,16 +65,20 @@
 @keyframes swap-in { from { opacity: 0; transform: translateY(7px); filter: blur(3px); } }
 @keyframes swap-out { to { opacity: 0; transform: translateY(-7px); filter: blur(3px); } }
 
-/* Gus's face reacts in small ways. */
-.gus-pupils { transition: transform var(--t-move) var(--ease); }
-.gus-thinking .gus-pupils { animation: ponder 2.4s var(--ease) infinite; }
-@keyframes ponder { 0%, 100% { transform: translate(-2.2px, -2.6px); } 50% { transform: translate(2.2px, -2.6px); } }
-.gus-idle .gus-eyes { animation: blink 5.2s infinite; transform-origin: 50% 45%; }
-@keyframes blink { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
-.gus-z { animation: zed 2.4s var(--ease) infinite; }
-@keyframes zed { from { opacity: 0; transform: translate(-4px, 6px); } 50% { opacity: 1; } to { opacity: 0; transform: translate(4px, -6px); } }
-.gus-listening .gus-body { animation: lean 1.4s var(--ease) infinite; transform-origin: 50% 90%; }
-@keyframes lean { 50% { transform: rotate(-2deg) translateY(-1px); } }
+/* Gus. A new pose settles in; his face in small places moves a little for his mood. */
+.gus { display: block; flex: none; user-select: none; -webkit-user-drag: none; }
+.gus-pose { animation: gus-in var(--t-move) var(--ease) both; filter: drop-shadow(0 10px 12px rgba(20, 10, 0, 0.28)); }
+@keyframes gus-in { from { opacity: 0; transform: translateY(4px) scale(0.985); } }
+.gus-face { transition: transform 90ms linear, opacity var(--t-fade), filter var(--t-fade); transform-origin: 50% 80%; }
+.gus-face.gus-thinking, .gus-face.gus-working { animation: ponder 2.4s var(--ease) infinite; }
+@keyframes ponder { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+.gus-face.gus-sleeping { opacity: 0.55; filter: grayscale(0.5); animation: doze 3.6s var(--ease) infinite; }
+@keyframes doze { 50% { transform: translateY(1px) rotate(-4deg); } }
+.gus-face.gus-worried { animation: fret 1.6s var(--ease) infinite; }
+@keyframes fret { 0%, 100% { transform: none; } 10% { transform: translateX(-1px); } 20% { transform: translateX(1px); } 30% { transform: none; } }
+.gus-face.gus-proud, .gus-face.gus-done { animation: nod 420ms var(--ease) both; }
+@keyframes nod { 50% { transform: translateY(-2px) rotate(-3deg); } }
+@media (prefers-reduced-motion: reduce) { .gus { animation: none !important; } }
 
 /* ---------- dock */
 .dock {
@@ -117,7 +121,8 @@
   transition: opacity 220ms var(--ease), transform 260ms var(--ease), filter 220ms var(--ease); transition-delay: calc(var(--i) * 10ms);
 }
 .tiles.on .tiles-head, .tiles.on .tiles-ask, .tiles.on .tile { opacity: 1; transform: none; filter: none; transition: opacity 320ms var(--ease), transform 420ms var(--ease), filter 320ms var(--ease); transition-delay: calc(var(--i) * 24ms); }
-.tiles-head { padding: 0 6px 12px; }
+.tiles-head { position: relative; padding: 0 6px 12px; }
+.tiles-gus { margin: 0 0 2px -10px; }
 .tiles-head p { margin-top: 4px; }
 .tiles-ask { margin-bottom: 8px; }
 .tiles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
