@@ -83,8 +83,17 @@
 .tr-what b .tag { font-style: normal; }
 .tr-what span { font-size: 13.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* Raised: the hero folds into one bar so the list gets the room. */
-.th-compact { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 8px 6px 6px; border-radius: var(--r-l); background: var(--raise); box-shadow: var(--bevel), var(--drop); text-align: left; animation: fade var(--t-fade) var(--ease); }
+/* Raised: the hero folds into one bar so the list gets the room. --p comes from the drawer (or the
+   panel's scroll on a computer): Gus and the details go first, the title lifts and shrinks, the
+   head's height closes to the bar's, and the bar fades in late. The clip keeps Gus breaking out
+   above but trims what the folding head no longer holds. */
+.th-wrap { --th-h: 420px; --pp: var(--p, 0); position: relative; height: calc(var(--th-h) - (var(--th-h) - 56px) * var(--pp)); clip-path: inset(-140px -40px -8px -40px); }
+.th-wrap .th { opacity: calc(1 - var(--pp) * 1.8); transform: translateY(calc(var(--pp) * -22px)) scale(calc(1 - var(--pp) * 0.05)); transform-origin: 50% 0; }
+.th-wrap .th-obj { opacity: calc(1 - var(--pp) * 2.6); }
+.th-wrap .th-compact { position: absolute; left: 0; right: 0; top: 0; z-index: 3; opacity: calc((var(--pp) - 0.45) * 2.2); transform: translateY(calc((1 - var(--pp)) * 10px)); pointer-events: none; }
+[data-folded] .th-wrap .th-compact { pointer-events: auto; }
+[data-folded] .th-wrap .th { pointer-events: none; }
+.th-compact { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 8px 6px 6px; border-radius: var(--r-l); background: var(--raise); box-shadow: var(--bevel), var(--drop); text-align: left; }
 .th-mini { width: 42px; height: 42px; flex: none; border-radius: 50%; display: grid; place-items: center; font: 800 15px var(--display); background: radial-gradient(circle, var(--well-bg) 15px, transparent 15.5px), conic-gradient(var(--wanted) calc(var(--v) * 1%), var(--veil-2) 0); }
 .th-compact b { flex: 1; min-width: 0; display: flex; flex-direction: column; font: 700 16px/1.2 var(--display); letter-spacing: -0.01em; }
 .th-compact em { font: 500 13px var(--body); font-style: normal; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -6,7 +6,7 @@
  * what moved.
  */
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Deal, Roast, TourPlan, TourStop } from '@/lib/types';
 import { Art } from '@web/components/Art';
 import { Gus } from '@web/components/Gus';
@@ -42,6 +42,16 @@ export default function TourPage() {
   const [moved, setMoved] = useState<Set<string>>(new Set());
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const fixesRef = useRef<HTMLDivElement>(null);
+  const foldRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const hasPlan = !!plan;
+  useLayoutEffect(() => {
+    const c = heroRef.current;
+    if (!c) return;
+    const ro = new ResizeObserver(() => foldRef.current?.style.setProperty('--th-h', `${c.offsetHeight}px`));
+    ro.observe(c);
+    return () => ro.disconnect();
+  }, [hasPlan]);
 
   const route = useMemo(() => plan?.stops.map((s) => ({ lat: s.lat, lon: s.lon, city: s.city })) ?? null, [plan]);
   useEffect(() => {
@@ -94,57 +104,60 @@ export default function TourPage() {
     setAt(1);
     setTimeout(() => fixesRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 320);
   };
-  const head = !plan ? null : at > 0 ? (
-    <button className="th-compact" onClick={() => (fixes.length ? seeFixes() : setAt(0))}>
-      <span className="th-mini" style={{ ["--v" as string]: Math.round(plan.total) }}>{Math.round(plan.total)}</span>
-      <b>
-        {md(first!.date)} → {md(last!.date)}
-        <em>
+  // Both faces are always there: the drawer's --p (0 at the peek, 1 at half) folds the hero into
+  // the bar under your finger, the way a scoreboard shrinks into the toolbar as you scroll.
+  const head = !plan ? null : (
+    <div className="th-wrap" ref={foldRef}>
+      <button className="th-compact" onClick={() => (fixes.length ? seeFixes() : setAt(0))}>
+        <span className="th-mini" style={{ ["--v" as string]: Math.round(plan.total) }}>{Math.round(plan.total)}</span>
+        <b>
+          {md(first!.date)} → {md(last!.date)}
+          <em>
+            {plan.stops.length} nights · {first!.city} to {last!.city}
+          </em>
+        </b>
+        {fixes.length > 0 && <span className="btn xs hot">{fixes.length === 1 ? '1 change' : `${fixes.length} changes`}</span>}
+      </button>
+      <div className="th" data-tour="run" ref={heroRef}>
+        <Gus mood={busy ? 'working' : fixes.length ? 'thinking' : 'proud'} size={124} className="th-obj" />
+        <span className="kicker k-hot">Your run</span>
+        <h2 className="th-title">
+          {md(first!.date)}
+          <span className="th-arrow">→</span>
+          {day(first!.date).getMonth() === day(last!.date).getMonth() ? day(last!.date).getDate() : md(last!.date)}
+        </h2>
+        <p className="th-sub">
           {plan.stops.length} nights · {first!.city} to {last!.city}
-        </em>
-      </b>
-      {fixes.length > 0 && <span className="btn xs hot">{fixes.length} changes</span>}
-    </button>
-  ) : (
-    <div className="th" data-tour="run">
-      <Gus mood={busy ? 'working' : fixes.length ? 'thinking' : 'proud'} size={124} className="th-obj" />
-      <span className="kicker k-hot">Your run</span>
-      <h2 className="th-title">
-        {md(first!.date)}
-        <span className="th-arrow">→</span>
-        {day(first!.date).getMonth() === day(last!.date).getMonth() ? day(last!.date).getDate() : md(last!.date)}
-      </h2>
-      <p className="th-sub">
-        {plan.stops.length} nights · {first!.city} to {last!.city}
-      </p>
-      <RunStrip stops={plan.stops} moved={moved} />
-      {longLeg && (
-        <button className="th-road" onClick={() => router.push(`/a/${slug}/road/${longLeg.metroId}`)}>
-          <Icon name="van" size={18} />
-          <span>
-            <b>{Math.round(longLeg.driveHoursFromPrev)} h to {longLeg.city}.</b> Gus found a better way.
-          </span>
-          <Icon name="forward" size={14} />
-        </button>
-      )}
-      <div className="th-score">
-        <Ring value={plan.total} gain={gain} />
-        <p>
-          {plan.gusLine}
-          {gain >= 1 && <b> Gus can get it to {Math.round(plan.total + gain)}.</b>}
         </p>
+        <RunStrip stops={plan.stops} moved={moved} />
+        {longLeg && (
+          <button className="th-road" onClick={() => router.push(`/a/${slug}/road/${longLeg.metroId}`)}>
+            <Icon name="van" size={18} />
+            <span>
+              <b>{Math.round(longLeg.driveHoursFromPrev)} h to {longLeg.city}.</b> Gus found a better way.
+            </span>
+            <Icon name="forward" size={14} />
+          </button>
+        )}
+        <div className="th-score">
+          <Ring value={plan.total} gain={gain} />
+          <p>
+            {plan.gusLine}
+            {gain >= 1 && <b> Gus can get it to {Math.round(plan.total + gain)}.</b>}
+          </p>
+        </div>
+        {fixes.length > 0 ? (
+          <button className="btn hot block" onClick={seeFixes}>
+            {fixes.length === 1 ? 'See Gus’s change' : `See Gus’s ${fixes.length} changes`}
+            <Icon name="forward" size={18} />
+          </button>
+        ) : (
+          <button className="btn block" onClick={() => router.push(`/a/${slug}`)}>
+            Ask rooms on the map
+            <Icon name="forward" size={18} />
+          </button>
+        )}
       </div>
-      {fixes.length > 0 ? (
-        <button className="btn hot block" onClick={seeFixes}>
-          {fixes.length === 1 ? 'See Gus’s change' : `See Gus’s ${fixes.length} changes`}
-          <Icon name="forward" size={18} />
-        </button>
-      ) : (
-        <button className="btn block" onClick={() => router.push(`/a/${slug}`)}>
-          Ask rooms on the map
-          <Icon name="forward" size={18} />
-        </button>
-      )}
     </div>
   );
 
@@ -208,7 +221,17 @@ export default function TourPage() {
       {wide ? (
         <aside className="home-panel card">
           {head && <div className="sheet-head">{head}</div>}
-          <div className="home-panel-body">{body}</div>
+          <div
+            className="home-panel-body"
+            onScroll={(e) => {
+              const p = Math.min(1, e.currentTarget.scrollTop / 140);
+              const panel = e.currentTarget.parentElement!;
+              panel.style.setProperty('--p', p.toFixed(3));
+              panel.toggleAttribute('data-folded', p > 0.5);
+            }}
+          >
+            {body}
+          </div>
         </aside>
       ) : (
         <Sheet detents={detents} at={at} onAt={setAt} head={head}>
