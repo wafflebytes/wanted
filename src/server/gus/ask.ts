@@ -17,6 +17,7 @@ import { env, redact } from '../env';
 import { isOpenOn, type RoomView } from '../city';
 import { METROS } from '../score';
 import { cityData, crowdFor, mapData } from '../service';
+import { config } from '../config';
 import { checkGrounded, digitize, numbersIn, wordCount, type Evidence } from './grounding';
 import { chat, LlmUnavailable, parseJson, type ChatMessage, type ToolDef } from './llm';
 
@@ -45,8 +46,8 @@ export type GusAnswer = {
  * threshold, Wanted Score) and a model sometimes repeats them. Musicians hear these instead.
  */
 const PLAIN: [RegExp, string][] = [
-  [/\b(?:the )?proof threshold\b/gi, 'fifty signatures'],
-  [/\bcrossed (?:the )?(?:proof|threshold)\b/gi, 'reached fifty signatures'],
+  [/\b(?:the )?(?:proof )?threshold(?: line)?\b/gi, 'fifty signatures'],
+  [/\bcrossed (?:the )?(?:proof|threshold)(?: line)?\b/gi, 'reached fifty signatures'],
   [/\b(?:a|one of your) sleepers?(?: city| cities)?\b/gi, 'a city nobody plays yet'],
   [/\bsleeper cities\b/gi, 'cities nobody plays yet'],
   [/\bsleepers\b/gi, 'cities nobody plays yet'],
@@ -103,18 +104,36 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
 const untrusted = (s: string) => `<untrusted>${s.replace(/<\/?untrusted>/g, '')}</untrusted>`;
 
-function findCity(text: string, metros: Metro[]): Metro | null {
+const STATES: Record<string, string> = Object.fromEntries(
+  'AL alabama|AK alaska|AZ arizona|AR arkansas|CA california|CO colorado|CT connecticut|DE delaware|DC district of columbia|FL florida|GA georgia|HI hawaii|ID idaho|IL illinois|IN indiana|IA iowa|KS kansas|KY kentucky|LA louisiana|ME maine|MD maryland|MA massachusetts|MI michigan|MN minnesota|MS mississippi|MO missouri|MT montana|NE nebraska|NV nevada|NH new hampshire|NJ new jersey|NM new mexico|NY new york|NC north carolina|ND north dakota|OH ohio|OK oklahoma|OR oregon|PA pennsylvania|RI rhode island|SC south carolina|SD south dakota|TN tennessee|TX texas|UT utah|VT vermont|VA virginia|WA washington|WV west virginia|WI wisconsin|WY wyoming'
+    .split('|')
+    .map((x) => [x.slice(0, 2), x.slice(3)]),
+);
+
+/**
+ * The city a phrase means. Two Portlands, five Springfields: the state settles it when it's said
+ * ("Portland Maine", "Portland, ME"), otherwise the one with a poster up, then the one that wants you most.
+ */
+function findCity(text: string, metros: Metro[], opened: string[] = []): Metro | null {
   const t = ` ${norm(text)} `;
-  let best: Metro | null = null;
+  let hits: { m: Metro; n: string }[] = [];
   for (const m of metros) {
     const n = norm(m.name.split(/[-–/]/)[0]);
-    if (n.length > 2 && t.includes(` ${n} `) && (!best || n.length > norm(best.name).length)) best = m;
+    if (n.length > 2 && t.includes(` ${n} `)) hits.push({ m, n });
   }
-  return best;
+  if (!hits.length) return null;
+  const longest = Math.max(...hits.map((h) => h.n.length));
+  hits = hits.filter((h) => h.n.length === longest);
+  const said = hits.filter(({ m, n }) => {
+    const full = STATES[m.state?.toUpperCase()];
+    return (full && t.includes(` ${full} `)) || t.includes(` ${n} ${m.state?.toLowerCase()} `);
+  });
+  const pool = said.length ? said : hits;
+  return pool.sort((a, b) => Number(opened.includes(b.m.id)) - Number(opened.includes(a.m.id)) || (a.m.rank ?? 999) - (b.m.rank ?? 999))[0].m;
 }
 
 /** Every city named in the text, in the order they appear ("Columbus or Cleveland?"). */
-function citiesIn(text: string, metros: Metro[]): Metro[] {
+function citiesIn(text: string, metros: Metro[], opened: string[] = []): Metro[] {
   const t = ` ${norm(text)} `;
   const hits: { m: Metro; at: number }[] = [];
   for (const m of metros) {
@@ -122,7 +141,11 @@ function citiesIn(text: string, metros: Metro[]): Metro[] {
     const at = n.length > 2 ? t.indexOf(` ${n} `) : -1;
     if (at >= 0) hits.push({ m, at });
   }
-  return hits.sort((a, b) => a.at - b.at).map((h) => h.m).filter((m, i, a) => a.findIndex((x) => x.id === m.id) === i);
+  const at = [...new Set(hits.map((h) => h.at))].sort((a, b) => a - b);
+  return at.map((i) => {
+    const same = hits.filter((h) => h.at === i).map((h) => h.m);
+    return same.length > 1 ? (findCity(text, same, opened) ?? same[0]) : same[0];
+  }).filter((m, i, a) => a.findIndex((x) => x.id === m.id) === i);
 }
 
 function dayIn(text: string): DayKey | null {
@@ -250,7 +273,7 @@ async function runTool(ctx: Ctx, name: string, args: Record<string, string>): Pr
 
 async function execTool(ctx: Ctx, name: string, args: Record<string, string>): Promise<{ out: unknown; found: string }> {
   const { artist, metros, ranked } = ctx;
-  const city = () => (args.city ? findCity(args.city, metros) : null);
+  const city = () => (args.city ? findCity(args.city, metros, ctx.opened) : null);
   const notMine = (c: string) => ({ out: { error: `${c} isn’t one of the cities scored for this act.` }, found: `${c} isn’t on your map` });
 
   if (name === 'top_cities') {
@@ -323,10 +346,10 @@ async function execTool(ctx: Ctx, name: string, args: Record<string, string>): P
     const map = await mapData(artist);
     const cities = map.proof.map((p) => {
       const m = metros.find((x) => x.id === p.city);
-      return { city: m ? `${m.name}, ${m.state}` : p.city, signatures: p.signatures, demoSignatures: p.demoSignatures, shareOfSignatures: p.signatureShare, shareQlooPredicted: p.heatShare, proofRatio: p.ratio, crossedThreshold: p.crossed };
+      return { city: m ? `${m.name}, ${m.state}` : p.city, signatures: p.signatures, demoSignatures: p.demoSignatures, shareOfSignatures: p.signatureShare, shareQlooPredicted: p.heatShare, proofRatio: p.ratio, crossedThreshold: p.crossed, signaturesToAskRooms: Math.max(0, config.proof.minSignatures - p.signatures) };
     });
     const total = cities.reduce((s, c) => s + c.signatures, 0);
-    const out = { posters: cities.length, totalSignatures: total, cities, isDemoData: artist.isDemo };
+    const out = { posters: cities.length, totalSignatures: total, signaturesBeforeAskingRooms: config.proof.minSignatures, cities, isDemoData: artist.isDemo };
     return { out, found: cities.length ? `${total} signatures across ${cities.length} posters` : 'no posters up yet' };
   }
   return { out: { error: `Unknown tool ${name}` }, found: 'couldn’t check that' };
@@ -348,21 +371,28 @@ function limitAction(which: 'deposit' | 'cut', value: number): GusAction {
   return { type: 'limit', key: 'minSplit', value: v, label: `Never take less than ${v}% of the door` };
 }
 
+/** "Never more than 300 down", "at least 70 percent of the door": a limit, offered on the real slider. */
+function limitAsk(heard: string): Omit<GusAnswer, 'heard' | 'model' | 'steps'> | null {
+  const t = norm(heard);
+  const amount = heard.match(/\$?\s?(\d{2,4})\s?(%|percent|dollars|bucks)?/i);
+  if (!amount || !/(deposit|put down|up front|upfront|cut|split|door|percent|%)/.test(t) || !/(limit|up to|at most|max|most|never|less than|no less|at least|let|set|raise|lower|change|allow)/.test(t)) return null;
+  const n = Number(amount[1]);
+  const cut = /(cut|split|door|percent|%)/.test(t) && !/(deposit|put down|up front|upfront)/.test(t);
+  const action = limitAction(cut ? 'cut' : 'deposit', n);
+  const v = (action as { value: number }).value;
+  return { reply: cut ? `Fine. I won’t take less than ${v} percent of the door. Slide it if that’s right.` : `Fine. I’ll go up to ${v} dollars to hold a night. Check the slider.`, mood: 'idle', action };
+}
+
 async function liteAgent(ctx: Ctx, heard: string): Promise<Omit<GusAnswer, 'heard' | 'model' | 'steps'>> {
   const t = norm(heard);
   const { metros, ranked } = ctx;
-  const named = citiesIn(heard, metros);
+  const named = citiesIn(heard, metros, ctx.opened);
   const city = named[0] ?? null;
   const day = dayIn(heard);
   const name = ctx.artist.name;
 
-  const amount = heard.match(/\$?\s?(\d{2,4})\s?(%|percent|dollars|bucks)?/i);
-  if (amount && /(deposit|put down|up front|upfront|cut|split|door|percent|%)/.test(t) && /(limit|up to|at most|max|most|never|less than|no less|at least|let|set|raise|lower|change|allow)/.test(t)) {
-    const n = Number(amount[1]);
-    const cut = /(cut|split|door|percent|%)/.test(t) && !/(deposit|put down|up front|upfront)/.test(t);
-    const action = limitAction(cut ? 'cut' : 'deposit', n);
-    return { reply: cut ? `Fine. I won’t take less than ${(action as { value: number }).value} percent of the door. Slide it if that’s right.` : `Fine. I’ll go up to ${(action as { value: number }).value} dollars to hold a night. Check the slider.`, mood: 'idle', action };
-  }
+  const lim = limitAsk(heard);
+  if (lim) return lim;
 
   if (named.length >= 2 && /( or |versus| vs |compare|better|which)/.test(` ${t} `)) {
     const [a, b] = named;
@@ -412,6 +442,13 @@ async function liteAgent(ctx: Ctx, heard: string): Promise<Omit<GusAnswer, 'hear
   if (/(signature|signed|poster|proof|proved|threshold|demand)/.test(t)) {
     await runTool(ctx, 'fan_proof', {});
     const map = await mapData(ctx.artist);
+    const mine = city ? map.proof.find((p) => p.city === city.id) : null;
+    if (city && mine) {
+      const more = Math.max(0, config.proof.minSignatures - mine.signatures);
+      return more
+        ? { reply: `${city.name} has ${mine.signatures} signatures. ${more} more and I can start asking rooms.`, mood: 'idle', action: { type: 'city', id: city.id, name: city.name, label: `Go to ${city.name}` } }
+        : { reply: `${city.name} has ${mine.signatures} signatures. That’s enough, I can ask rooms there now.`, mood: 'proud', action: { type: 'pitch', id: city.id, name: city.name, label: `Pitch ${city.name}` } };
+    }
     const best = [...map.proof].sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))[0];
     if (!best) return { reply: 'No posters up yet. Put one up where your crowd is and let them prove it.', mood: 'idle', action: TABS.posters };
     const m = metros.find((x) => x.id === best.city);
@@ -450,7 +487,7 @@ Rules:
 - Talk like a tour manager to a musician. Never say: score, Wanted Score, sleeper, proof, threshold, metric, data, Qloo, rank or ranked, market. Say instead: "one of your best cities", "a city nobody's playing yet", "35 more signatures and I can ask rooms", "fans there".
 - It's spoken aloud: whole words, no dashes, slashes or abbreviations ("Wednesday to Friday", not "wed-thu-fri").
 - When you call tools, also say one short line out loud about what you're checking ("Let me see how Ithaca's doing."), no numbers.
-- Changing what you may agree to (the biggest deposit, the smallest cut of the door): never say it's changed. Offer it with action "limit" and the value they asked for; they confirm it on the slider.
+- Changing what you may agree to (the biggest deposit, the smallest cut of the door) needs no lookups: never say it's changed. Offer it with action "limit" and the value they asked for; they confirm it on the slider.
 - You can open one screen or start one thing. Booking: you only ASK a room for a date (action "book"); the artist approves any money later. Hotels and dinner open a search; you never claim to have booked them.
 When you are done, reply with ONLY this JSON:
 {"reply": "<one or two spoken sentences, under 35 words, with the specific answer>", "mood": "idle|proud|unimpressed", "action": {"type": "none|city|tab|pitch|book|stay|eat|limit", "city": "<city name, if any>", "tab": "<map|tour|pulse|posters, if type is tab>", "room": "<exact room name from a rooms result, if type is book>", "limit": "<deposit|cut, if type is limit>", "value": <number, if type is limit>}}`;
@@ -476,6 +513,8 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     return out;
   };
   if (!heard.trim()) return done({ model: 'gus-lite', reply: 'I didn’t catch anything. Hold me and talk.', mood: 'unimpressed', action: null });
+  const lim = limitAsk(heard);
+  if (lim) return done({ model: 'gus-lite', ...lim });
 
   const facts = [
     `Act: ${untrusted(artist.name)} (${artist.kind === 'comedy' ? 'stand-up comedian' : 'music'}).`,
@@ -543,7 +582,7 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
   }
 
   const a = parsed?.action ?? {};
-  const city = a.city ? (findCity(a.city, metros) ?? null) : null;
+  const city = a.city ? (findCity(a.city, metros, map.opened) ?? null) : null;
   let action: GusAction | null = null;
   if (a.type === 'tab' && a.tab && a.tab in TABS) action = TABS[a.tab];
   else if (a.type === 'limit' && (a.limit === 'deposit' || a.limit === 'cut') && typeof a.value === 'number') action = limitAction(a.limit, a.value);
@@ -556,6 +595,20 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     const room = rooms.find((r) => norm(r.name) === norm(a.room ?? '')) ?? rooms.find((r) => a.room && norm(r.name).includes(norm(a.room)));
     if (room) action = { type: 'deal', id: city.id, name: city.name, roomId: room.id, label: `Ask ${room.name} for a date` };
     else action = { type: 'city', id: city.id, name: city.name, label: `Go to ${city.name}` };
+  }
+  // He said a room or a city but picked no action: hand over the key for it, never a dead end.
+  if (!action || action.type === 'tab') {
+    const said = norm(reply);
+    for (const [cid, rooms] of ctx.seenRooms) {
+      const room = rooms.find((r) => norm(r.name).length > 3 && said.includes(norm(r.name)));
+      const m = metros.find((x) => x.id === cid);
+      if (room && m) {
+        action = { type: 'deal', id: m.id, name: m.name, roomId: room.id, label: `Ask ${room.name} for a date` };
+        break;
+      }
+    }
+    const asked = citiesIn(heard, metros, map.opened)[0];
+    if (!action && asked) action = { type: 'city', id: asked.id, name: asked.name, label: `Go to ${asked.name}` };
   }
   return done({ reply: reply.slice(0, 280), mood: parsed?.mood && ['idle', 'proud', 'unimpressed'].includes(parsed.mood) ? parsed.mood : 'idle', action, model });
 }

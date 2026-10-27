@@ -105,6 +105,8 @@ There's no tool that approves or pays. That happens in the app, by the artist, a
 
 ## Evals
 
+- Asking Gus (`evals/gus.md`, `npm run eval:gus`): 16 questions across everything he's asked to do, live model with no cache and live Qloo, through the same route the app uses. 16 of 16 answers passed. A pass means he ran the right lookup, offered a fitting next step, used plain words and stayed short. Separately, the server throws out any reply naming a place no lookup returned. Writing this eval caught three bugs that are now fixed: "Portland Maine" picked Portland, Oregon; Gus didn't know a poster needs fifty signatures; and he'd ask "want me to ask for a date?" without the button that does it.
+- Qloo against a plain chatbot (`evals/qloo-vs-chatbot.md`, `npm run eval:chatbot`): the same city question over 8 cities. 46% of its rooms hold up, and most of the neighborhoods it names aren't where this sound's fans live by Qloo's ranking.
 - Agent gate (`evals/report.md`): 12 of 12 scenarios passed with no rejected tool calls. They cover approval not being delivery, changed terms needing review, stopping when nothing qualifies, and text from a venue not being able to grant authority.
 - Unit and policy tests: `npm test` (deal policy, approvals, the MCP protocol, ranking).
 - Production smoke: `npm run smoke:prod` checks every page, the JSON the pages need, the share images, the MCP connector and these text files, with time budgets.

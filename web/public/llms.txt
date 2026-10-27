@@ -46,5 +46,7 @@
 
 - [README](https://github.com/wafflebytes/wanted#readme): the pitch, try-it path, architecture, evals.
 - [Agent UX spec](https://github.com/wafflebytes/wanted/blob/main/docs/design/AGENT-UX.md): approvals ladder, surfaces, loops.
-- [Evals](https://github.com/wafflebytes/wanted/blob/main/evals/report.md): agent, voice, and Qloo vs plain-LLM results.
+- [Asking Gus eval](https://github.com/wafflebytes/wanted/blob/main/evals/gus.md): 16 live questions, the right lookup and a next step each time.
+- [Qloo vs a plain chatbot](https://github.com/wafflebytes/wanted/blob/main/evals/qloo-vs-chatbot.md): how much of a chatbot's room advice holds up, over 8 cities.
+- [Agent gate](https://github.com/wafflebytes/wanted/blob/main/evals/report.md): 12 policy scenarios (approval, changed terms, untrusted text).
 - [Research](https://github.com/wafflebytes/wanted/tree/main/docs/research): customers, touring operating model, voice of customer, market.

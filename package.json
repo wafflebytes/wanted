@@ -90,6 +90,8 @@
     "eval:llm": "tsx evals/agent-llm.ts",
     "eval:report": "tsx scripts/build-eval-report.ts",
     "eval:voice": "tsx evals/voice.ts",
+    "eval:gus": "tsx evals/gus-ask.ts",
+    "eval:chatbot": "tsx evals/qloo-vs-chatbot.ts",
     "web:build": "next build web",
     "web:start": "next start web --port 3100",
     "web:routes": "tsx scripts/web-routes.ts",
