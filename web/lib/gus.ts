@@ -218,7 +218,13 @@ async function speak(text: string, mood: string) {
 }
 
 // ---------- asks
-async function send(body: FormData | { text: string; screen: string }) {
+/** The last few exchanges, so "book me a room there" follows on. Forgotten after five quiet minutes. */
+let turns: { heard: string; reply: string; at: number }[] = [];
+const recent = () => turns.filter((t) => Date.now() - t.at < 300_000).slice(-3).map(({ heard, reply }) => ({ heard, reply }));
+
+async function send(body: FormData | { text: string; screen: string; history?: { heard: string; reply: string }[] }) {
+  if (body instanceof FormData) body.append('history', JSON.stringify(recent()));
+  else body.history = recent();
   const id = ++run;
   set({ phase: 'thinking', panel: state.panel === 'none' || state.panel === 'tiles' ? 'voice' : state.panel, error: null, answer: null, steps: [], aside: null, spoken: 0, heard: body instanceof FormData ? null : body.text });
   let answer: GusAnswer | null = null;
@@ -247,6 +253,7 @@ async function send(body: FormData | { text: string; screen: string }) {
   const a = answer as GusAnswer;
   haptic('answer');
   set({ phase: 'answer', answer: a, spoken: 0 });
+  if (a.heard && a.reply) turns = [...turns.slice(-4), { heard: a.heard, reply: a.reply, at: Date.now() }];
   speak(a.reply, a.mood);
   // Still holding when the answer lands: he just takes you there (links always ask first).
   if (state.holding && a.action && a.action.type !== 'link' && a.action.type !== 'limit') act(a.action);

@@ -39,6 +39,8 @@ export type GusAnswer = {
   action: GusAction | null;
   model: string;
   steps: GusStep[];
+  /** Why the rules planner answered instead of the model, when it did. */
+  fallback?: 'unavailable' | 'ungrounded' | 'no-reply' | 'rule';
 };
 
 /**
@@ -68,7 +70,11 @@ export function plainWords(text: string): string {
   return out.replace(/\s{2,}/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 }
 
-export type GusEvent = { type: 'heard'; text: string } | { type: 'say'; text: string } | { type: 'step'; step: GusStep } | { type: 'answer'; answer: GusAnswer };
+/** `looked` carries a lookup's raw result for in-process callers (the evals); the route never streams it. */
+export type GusEvent = { type: 'heard'; text: string } | { type: 'say'; text: string } | { type: 'step'; step: GusStep } | { type: 'looked'; tool: string; args: Record<string, string>; out: unknown } | { type: 'answer'; answer: GusAnswer };
+
+/** One earlier exchange, sent back by the app so "book me a room there" knows where "there" is. */
+export type GusTurn = { heard: string; reply: string };
 
 export class AsrError extends Error {}
 
@@ -237,6 +243,8 @@ type Ctx = {
   seenRooms: Map<string, RoomView[]>;
   memo: Map<string, Promise<unknown>>;
   emit: (e: GusEvent) => void;
+  /** Earlier turns, newest last: only for working out which city "there" means. */
+  history: GusTurn[];
 };
 
 function remember(ctx: Ctx, out: unknown) {
@@ -259,6 +267,7 @@ async function runTool(ctx: Ctx, name: string, args: Record<string, string>): Pr
     Object.assign(step, { status, found, ms: Date.now() - started });
     ctx.emit({ type: 'step', step: { ...step } });
     if (status === 'done') remember(ctx, out);
+    ctx.emit({ type: 'looked', tool: name, args, out });
     return out;
   };
   const key = `${name}:${JSON.stringify(args)}`;
@@ -372,12 +381,17 @@ function limitAction(which: 'deposit' | 'cut', value: number): GusAction {
 }
 
 /** "Never more than 300 down", "at least 70 percent of the door": a limit, offered on the real slider. */
-function limitAsk(heard: string): Omit<GusAnswer, 'heard' | 'model' | 'steps'> | null {
+function limitAsk(heard: string, history: GusTurn[] = []): Omit<GusAnswer, 'heard' | 'model' | 'steps'> | null {
   const t = norm(heard);
   const amount = heard.match(/\$?\s?(\d{2,4})\s?(%|percent|dollars|bucks)?/i);
-  if (!amount || !/(deposit|put down|up front|upfront|cut|split|door|percent|%)/.test(t) || !/(limit|up to|at most|max|most|never|less than|no less|at least|let|set|raise|lower|change|allow)/.test(t)) return null;
+  if (!amount) return null;
+  // "Actually make it 250" right after a limit: the same limit, a new number.
+  const last = history.at(-1)?.reply ?? '';
+  const before = /percent of the door/.test(last) ? 'cut' : /dollars to hold a night/.test(last) ? 'deposit' : null;
+  const followUp = before && /(make it|instead|actually|change it|go with|lower|raise|how about|what about)/.test(t);
+  if (!followUp && (!/(deposit|put down|up front|upfront|cut|split|door|percent|%)/.test(t) || !/(limit|up to|at most|max|most|never|less than|no less|at least|let|set|raise|lower|change|allow)/.test(t))) return null;
   const n = Number(amount[1]);
-  const cut = /(cut|split|door|percent|%)/.test(t) && !/(deposit|put down|up front|upfront)/.test(t);
+  const cut = followUp ? before === 'cut' : /(cut|split|door|percent|%)/.test(t) && !/(deposit|put down|up front|upfront)/.test(t);
   const action = limitAction(cut ? 'cut' : 'deposit', n);
   const v = (action as { value: number }).value;
   return { reply: cut ? `Fine. I won’t take less than ${v} percent of the door. Slide it if that’s right.` : `Fine. I’ll go up to ${v} dollars to hold a night. Check the slider.`, mood: 'idle', action };
@@ -386,12 +400,17 @@ function limitAsk(heard: string): Omit<GusAnswer, 'heard' | 'model' | 'steps'> |
 async function liteAgent(ctx: Ctx, heard: string): Promise<Omit<GusAnswer, 'heard' | 'model' | 'steps'>> {
   const t = norm(heard);
   const { metros, ranked } = ctx;
-  const named = citiesIn(heard, metros, ctx.opened);
+  let named = citiesIn(heard, metros, ctx.opened);
+  // "Book me a room there": the city from the last turn that named one.
+  for (const turn of [...ctx.history].reverse()) {
+    if (named.length) break;
+    named = citiesIn(`${turn.heard} ${turn.reply}`, metros, ctx.opened).slice(0, 1);
+  }
   const city = named[0] ?? null;
   const day = dayIn(heard);
   const name = ctx.artist.name;
 
-  const lim = limitAsk(heard);
+  const lim = limitAsk(heard, ctx.history);
   if (lim) return lim;
 
   if (named.length >= 2 && /( or |versus| vs |compare|better|which)/.test(` ${t} `)) {
@@ -420,10 +439,12 @@ async function liteAgent(ctx: Ctx, heard: string): Promise<Omit<GusAnswer, 'hear
     const open = day ? rooms.filter((r) => isOpenOn(r, day) !== false) : rooms;
     const dark = day ? rooms.filter((r) => isOpenOn(r, day) === false) : [];
     const pick = open[0] ?? rooms[0];
+    const askedFor = heard.match(/\b(?:at|play|book)\s+(?:the\s+)?((?:[A-Z][\w’'&-]*\s*){1,5})/)?.[1]?.trim();
+    const missing = askedFor && !rooms.some((r) => norm(r.name).includes(norm(askedFor))) && !citiesIn(askedFor, metros).length ? `I can’t find ${askedFor} in ${city.name}. ` : '';
     const darkLine = dark.length ? ` Skip ${dark[0].name}, it’s dark ${cap(day!)}s.` : pick.closedDays?.length ? ` It’s dark ${pick.closedDays.map((d) => cap(d)).join(' and ')}s, so route around that.` : '';
     const hood = pick.neighborhood && pick.neighborhoodRank && pick.neighborhoodRank <= 5 ? `, right where your people live in ${pick.neighborhood}` : pick.neighborhood ? ` in ${pick.neighborhood}` : '';
     return {
-      reply: `${pick.name}${hood}.${darkLine}`,
+      reply: `${missing}${missing ? `Try ${pick.name}` : pick.name}${hood}.${darkLine}`,
       mood: 'proud',
       action: { type: 'deal', id: city.id, name: city.name, roomId: pick.id, label: `Ask ${pick.name} for a date` },
     };
@@ -492,7 +513,8 @@ Rules:
 When you are done, reply with ONLY this JSON:
 {"reply": "<one or two spoken sentences, under 35 words, with the specific answer>", "mood": "idle|proud|unimpressed", "action": {"type": "none|city|tab|pitch|book|stay|eat|limit", "city": "<city name, if any>", "tab": "<map|tour|pulse|posters, if type is tab>", "room": "<exact room name from a rooms result, if type is book>", "limit": "<deposit|cut, if type is limit>", "value": <number, if type is limit>}}`;
 
-export async function answer(artist: ArtistRow, heard: string, screen: string | null, emit: (e: GusEvent) => void = () => {}): Promise<GusAnswer> {
+export async function answer(artist: ArtistRow, heard: string, screen: string | null, emit: (e: GusEvent) => void = () => {}, history: GusTurn[] = []): Promise<GusAnswer> {
+  history = history.slice(-3).map((t) => ({ heard: String(t.heard ?? '').slice(0, 300), reply: String(t.reply ?? '').slice(0, 300) }));
   const map = await mapData(artist);
   const metros: Metro[] = map.metros.map((m) => ({ id: m.id, name: m.name, state: m.state, rank: m.rank ?? null, sleeper: !!m.sleeper, score: m.score ?? null, heatRank: m.heatRank ?? null, liftRank: m.liftRank ?? null }));
   const ranked = metros.filter((m) => m.rank !== null).sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
@@ -506,6 +528,7 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     seenRooms: new Map(),
     memo: new Map(),
     emit,
+    history,
   };
   const done = (a: Omit<GusAnswer, 'heard' | 'steps'>): GusAnswer => {
     const out = { heard, ...a, reply: plainWords(a.reply), steps: ctx.steps.map((s) => ({ ...s })) };
@@ -513,8 +536,8 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     return out;
   };
   if (!heard.trim()) return done({ model: 'gus-lite', reply: 'I didn’t catch anything. Hold me and talk.', mood: 'unimpressed', action: null });
-  const lim = limitAsk(heard);
-  if (lim) return done({ model: 'gus-lite', ...lim });
+  const lim = limitAsk(heard, history);
+  if (lim) return done({ model: 'gus-lite', fallback: 'rule', ...lim });
 
   const facts = [
     `Act: ${untrusted(artist.name)} (${artist.kind === 'comedy' ? 'stand-up comedian' : 'music'}).`,
@@ -527,10 +550,14 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     .join('\n');
   const messages: ChatMessage[] = [
     { role: 'system', content: SYSTEM },
-    { role: 'user', content: `${facts}\n\nThe artist said: ${untrusted(heard.slice(0, 400))}` },
+    {
+      role: 'user',
+      content: `${facts}${history.length ? `\n\nEarlier in this conversation (to work out what "there", "those" or "it" means; look things up again before you rely on it):\n${history.map((h) => `Artist: ${untrusted(h.heard)}\nYou: ${untrusted(h.reply)}`).join('\n')}` : ''}\n\nThe artist said: ${untrusted(heard.slice(0, 400))}`,
+    },
   ];
 
   let finalText: string | null = null;
+  let unavailable = false;
   let model = 'gus-lite';
   const deadline = Date.now() + 30_000;
   // One budget for the whole answer: a slow provider can't chain timeouts into minutes.
@@ -569,16 +596,19 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
       finalText = res.content;
     }
   } catch (err) {
-    if (!(err instanceof LlmUnavailable)) console.warn('[gus] agent failed, using lite', redact(String(err)));
+    if (!(err instanceof LlmUnavailable) || process.env.GUS_DEBUG) console.warn('[gus] agent failed, using lite', redact(String(err)).slice(0, 400));
     finalText = null;
+    if (err instanceof LlmUnavailable) unavailable = true;
   }
 
   const parsed = parseJson<{ reply?: string; mood?: GusAnswer['mood']; action?: { type?: string; city?: string; tab?: string; room?: string; limit?: string; value?: number } }>(finalText);
   const reply = digitize((parsed?.reply ?? '').trim());
   const grounded = reply ? checkGrounded(reply, ctx.evidence, METRO_NAMES) : null;
+  if (process.env.GUS_DEBUG && (!reply || wordCount(reply) > 45)) console.warn('[gus] no usable reply:', (finalText ?? '(none)').slice(0, 300));
   if (!reply || !grounded?.ok || wordCount(reply) > 45) {
     if (reply && grounded && !grounded.ok) console.warn('[gus] ungrounded reply, using lite:', [...grounded.unknownNumbers, ...grounded.unknownNames].join(', '));
-    return done({ model: 'gus-lite', ...(await liteAgent(ctx, heard)) });
+    const fallback = unavailable ? 'unavailable' : reply ? 'ungrounded' : 'no-reply';
+    return done({ model: 'gus-lite', fallback, ...(await liteAgent(ctx, heard)) });
   }
 
   const a = parsed?.action ?? {};
