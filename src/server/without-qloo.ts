@@ -109,14 +109,18 @@ export async function withoutQloo(input: {
   });
 
   // Rooms: exists, not closed, open that night, hosts shows.
+  // "The Basement (North Market)" -> "basement"; the parenthetical is the LLM's own gloss.
+  const clean = (x: string) => x.toLowerCase().replace(/\(.*?\)/g, '').replace(/^the /, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  const same = (a: string, b: string) => a === b || (a.length > 3 && b.length > 3 && (a.includes(b) || b.includes(a)));
   const rooms = await Promise.all(
     llm.rooms.map(async (name) => {
+      const want = clean(name).split(',')[0];
+      // A room Qloo already ranked for this act in this metro (suburbs included) is real and fits.
+      const mine = detail.rooms.find((r) => same(clean(r.name).split(' - ')[0], want));
+      if (mine) return { name, found: mine.name, address: mine.address, mark: ok('One of the rooms Wanted ranked for this Sound here too') };
       try {
         const r = await searchPlace(name, focus.query, scope);
         receipts.push(r.receipt);
-        // "The Basement (North Market)" -> "basement"; the parenthetical is the LLM's own gloss.
-        const clean = (x: string) => x.toLowerCase().replace(/\(.*?\)/g, '').replace(/^the /, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-        const want = clean(name).split(',')[0];
         const hit = r.data.find((p) => clean(p.name).includes(want) || want.includes(clean(p.name))) ?? null;
         const inCity = !!hit && (hit.address?.toLowerCase().includes(focus.name.toLowerCase()) || hit.address?.includes(`, ${focus.state}`));
         let mark: Mark;

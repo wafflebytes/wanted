@@ -1,7 +1,8 @@
 'use client';
 /**
  * One city: its name huge, the one-line reason, then where your people are (ranked
- * neighbourhoods with signatures), the rooms worth playing, and who the fans are.
+ * neighbourhoods with signatures), the rooms worth playing, who the fans are, and what a plain
+ * chatbot would have said instead.
  */
 import Link from 'next/link';
 import type { CityData, Crowd } from '@/ui/types';
@@ -9,6 +10,7 @@ import { deals, useDeal } from '@web/lib/deals';
 import { gus } from '@web/lib/gus';
 import { useApi } from '@web/lib/hooks';
 import { Icon } from './Icon';
+import { PlainChatbot } from './PlainChatbot';
 import { Reel } from './Reel';
 
 export function CitySheet({ slug, d, opened, posting, onPost, onClose }: { slug: string; d: CityData; opened: boolean; posting: boolean; onPost: () => void; onClose: () => void }) {
@@ -147,6 +149,8 @@ export function CitySheet({ slug, d, opened, posting, onPost, onClose }: { slug:
           </div>
         </>
       )}
+
+      <PlainChatbot slug={slug} city={d.metro.id} name={d.metro.name} />
     </div>
   );
 }
