@@ -7,7 +7,7 @@
  */
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Roast, TourPlan, TourStop } from '@/lib/types';
+import type { Deal, Roast, TourPlan, TourStop } from '@/lib/types';
 import { Art } from '@web/components/Art';
 import { Gus } from '@web/components/Gus';
 import { Icon } from '@web/components/Icon';
@@ -29,6 +29,9 @@ export default function TourPage() {
   const path = `/artist/${slug}/plan`;
   const res = useApi<{ plan: TourPlan | null }>(path);
   const plan = res.data?.plan ?? null;
+  // Held dates open their show day; the rest open the city.
+  const dl = useApi<{ deals: Deal[] }>(`/artist/${slug}/deals`);
+  const heldIn = useMemo(() => Object.fromEntries((dl.data?.deals ?? []).filter((d) => d.status === 'held').map((d) => [d.city, d])), [dl.data]);
   const { w, h } = useViewport();
   const wide = w >= 900;
   const dock = 10 + 62 + 12;
@@ -176,7 +179,8 @@ export default function TourPage() {
             isNew={moved.has(s.date)}
             busy={busy === `lock${i}`}
             onLock={() => run({ kind: 'lock', stopIndex: i, locked: !s.locked }, `lock${i}`, s.locked ? `Unlocked ${s.city}` : `Locked ${s.city}`)}
-            onOpen={() => router.push(`/a/${slug}?city=${s.metroId}`)}
+            held={heldIn[s.metroId]?.roomName ?? null}
+            onOpen={() => router.push(heldIn[s.metroId] ? `/a/${slug}/show/${heldIn[s.metroId].id}` : `/a/${slug}?city=${s.metroId}`)}
           />
         ))}
       </ol>
@@ -235,7 +239,7 @@ function Fix({ r, i, step, busy, disabled, onTake, onSkip }: { r: Roast; i: numb
   );
 }
 
-function Stop({ s, i, isNew, busy, onLock, onOpen }: { s: TourStop; i: number; isNew: boolean; busy: boolean; onLock: () => void; onOpen: () => void }) {
+function Stop({ s, i, isNew, busy, held, onLock, onOpen }: { s: TourStop; i: number; isNew: boolean; busy: boolean; held: string | null; onLock: () => void; onOpen: () => void }) {
   const d = day(s.date);
   const long = s.driveHoursFromPrev >= 8;
   return (
@@ -260,7 +264,7 @@ function Stop({ s, i, isNew, busy, onLock, onOpen }: { s: TourStop; i: number; i
                 {s.city}
                 {isNew && <i className="tag hot">New</i>}
               </b>
-              <span>{s.room?.name ?? 'Room to find'}</span>
+              <span>{held ? <><b className="tr-held">Held</b> {held} · show day</> : s.room?.name ?? 'Room to find'}</span>
             </span>
           </button>
           <button className={`tr-lock ${s.locked ? 'on' : ''}`} onClick={onLock} disabled={busy} aria-pressed={s.locked} aria-label={s.locked ? `Unlock ${s.city}` : `Lock ${s.city}`}>

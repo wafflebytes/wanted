@@ -1,0 +1,128 @@
+/* Show day: one held date, kept by Gus. A timeline with who-set-it dots, the advance as a
+   small meter, and money as a control. */
+.sd { width: 100%; max-width: var(--col); margin: 0 auto; padding: calc(var(--safe-t) + var(--header-h) + 8px) var(--gutter) calc(var(--safe-b) + var(--dock-h) + 48px); display: flex; flex-direction: column; gap: 26px; }
+.ok-text { color: var(--ok-text); }
+
+.sd-hero { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 8px 4px 0; animation: rise var(--t-enter) var(--ease) both; }
+.sd-hero h1 { font: 800 34px/1.04 var(--display); letter-spacing: -0.035em; margin-top: 4px; padding-right: 104px; }
+.sd-city { font: 600 15px/1.2 var(--body); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.sd-say { margin-top: 8px; font: 500 16px/1.42 var(--body); color: var(--ink); max-width: 36ch; text-wrap: pretty; animation: fade 320ms var(--ease) both; }
+.sd-gus { position: absolute; right: -8px; top: -4px; }
+
+/* The room wrote: an amber card with the letter, Gus's read, and a hold key. */
+.sd-letter { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--r-l); background: color-mix(in srgb, var(--ask, #F5B400) 12%, var(--card)); box-shadow: var(--shadow-1), inset 0 0 0 1px color-mix(in srgb, var(--ask, #F5B400) 35%, transparent); animation: rise var(--t-enter) var(--ease) 120ms both; }
+.sd-letter-h { display: flex; align-items: center; gap: 8px; font: 700 13px/1 var(--body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ask-text); }
+.sd-letter blockquote { margin: 0; font: 600 17px/1.38 var(--display); letter-spacing: -0.01em; color: var(--ink); text-wrap: pretty; }
+.sd-letter-g { display: flex; gap: 8px; align-items: flex-start; font: 500 14.5px/1.4 var(--body); color: var(--ink-2); }
+.sd-letter-g > :first-child { flex: none; margin-top: -2px; }
+
+.sd-sec { display: flex; flex-direction: column; gap: 10px; animation: rise var(--t-enter) var(--ease) both; }
+.sd-sec-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 0 4px; }
+.sd-sec-h h2 { font: 750 21px/1.1 var(--display); letter-spacing: -0.02em; }
+.sd-more { position: relative; font: 650 14px/1 var(--body); color: var(--wanted-text); padding: 6px 0; }
+.sd-more::after { content: ""; position: absolute; inset: -10px -8px; }
+.sd-legend { display: inline-flex; align-items: center; gap: 5px; font: 550 12.5px/1 var(--body); color: var(--ink-3); white-space: nowrap; }
+.sd-legend i { width: 7px; height: 7px; border-radius: 50%; margin-left: 6px; }
+.sd-legend i:first-child { margin-left: 0; }
+.w-room { background: #4C7FD6; }
+.w-gus { background: #F2601F; }
+
+/* The day: times in a column, a rail with a dot per row, what and who. */
+.sd-day { list-style: none; margin: 0; padding: 6px 0; border-radius: var(--r-l); background: var(--card); box-shadow: var(--shadow-1), var(--rim); }
+.sd-row { position: relative; }
+.sd-row-b { display: grid; grid-template-columns: 58px 14px 1fr; align-items: start; gap: 0 10px; width: 100%; min-height: 56px; padding: 10px 16px 10px 12px; text-align: left; transition: background var(--t-fade) var(--ease); }
+.sd-row-b:active { background: var(--veil-2); }
+.sd-t { display: flex; align-items: baseline; justify-content: flex-end; gap: 3px; padding-top: 1px; font-variant-numeric: tabular-nums; }
+.sd-t b { font: 750 16px/1.2 var(--display); color: var(--ink); transition: color var(--t-move) var(--ease); }
+.sd-t em { font: 600 11px/1 var(--body); font-style: normal; color: var(--ink-3); }
+.sd-pin { position: relative; align-self: stretch; }
+.sd-pin::before { content: ""; position: absolute; left: 6px; top: -10px; bottom: -10px; width: 2px; background: var(--line-2); }
+.sd-row:first-child .sd-pin::before { top: 9px; }
+.sd-row:last-child .sd-pin::before { bottom: auto; height: 20px; }
+.sd-pin::after { content: ""; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot); box-shadow: 0 0 0 3px var(--card); }
+.sd-row.w-room { --dot: #4C7FD6; background: none; }
+.sd-row.w-gus { --dot: #F2601F; background: none; }
+.sd-row.w-road { --dot: var(--ink-3); background: none; }
+.sd-row.w-fans { --dot: #2FA36B; background: none; }
+.sd-row.s-asked .sd-pin::after { background: var(--card); box-shadow: 0 0 0 3px var(--card), inset 0 0 0 2px var(--ask, #E0A400); }
+.sd-what { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.sd-what b { display: flex; align-items: center; gap: 8px; font: 650 16px/1.25 var(--body); color: var(--ink); }
+.sd-what > span { font: 500 13.5px/1.35 var(--body); color: var(--ink-2); }
+.s-asked .sd-what > span { color: var(--ask-text); }
+.sd-tag { flex: none; padding: 3px 7px; border-radius: var(--r-pill); background: var(--wanted); color: #fff; font: 700 10.5px/1 var(--body); letter-spacing: 0.04em; text-transform: uppercase; animation: dr-land 420ms var(--ease) both; }
+/* A row that moved: the time glows orange and the row washes once, so the change is seen. */
+.sd-row.moved .sd-row-b { animation: sd-wash 1.8s var(--ease) both; }
+.sd-row.moved .sd-t b { color: var(--wanted-text); }
+.sd-row.moved .sd-what { animation: sd-slide 420ms var(--ease) both; }
+@keyframes sd-wash { 0% { background: color-mix(in srgb, var(--wanted) 22%, transparent); } 100% { background: transparent; } }
+@keyframes sd-slide { from { opacity: 0; transform: translateY(6px); filter: blur(3px); } }
+.sd-why { margin: -4px 16px 12px 94px; font: 500 13.5px/1.4 var(--body); color: var(--ink-3); animation: fade 220ms var(--ease) both; }
+
+/* Dinner, opened: the party and the places, the ones that no longer fit struck through. */
+.sd-dinner { margin: -2px 14px 12px 94px; display: flex; flex-direction: column; gap: 10px; animation: rise 280ms var(--ease) both; }
+.sd-party { display: flex; flex-wrap: wrap; gap: 6px; }
+.sd-party span { display: inline-flex; gap: 5px; align-items: baseline; padding: 6px 10px; border-radius: var(--r-pill); background: var(--well-bg); font: 500 12.5px/1 var(--body); color: var(--ink-2); }
+.sd-party b { font-weight: 700; color: var(--ink); }
+.sd-dinner ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sd-dinner li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--r-m); background: var(--raise); box-shadow: var(--bevel), var(--drop); }
+.sd-dinner li.pick { box-shadow: var(--bevel), var(--drop), inset 0 0 0 1.5px var(--ok); }
+.sd-dinner li.out { opacity: 0.55; box-shadow: none; background: var(--well-bg); }
+.sd-dinner li.out b { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.sd-m-n { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sd-m-n b { font: 650 15px/1.2 var(--body); }
+.sd-m-n em { font: 500 12.5px/1.3 var(--body); font-style: normal; color: var(--ink-2); }
+.sd-m-t { flex: none; font: 600 11.5px/1.2 var(--body); color: var(--wanted-text); text-align: right; max-width: 9em; }
+
+/* The advance: a fraction and nine dots, then the questions. */
+.sd-adv { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: var(--r-l); background: var(--well-bg); box-shadow: var(--well); }
+.sd-adv-n { display: flex; align-items: baseline; gap: 8px; }
+.sd-adv-n b { font: 800 30px/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.sd-adv-n b span { font-size: 18px; color: var(--ink-3); }
+.sd-adv-n > span { font: 550 14px/1.2 var(--body); color: var(--ink-2); }
+.sd-adv-dots { display: flex; gap: 4px; }
+.sd-adv-dots i { width: 8px; height: 8px; border-radius: 50%; background: transparent; box-shadow: inset 0 0 0 1.5px var(--ask, #E0A400); }
+.sd-adv-dots i.on { background: #4C7FD6; box-shadow: none; }
+.sd-qs { list-style: none; margin: 0; padding: 4px 0; border-radius: var(--r-l); background: var(--card); box-shadow: var(--shadow-1), var(--rim); }
+.sd-qs li { display: flex; justify-content: space-between; gap: 12px; padding: 11px 16px; font: 500 14.5px/1.3 var(--body); color: var(--ink-2); }
+.sd-qs li + li { border-top: 1px solid var(--line); }
+.sd-qs li b { font-weight: 650; color: var(--ink); text-align: right; }
+.sd-qs li.wait b { color: var(--ask-text); }
+.sd-thread { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; animation: rise 280ms var(--ease) both; }
+.sd-thread li { padding: 12px 14px; border-radius: var(--r-m); background: var(--raise); box-shadow: var(--bevel), var(--drop); max-width: 92%; }
+.sd-thread li.gus { align-self: flex-end; background: color-mix(in srgb, var(--wanted) 14%, var(--raise)); }
+.sd-thread span { font: 650 12px/1 var(--body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+.sd-thread p { margin-top: 6px; font: 500 14.5px/1.4 var(--body); color: var(--ink); }
+
+/* Fans, opener, money, road */
+.sd-fans { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.sd-fans p { font: 500 15.5px/1.42 var(--body); color: var(--ink-2); text-wrap: pretty; }
+.sd-fans p b { color: var(--ink); }
+.sd-done { display: flex; align-items: center; gap: 6px; font-weight: 650 !important; color: var(--ok-text) !important; }
+.sd-ops { display: flex; flex-direction: column; gap: 8px; }
+.sd-op { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 12px 10px 14px; border-radius: var(--r-l); background: var(--card); box-shadow: var(--shadow-1), var(--rim); text-align: left; transition: transform var(--t-tap) var(--ease), box-shadow var(--t-fade) var(--ease); }
+.sd-op:active { transform: scale(var(--press-wide)); }
+.sd-op.on { box-shadow: var(--shadow-1), inset 0 0 0 1.5px var(--wanted); color: var(--wanted-text); }
+.sd-op > svg { flex: none; color: var(--ink-3); }
+.sd-op > span:not(.btn) { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sd-op b { font: 700 16px/1.2 var(--display); color: var(--ink); }
+.sd-op em { font: 500 13px/1.3 var(--body); font-style: normal; color: var(--ink-2); }
+.sd-money { display: flex; flex-direction: column; gap: 6px; padding: 16px; }
+.sd-take { display: flex; align-items: baseline; gap: 10px; }
+.sd-take b { font: 800 40px/1 var(--display); letter-spacing: -0.035em; font-variant-numeric: tabular-nums; color: var(--ok-text); }
+.sd-take span { font: 550 15px/1.2 var(--body); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.sd-even { font: 500 14px/1.45 var(--body); color: var(--ink-2); font-variant-numeric: tabular-nums; text-wrap: pretty; }
+.sd-even b { color: var(--ink); font-weight: 650; }
+.sd-r { width: 100%; text-align: left; }
+.sd-r > svg:first-child { flex: none; color: var(--ink-3); }
+.sd-r > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sd-r b { font: 650 15.5px/1.25 var(--body); }
+.sd-r em { font: 500 13px/1.3 var(--body); font-style: normal; color: var(--ink-2); }
+
+.sd-empty, .sd-skel { padding-top: 24px; }
+.sd-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+.sd-empty h1 { font: 800 26px/1.1 var(--display); }
+.sd-empty p { color: var(--ink-2); max-width: 26ch; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sd-row.moved .sd-row-b, .sd-row.moved .sd-what { animation: none; }
+}

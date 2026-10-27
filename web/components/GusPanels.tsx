@@ -451,7 +451,7 @@ function Offer({ action }: { action: GusAction }) {
 }
 
 /** Hold to confirm: the key fills in 700 ms and lands with a firm tap. Let go early and nothing happens. */
-function HoldKey({ label, onDone }: { label: string; onDone: () => void }) {
+export function HoldKey({ label, onDone }: { label: string; onDone: () => void }) {
   const [on, setOn] = useState(false);
   const t = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stop = () => {

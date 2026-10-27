@@ -121,8 +121,8 @@ export function DealRoom({ open, slug }: { open: boolean; slug: string }) {
                 Tell the fans in {d.cityName}
                 <Icon name="send" size={18} />
               </button>
-              <button className="btn light block" onClick={() => go('/tour')}>
-                See it on your tour
+              <button className="btn light block" onClick={() => go(`/show/${d.id}`)}>
+                Plan the day with Gus
               </button>
             </div>
           )}

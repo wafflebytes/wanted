@@ -76,6 +76,12 @@ function Home() {
     const held = new Set((dl.data?.deals ?? []).filter((d) => d.status === 'held').map((d) => d.city));
     const proven = opened.find((o) => o.proof?.crossed && !held.has(o.city));
     if (proven) return { kicker: 'Your next move', title: `${proven.name} proved it.`, line: `${proven.proof!.signatures} people signed. I can ask three rooms to hold a date.`, action: 'Ask rooms', art: 'room', go: () => (gus.flash(`Asking rooms in ${proven.name}`, 2200), deals.ask(slug, proven.city).then(() => gus.open('room')).catch(() => {})), progress: null };
+    // A held date is the next thing to look after: Gus is advancing it with the room.
+    const next = (dl.data?.deals ?? []).filter((d) => d.status === 'held' && d.terms && d.terms.date >= new Date().toISOString().slice(0, 10)).sort((a, b) => a.terms!.date.localeCompare(b.terms!.date))[0];
+    if (next?.terms) {
+      const when = new Date(`${next.terms.date}T12:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      return { kicker: 'Your next show', title: `${next.roomName}, ${when}.`, line: `Gus is advancing it with the room: load-in, soundcheck, where you eat and sleep.`, action: 'Open show day', art: 'room', go: () => router.push(`/a/${slug}/show/${next.id}`), progress: null };
+    }
     const warm = [...opened].filter((o) => !o.proof?.crossed).sort((a, b) => (b.proof?.signatures ?? 0) - (a.proof?.signatures ?? 0))[0];
     if (warm && (warm.proof?.signatures ?? 0) > 0) {
       const n = warm.proof!.signatures;

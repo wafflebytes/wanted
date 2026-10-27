@@ -89,6 +89,13 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 - Logbook Gus is on the phone while a venue talk is open; Tour's empty state is the stage.
 - Still unused: `receipt-paper`, `badge-sold-out` (no sold-out data), `pin-room` on the city map (venues are blue dots).
 
+## Session 9: the deal room, the drawer, Show day
+
+- Deal room (`DealRoom.tsx`): tug lines, folded letters, steer chips; slim approval; `?deal=` opens it. Limits as genUI (`LimitProposal`) applied in place with an Undo chip. Appllama pass: press and radius tokens, 44 pt targets. `docs/design/AGENT-UX.md` is the agent spec (approvals ladder, surfaces, loops).
+- Stories: `/img/story/<act>/<city>?kind=winner|booked` (1080x1920 JPEG); `web/lib/share.ts` hands it to the share sheet (files) or saves it and copies the caption. Wired: draw winner, Posters held CTA, Story size key, Show day.
+- Drawer (`Sheet.tsx`) rebuilt: follows the finger from anywhere, critically damped spring from release speed (no bounce), scroll and trackpad drive it and hand off to the list both ways, wheel momentum swallowed at the ends. Exposes `--p`/`--q` and `[data-folded]`; the home card folds with the drag (`.nm-wrap`). Home has two rests now (card, list); a city keeps three. The desktop panel folds the card on scroll.
+- Show day (`/a/<act>/show/<deal>`, `web/lib/showday.ts`, `showday.css`): see AGENT-UX 3.6 for what's real and what's fixture. Home's next move leads with the next held date; Tour's held stops open it.
+
 ## Next steps
 
 (Tour and Posters done. Dark is the main mode: design there first, then check light. Use the material system above for every new control. Judge product and copy as well as pixels: one job per screen, one primary key, plain musician words.)
@@ -98,4 +105,5 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 3. Known issues above.
 4. ~~Welcome~~ (landed, session 5): `/` sends a returning device to its last act; a new one gets "Find the cities that want you" (I make music / I'm a fan / demo act), then link → who you sound like → room size → the run streaming picks, then the map. `/?new=1` is Add an act. The full run (`/scout/run`) wasn't exercised from the web yet. Fan poster page `/w/[artist]/[city]` landed too: the poster nailed to the cork wall, count + LED meter + one sentence, a form (initials well, neighbourhood keys, optional contact behind a disclosure), and a torn thermal receipt after signing with a share-to-two-friends key. A real signature wasn't submitted from the web (kept demo counts clean). Splash (session 6): `/` shows Gus with five objects drifting in and the wordmark rolling up, ≤1.4 s, tap to skip, once per browser session, skipped for reduced motion and `?new`. Not yet seen in the browser at full speed (the hidden pane redirected before a screenshot).
 5. Desktop layout (≥900 px): not designed yet; the map already pads for a 520 px left column.
+7. Tech pass for Show day: advance desk (per-deal email thread, parsed answers with source), per-person meal ranking, settle-up. Then the AGENT-UX 3.7 jobs: fly or drive, settle up, conflict radar.
 6. Verify every screen at 375 px dark + light (session 7: Welcome, splash, map, tiles, Tour, Logbook, 404 checked; session 8: Posters, Fan Mail, Settings, fan poster dark, fan poster + Tour light, all fine with the new art). ~~Delete `/lab`~~ (session 7). Vercel: `vercel.json` now builds `next build web` and main deploys fine, but the project's production branch is `ui-overhaul-iphone16`, Production branch switched to main (session 6).

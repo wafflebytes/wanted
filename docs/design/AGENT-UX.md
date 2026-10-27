@@ -120,7 +120,80 @@ Rules for these: the control is the real one (same component, same limits); chan
 the card changes it everywhere at once; the card says where it lives ("This is in
 Settings") so you learn the app while Gus drives it.
 
-### 3.6 Progressive disclosure (Built in part)
+### 3.6 Show day (Built, fixture marked)
+
+`/a/<act>/show/<deal>`. The day sheet for one held date, kept by Gus. Opens from the home card
+("Your next show"), a held stop on Tour, and the deal room once a room is held ("Plan the day
+with Gus"). Why this one: the research pack's strongest evidence (04, tour managers and crew;
+16 D, advance desk) is that the advance-to-day-sheet handoff is where touring people lose hours
+and where things break on the night.
+
+- **The day** is a timeline. Each time has a dot for who set it: blue, the room confirmed it
+  (tap: who said so, and when); orange, Gus picked it; hollow amber, asked and waiting. Unknowns
+  stay visible; nothing pretends to be settled.
+- **The room writes to change something.** An amber card brings the letter, then Gus's one-line
+  read of what it costs ("Dinner gets shorter, so I'll find a quicker place"), then a hold key
+  (rung 2: he answers for you). Hold, and only what depends on it moves: soundcheck slides,
+  dinner's window shrinks, the dinner pick changes, both rows wash orange with a Moved tag.
+  Gus says it in one sentence and ends with "Nothing else moved." That last clause is the
+  judge-facing proof (research 15, Idea D; 16 D gate).
+- **Least-worst dinner for the whole band.** Tap the dinner row: the party with each person's
+  needs (vegetarian, gluten-free), then the places, the ones that no longer fit struck through
+  with "Needs 59 min, you have 30".
+- **The advance** as a fraction and nine dots (6/9), the questions and answers, and the emails
+  one tap down.
+- **Fans:** invite the signers to the place Qloo says this crowd already goes (real: Radio Bean
+  for Burlington), and post that it's booked (real story image).
+- **Who opens:** Qloo openers who share your tags (real). Suggesting one is the room's call.
+- **What you take home** is a control: drag the crowd, watch the number; a heavier tick when
+  you cross the break-even line. "You're even at 24 people."
+- **Getting there:** the drive from the previous tour stop, the room for the night, and the
+  word-of-mouth piece: signers who offered a couch ("Gus checks they're real and close").
+
+**Real today:** the deal (room, date, split, capacity), signer count, Qloo hang spot and
+openers, the previous tour stop, the story image. **Fixture (labelled in `web/lib/showday.ts`):**
+the advance thread and answers, times, party, dinner places, costs, ticket price, hotel, couch
+offers, the venue's change letter. Tech pass: an advance desk (email thread per deal, parsed
+answers with source), places from Qloo ranked per person with hard filters, a settle-up check
+against the door count.
+
+### 3.7 Next jobs for Gus, by demo value
+
+Ranked by how much real friction they remove times how well they show in two minutes.
+
+| Job | What it looks like | Qloo's part | Rung |
+|---|---|---|---|
+| Fly or drive | A long leg shows two lanes: 11 h in the van vs $214 flight + van shuttle, with what each does to the next day's load-in | none; honest | 0, then 3 to buy |
+| Settle up | After the set: the room's count vs the ticket scanner vs your split, one line if it matches, an amber card if not | none | 0 |
+| Guest list and rider | The four names and the rider go to the room; "sent" is not "acknowledged" until the room says so | none | 2 |
+| Conflict radar | "A Sour Widows show is two blocks away that night": same-night shows that share your crowd, not every show | taste similarity of the other bill | 0 |
+| Merch that fits the city | Which shirt to bring more of, from what this crowd also loves | cross-domain brands | 1 |
+| Couch offers | Signers can offer a place to stay; Gus checks distance and that it's real | none; fan data stays local | 2 |
+
+---
+
+## 4. Loops: where the product grows itself
+
+Each one is a moment the musician already wants to post or say, with the next fan's way in
+attached. Built ones are marked.
+
+1. **The poster** (Built): every city's link unfurls as a WANTED poster with the live count.
+   A fan shares it to get to fifty.
+2. **"I signed #43"** (Built): the fan's receipt after signing, made to send to two friends.
+3. **The draw winner** (Built): a story with the poster, the stamp and "#43 from South End,
+   you won." Every fan checks their number; the pill says "Your city next? Sign a poster."
+4. **Booked** (Built): "Burlington, you did it", the date, and "51 of you signed for this".
+   Proof to the next city that signing works. From Posters, the deal room and Show day.
+5. **Meet the signers after** (Built, fixture send): the after-show hang at a place the crowd
+   already loves. Turns a show into a night fans talk about.
+6. **Couch offers** (Built, fixture): the most DIY form of fandom, and a reason to sign.
+7. **Next:** the tour poster (all held dates on one image), the thank-you story the morning
+   after with the room's count, and first-dibs tickets as the revenue edge: signers buy first,
+   Wanted takes a small fee from the room, not the fan.
+
+---
+
+### 3.8 Progressive disclosure (Built in part)
 
 - **Map**: on the tour tab the heat goes quiet and only the route shows. On the country
   view, labels only for your top cities; the rest appear as you zoom.
@@ -131,7 +204,7 @@ Settings") so you learn the app while Gus drives it.
 
 ---
 
-## 4. Motion and feel
+## 5. Motion and feel
 
 - Every Gus act has one motion that points at its subject: a ring (spotlight), a pin drop,
   a tug line sliding. Never confetti.
@@ -142,7 +215,7 @@ Settings") so you learn the app while Gus drives it.
 
 ---
 
-## 5. What the agent needs (tech notes)
+## 6. What the agent needs (tech notes)
 
 Each pattern is a contract the model can fill:
 

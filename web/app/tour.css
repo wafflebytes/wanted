@@ -85,3 +85,6 @@
 .th-mini { width: 42px; height: 42px; flex: none; border-radius: 50%; display: grid; place-items: center; font: 800 15px var(--display); background: radial-gradient(circle, var(--well-bg) 15px, transparent 15.5px), conic-gradient(var(--wanted) calc(var(--v) * 1%), var(--veil-2) 0); }
 .th-compact b { flex: 1; min-width: 0; display: flex; flex-direction: column; font: 700 16px/1.2 var(--display); letter-spacing: -0.01em; }
 .th-compact em { font: 500 13px var(--body); font-style: normal; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* A held night: its row opens the show day. */
+.tr-held { display: inline; font: 700 11px/1 var(--body) !important; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ok-text) !important; margin-right: 2px; }
