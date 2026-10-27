@@ -79,4 +79,4 @@ qloo, typescript, next.js, react, expo, openrouter, libsql, turso, maplibre, dec
 
 ## Image gallery
 
-Upload [docs/gallery](gallery) in order: `0-cover.png` as the thumbnail, then cards 1 to 7. They're 3:2 and made from real app screenshots (`node scripts/gallery-shots.mjs <dir>`, then `node scripts/gallery-cards.mjs <dir> docs/gallery`).
+Upload [docs/gallery](gallery) in order: `0-cover.jpg` as the thumbnail, then cards 1 to 7. They're 3:2, alternate light and dark, and put real app screenshots in an iPhone frame with our own art (`node scripts/gallery-shots.mjs <dir>` and again with `SCHEME=dark`, then `node scripts/gallery-cards.mjs <dir> docs/gallery`).

@@ -8,9 +8,16 @@ import { chromium } from 'playwright';
 const BASE = process.env.BASE ?? 'http://localhost:3100';
 const out = process.argv[2] ?? '.data/gallery';
 const only = process.env.ONLY?.split(',');
+const scheme = process.env.SCHEME === 'dark' ? 'dark' : 'light';
 const b = await chromium.launch({ channel: 'chrome' });
 const page = async () => {
-  const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, colorScheme: 'light' });
+  // iPhone 16 points and safe areas, so the app leaves room for the status bar and home indicator the frame draws
+  const p = await b.newPage({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 3, colorScheme: scheme });
+  await p.addInitScript(() => document.addEventListener('DOMContentLoaded', () => {
+    const s = document.createElement('style');
+    s.textContent = ':root { --safe-t: 59px !important; --safe-b: 34px !important; }';
+    document.head.append(s);
+  }));
   return p;
 };
 const tap = (p, re) => p.evaluate((src) => {
@@ -71,7 +78,7 @@ for (const [name, run] of Object.entries(shots)) {
   const p = await page();
   try {
     await run(p);
-    await p.screenshot({ path: `${out}/${name}.png` });
+    await p.screenshot({ path: `${out}/${name}${scheme === 'dark' ? '-dark' : ''}.png` });
     console.log('ok', name);
   } catch (e) {
     console.log('ERR', name, String(e).split('\n')[0]);
