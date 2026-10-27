@@ -6,7 +6,7 @@ html.on-wall { --page: #191410; --wall-hole: #191410; }
 
 .pw { position: relative; width: 100%; max-width: var(--col); margin: 0 auto; padding: calc(var(--safe-t) + var(--header-h) + 4px) var(--gutter) calc(var(--safe-b) + var(--dock-h) + 48px); }
 .pw > * { position: relative; z-index: 1; }
-.pw > .pw-ground { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+.pw > .pw-ground, .fp > .pw-ground { position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
     radial-gradient(90% 46% at 50% 24%, rgba(255, 178, 102, 0.13), transparent 70%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .8 0 0 0 0 .55 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
