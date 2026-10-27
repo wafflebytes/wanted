@@ -14,6 +14,7 @@ import { gus, useGus, type GusAction } from '@web/lib/gus';
 import { haptic } from '@web/lib/haptics';
 import { useApi, useDark } from '@web/lib/hooks';
 import { Approval } from './Approval';
+import { DealRoom } from './DealRoom';
 import { Art, type ArtName } from './Art';
 import { Gus } from './Gus';
 import { Icon } from './Icon';
@@ -46,7 +47,7 @@ export function GusPanels({ slug, artist, waiting, entries }: { slug: string; ar
         if (!top) return go('')();
         gus.close();
         gus.flash(`Asking rooms in ${top.name}`, 2200);
-        deals.ask(slug, top.city).then(() => gus.open('tray')).catch(() => {});
+        deals.ask(slug, top.city).then(() => gus.open('room')).catch(() => {});
       },
     },
     { art: 'route', title: 'Plan the tour', sub: 'Route and dates', tint: 'var(--t-green)', run: go('/tour') },
@@ -73,6 +74,7 @@ export function GusPanels({ slug, artist, waiting, entries }: { slug: string; ar
       <Tiles open={g.panel === 'tiles'} tiles={tiles} />
       <VoiceCard open={g.panel === 'voice'} suggest={tiles.filter((t) => ['Ask rooms', 'Catch me up', 'Find an opener'].includes(t.title))} />
       <Tray open={g.panel === 'tray'} slug={slug} waiting={waiting} entries={entries} />
+      <DealRoom open={g.panel === 'room'} slug={slug} />
     </>
   );
 }
@@ -550,16 +552,34 @@ function Tray({ open, slug, waiting, entries }: { open: boolean; slug: string; w
               <i style={{ width: `${Math.min(100, (talking.thread.length / 14) * 100)}%` }} />
             </div>
             <div className="job-acts">
+              <button className="btn sm light" onClick={() => (haptic('tap'), gus.open('room'))}>
+                Listen in
+                <Icon name="forward" size={16} />
+              </button>
               <button className="btn sm ghost" onClick={() => (live.paused ? deals.play() : deals.pause())}>
                 <Icon name={live.paused ? 'play' : 'stop'} size={16} />
                 {live.paused ? 'Keep going' : 'Pause'}
               </button>
-              <span className="ink-3 b-13">Paused jobs keep their letters.</span>
             </div>
           </section>
         )}
 
-        {ask && <Approval deal={ask} busy={live.deciding} compact />}
+        {ask && (
+          <>
+            <Approval deal={ask} busy={live.deciding} compact />
+            <button
+              className="tray-room"
+              onClick={() => {
+                haptic('tap');
+                if (live.deal?.id !== ask.id) deals.show(ask);
+                gus.open('room');
+              }}
+            >
+              <span>How Gus got here</span>
+              <Icon name="chevron" size={14} />
+            </button>
+          </>
+        )}
 
         {!talking && !ask && d?.status === 'held' && (
           <section className="job done">

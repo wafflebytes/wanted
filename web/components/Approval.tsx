@@ -6,13 +6,14 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Deal } from '@/lib/types';
 import { deals } from '@web/lib/deals';
+import { haptic } from '@web/lib/haptics';
 import { Art } from './Art';
 import { Icon } from './Icon';
 
 const money = (n: number) => `$${n.toLocaleString('en-US')}`;
 export const fmtDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-export function Approval({ deal, busy, compact }: { deal: Deal; busy?: boolean; compact?: boolean }) {
+export function Approval({ deal, busy, compact, slim }: { deal: Deal; busy?: boolean; compact?: boolean; slim?: boolean }) {
   const seen = useRef(deal.review?.hash ?? null);
   const [voided, setVoided] = useState(false);
   useEffect(() => {
@@ -22,7 +23,13 @@ export function Approval({ deal, busy, compact }: { deal: Deal; busy?: boolean; 
   if (!t) return null;
   const left = deal.offerExpiresAt ? Math.max(0, deal.offerExpiresAt - Date.now()) : null;
   return (
-    <div className={`approve ${voided ? 'is-void' : ''} ${compact ? 'compact' : ''}`}>
+    <div className={`approve ${voided ? 'is-void' : ''} ${compact ? 'compact' : ''} ${slim ? 'slim' : ''}`}>
+      {slim ? (
+        <p className="approve-line">
+          Pay <b>{money(t.deposit)}</b> to hold {fmtDate(t.date)}. Then the date is yours{left !== null && left < 6 * 3600_000 ? `; the hold lapses in ${Math.max(1, Math.round(left / 3600_000))} h` : ''}.
+        </p>
+      ) : (
+      <>
       <div className="approve-top">
         <Art name="coin" size={compact ? 44 : 56} />
         <div>
@@ -54,6 +61,8 @@ export function Approval({ deal, busy, compact }: { deal: Deal; busy?: boolean; 
       <p className="approve-next">
         Then the date is yours, and everyone who signed in {deal.cityName} hears first.{left !== null && left < 6 * 3600_000 ? ` The hold lapses in ${Math.max(1, Math.round(left / 3600_000))} h.` : ''}
       </p>
+      </>
+      )}
       {voided ? (
         <div className="approve-void">
           <Icon name="warn" size={18} />
@@ -104,7 +113,7 @@ export function Slide({ label, onDone, busy }: { label: string; onDone: () => vo
     if (x > max() * 0.9) {
       setX(max());
       setDone(true);
-      navigator.vibrate?.(12);
+      haptic('commit');
       onDone();
     } else setX(0);
   };

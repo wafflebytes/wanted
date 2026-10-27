@@ -34,7 +34,7 @@
   box-shadow: 0 0 0 2.5px var(--card), var(--shadow-1); transition: transform var(--t-tap) var(--ease);
 }
 .hdr-av:active { transform: scale(0.92); }
-.hdr-av img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 14%; transform: scale(1.5); transform-origin: 50% 18%; }
+.hdr-av img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
 
 /* The island: a dark pill that always says what Gus is doing. */
 .island {
@@ -343,3 +343,4 @@ button.ml { cursor: pointer; }
 .vc-city b { font: 700 16px/1.2 var(--display); letter-spacing: -0.01em; }
 .vc-city b em { font-style: normal; font-weight: 600; color: var(--ink-3); margin-left: 5px; font-size: 13px; }
 .vc-city > span { font-size: 13px; color: var(--ink-2); }
+.tray-room { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: -6px; padding: 6px; font: 600 14px/1 var(--body); color: var(--wanted-text); }

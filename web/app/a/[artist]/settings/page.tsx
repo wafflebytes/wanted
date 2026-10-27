@@ -12,6 +12,7 @@ import type { ArtistState } from '@/ui/types';
 import { Icon } from '@web/components/Icon';
 import { api } from '@web/lib/api';
 import { gus } from '@web/lib/gus';
+import { haptic, hapticKind, setHaptics } from '@web/lib/haptics';
 import { mutate, useApi } from '@web/lib/hooks';
 import { session, type Act } from '@web/lib/session';
 import '../../../settings.css';
@@ -29,6 +30,7 @@ export default function Settings() {
   const [m, setM] = useState<Mandate | null>(null);
   const [acts, setActs] = useState<Act[]>([]);
   const [theme, setTheme] = useState<Theme>('system');
+  const [feel, setFeel] = useState<{ kind: ReturnType<typeof hapticKind>; on: boolean } | null>(null);
   const [saved, setSaved] = useState<'idle' | 'saving' | 'saved'>('idle');
   const pending = useRef<Partial<Mandate>>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -42,6 +44,13 @@ export default function Settings() {
       const t = localStorage.getItem('wanted-theme');
       setTheme(t === 'light' || t === 'dark' ? t : 'system');
     } catch {}
+    const kind = hapticKind();
+    let on = kind !== 'sound';
+    try {
+      const h = JSON.parse(localStorage.getItem('wanted-haptics') ?? 'null');
+      if (h) on = kind === 'sound' ? !!h.sound : h.enabled !== false;
+    } catch {}
+    setFeel({ kind, on });
   }, []);
   // Arriving from "Change what Gus can do" lands on that section.
   useEffect(() => {
@@ -70,7 +79,16 @@ export default function Settings() {
     }, 450);
   };
 
+  // Phones get real haptics; a Mac can't reach the trackpad, so it offers soft sound ticks.
+  const pickFeel = (on: boolean) => {
+    if (!feel) return;
+    setHaptics(feel.kind === 'sound' ? { sound: on } : { enabled: on });
+    setFeel({ ...feel, on });
+    if (on) haptic('success');
+  };
+
   const pickTheme = (t: Theme) => {
+    haptic('tick');
     setTheme(t);
     try {
       if (t === 'system') localStorage.removeItem('wanted-theme');
@@ -100,7 +118,7 @@ export default function Settings() {
           {(acts.length ? acts : name ? [{ slug, name, sounds: [], at: 0 }] : []).map((a) => (
             <li key={a.slug}>
               <Link href={`/a/${a.slug}`} className="st-row">
-                <span className="st-av">{a.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('')}</span>
+                <span className="st-av">{a.slug === 'maya-ortiz' ? <img src="/img/maya-avatar.webp" alt="" /> : a.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('')}</span>
                 <span className="st-t">
                   <b>{a.name}</b>
                   {a.sounds.length > 0 && <em>Sounds like {a.sounds.slice(0, 2).join(' and ')}</em>}
@@ -147,7 +165,7 @@ export default function Settings() {
                   </span>
                   <div className="seg">
                     {[1, 2, 3].map((n) => (
-                      <button key={n} className={m.roomsAtOnce === n ? 'on' : ''} aria-pressed={m.roomsAtOnce === n} onClick={() => change({ roomsAtOnce: n })}>
+                      <button key={n} className={m.roomsAtOnce === n ? 'on' : ''} aria-pressed={m.roomsAtOnce === n} onClick={() => (haptic('tick'), change({ roomsAtOnce: n }))}>
                         {n}
                       </button>
                     ))}
@@ -208,6 +226,17 @@ export default function Settings() {
             </button>
           ))}
         </div>
+        {feel && feel.kind !== 'none' && (
+          <ul className="st-group st-feel">
+            <li className="st-row">
+              <span className="st-t">
+                <b>{feel.kind === 'sound' ? 'Sound ticks' : 'Haptics'}</b>
+                <em>{feel.kind === 'sound' ? 'A soft click when you press, hold or Gus answers. Your trackpad can’t buzz from a browser, so this stands in.' : 'A little buzz when you press, hold or Gus answers.'}</em>
+              </span>
+              <Switch on={feel.on} label={feel.kind === 'sound' ? 'Sound ticks' : 'Haptics'} onChange={pickFeel} />
+            </li>
+          </ul>
+        )}
       </section>
 
       <section className="st-ios">
@@ -226,7 +255,7 @@ export default function Settings() {
 }
 
 function Switch({ on, label, onChange }: { on: boolean; label: string; onChange: (on: boolean) => void }) {
-  return <button role="switch" aria-checked={on} aria-label={label} className="switch" onClick={() => onChange(!on)} />;
+  return <button role="switch" aria-checked={on} aria-label={label} className="switch" onClick={() => (haptic(on ? 'tick' : 'tap'), onChange(!on))} />;
 }
 
 function Slide({ label, hint, value, min, max, step, show, onChange }: { label: string; hint: string; value: number; min: number; max: number; step: number; show: (v: number) => string; onChange: (v: number) => void }) {
@@ -237,7 +266,7 @@ function Slide({ label, hint, value, min, max, step, show, onChange }: { label: 
         <b>{label}</b>
         <output>{show(value)}</output>
       </span>
-      <input type="range" className="range" min={min} max={max} step={step} value={value} aria-label={label} aria-valuetext={show(value)} style={{ ['--p' as string]: `${p}%` }} onChange={(e) => onChange(Number(e.target.value))} />
+      <input type="range" className="range" min={min} max={max} step={step} value={value} aria-label={label} aria-valuetext={show(value)} style={{ ['--p' as string]: `${p}%` }} onChange={(e) => (haptic('tick'), onChange(Number(e.target.value)))} />
       <em className="st-hint">{hint}</em>
     </>
   );

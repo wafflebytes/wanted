@@ -122,7 +122,7 @@ type Stored = Deal & { talk?: Talk };
 
 const tool = (name: string, text: string): DealLetter => ({ from: 'gus', kind: 'tool', tool: name, text, terms: null });
 const letter = (from: DealLetter['from'], text: string, terms: DealLetter['terms']): DealLetter => ({ from, kind: 'letter', text, terms });
-const pub = ({ talk: _t, ...d }: Stored): Deal => ({ ...d, review: dealReview(d) });
+const pub = ({ talk, ...d }: Stored): Deal => ({ ...d, limits: d.limits ?? talk?.limits, review: dealReview(d) });
 
 /** Gus looks things up, then sends his opening letter. The room answers on the next turn. */
 export async function startDeal(artist: ArtistRow, metroId: string, roomId: string | null, opts: { quiet?: boolean } = {}): Promise<Deal> {
@@ -190,7 +190,7 @@ export async function advanceDeal(artist: ArtistRow, dealId: string, seen: numbe
   const deal = JSON.parse(row.body) as Stored;
   const t = deal.talk;
   if (deal.status !== 'talking' || !t || seen !== deal.thread.length) return pub(deal);
-  const last = [...deal.thread].reverse().find((l) => l.kind === 'letter');
+  const last = [...deal.thread].reverse().find((l) => l.kind === 'letter' && l.from !== 'you');
 
   if (last?.from === 'gus') {
     if (t.turn === 0) {
@@ -221,12 +221,41 @@ export async function advanceDeal(artist: ArtistRow, dealId: string, seen: numbe
   return pub(deal);
 }
 
+/**
+ * The artist steers mid-conversation ("hold out for 75%", "go up to $200"). It moves this
+ * deal's limits only, not the saved ones, and lands in the thread as the artist's own note so
+ * the next letter visibly follows it. Gus's standing ask moves inside the new line.
+ */
+export async function steerDeal(artist: ArtistRow, dealId: string, patch: Partial<DealLimits>): Promise<Deal> {
+  const row = await one<{ body: string }>('select body from deals where artist_id = ? and id = ?', [artist.id, dealId]);
+  if (!row) throw new HttpError(404, 'No such deal.');
+  const deal = JSON.parse(row.body) as Stored;
+  const t = deal.talk;
+  if (deal.status !== 'talking' || !t) return pub(deal);
+  const said: string[] = [];
+  if (typeof patch.minSplit === 'number') {
+    t.limits.minSplit = Math.max(40, Math.min(95, Math.round(patch.minSplit)));
+    t.gus.split = Math.max(t.gus.split, t.limits.minSplit);
+    said.push(`Don’t go under ${t.limits.minSplit}% of the door`);
+  }
+  if (typeof patch.maxDeposit === 'number') {
+    t.limits.maxDeposit = Math.max(0, Math.min(2000, tens(patch.maxDeposit)));
+    t.gus.deposit = Math.min(t.gus.deposit, t.limits.maxDeposit);
+    said.push(`I’ll put down up to $${t.limits.maxDeposit}`);
+  }
+  if (!said.length) return pub(deal);
+  deal.thread.push({ from: 'you', kind: 'letter', text: `${said.join('. ')}.`, terms: null });
+  deal.updatedAt = Date.now();
+  await save(artist.id, deal);
+  return pub(deal);
+}
+
 async function finish(artist: ArtistRow, deal: Stored, t: Talk): Promise<Deal> {
   const terms: DealTerms = { dealType: 'door-split', moneyDirection: 'artist-to-venue', basis: 'simulation', date: t.date, day: dayOf(t.date), split: t.offer.split, deposit: t.offer.deposit, capacity: t.capacity };
   const withinLimits = terms.split >= t.limits.minSplit && terms.deposit <= t.limits.maxDeposit;
   deal.thread.push(letter('house', `${withinLimits ? 'Deal' : 'Best we can do'}: ${terms.split}% of the door and $${terms.deposit} to hold ${nice(t.date)}. The hold lasts 48 hours.`, { split: terms.split, deposit: terms.deposit }));
   deal.thread.push(tool('check_limits', withinLimits ? 'Fits what you said you’d take. Checking with you' : 'More than you said you’d go for. Checking with you'));
-  Object.assign(deal, { terms, withinLimits, status: 'waiting', offerExpiresAt: Date.now() + HOLD_MS, version: (deal.version ?? 1) + 1, updatedAt: Date.now() });
+  Object.assign(deal, { terms, withinLimits, limits: t.limits, status: 'waiting', offerExpiresAt: Date.now() + HOLD_MS, version: (deal.version ?? 1) + 1, updatedAt: Date.now() });
   const quiet = t.quiet;
   delete deal.talk;
   await save(artist.id, deal);

@@ -61,7 +61,7 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
       if (a.type === 'tab') return router.push(`${base}${a.tab === 'map' ? '' : `/${a.tab}`}`);
       if (a.type === 'deal') {
         gus.flash(`Asking ${a.name}`);
-        deals.ask(slug, a.id, a.roomId).then(() => gus.open('tray')).catch(() => {});
+        deals.ask(slug, a.id, a.roomId).then(() => gus.open('room')).catch(() => {});
         return;
       }
       router.push(`${base}?city=${a.id}${a.type === 'pitch' ? '&pitch=1' : ''}`);
@@ -122,7 +122,7 @@ function useQuiet(m: Mandate | undefined) {
 
 function Header({ slug, artist, onMap }: { slug: string; artist: ArtistState | undefined; onMap: boolean }) {
   const a = artist?.artist;
-  const portrait = a?.portrait === 'maya-engraving' || a?.isDemo ? '/img/maya-mugshot.webp' : a?.imageUrl;
+  const portrait = a?.portrait === 'maya-engraving' || a?.isDemo ? '/img/maya-avatar.webp' : a?.imageUrl;
   const initials = (a?.name ?? '').split(/\s+/).map((w) => w[0]).slice(0, 2).join('');
   return (
     <header className={`hdr ${onMap ? 'over-map' : ''}`}>

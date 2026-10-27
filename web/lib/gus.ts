@@ -20,7 +20,7 @@ export type GusAction =
 export type GusStep = { id: string; tool: string; label: string; source: 'qloo' | 'fans' | 'wanted'; status: 'running' | 'done' | 'failed'; found: string | null; ms: number };
 export type GusAnswer = { heard: string; reply: string; mood: 'idle' | 'proud' | 'unimpressed' | 'thinking'; action: GusAction | null; model: string; steps?: GusStep[] };
 
-export type Panel = 'none' | 'tiles' | 'voice' | 'tray';
+export type Panel = 'none' | 'tiles' | 'voice' | 'tray' | 'room';
 export type Phase = 'idle' | 'listening' | 'thinking' | 'answer';
 
 type State = {
@@ -276,7 +276,7 @@ export const gus = {
     if (!wasHold) {
       // Voice first: a tap talks. Tapping again sends what he heard; on an open sheet it closes.
       if (state.phase === 'listening') return void finish(false);
-      if (state.panel === 'voice' || state.panel === 'tiles') return gus.close();
+      if (state.panel === 'voice' || state.panel === 'tiles' || state.panel === 'room') return gus.close();
       return gus.talk();
     }
     if (state.phase === 'listening') finish(true);

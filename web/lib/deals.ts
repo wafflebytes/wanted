@@ -76,6 +76,19 @@ export const deals = {
     set({ deal, paused: false });
     talk();
   },
+  /** Tell Gus a new line for this deal mid-talk; it shows in the thread as your note. */
+  async steer(patch: { minSplit?: number; maxDeposit?: number }) {
+    const { slug, deal } = state;
+    if (!slug || !deal || deal.status !== 'talking') return;
+    try {
+      const r = await api.post<{ deal: Deal }>(`/artist/${slug}/deals`, { deal: deal.id, steer: patch });
+      if (state.deal?.id !== deal.id) return;
+      set({ deal: r.deal, error: null, paused: false });
+      talk();
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : 'Gus didn’t catch that.' });
+    }
+  },
   pause() {
     if (loop) clearTimeout(loop);
     set({ paused: true });

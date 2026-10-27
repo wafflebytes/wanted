@@ -18,6 +18,8 @@ a.st-row:active { background: var(--veil); }
 .st-hint { margin-top: -4px; }
 .st-av { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font: 800 14px var(--display); color: var(--key-fg); background: var(--key); box-shadow: var(--key-bevel), var(--drop); }
 .st-av.add { color: var(--ink-2); background: var(--well-bg); box-shadow: var(--well); }
+.st-av img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.st-feel { margin-top: 14px; }
 .st-on { color: var(--wanted-text); }
 .st-saved { font: 600 13px var(--body); color: var(--ink-3); transition: opacity var(--t-fade); }
 .st-saved.saved { color: var(--ok-text); }

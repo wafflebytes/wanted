@@ -106,7 +106,7 @@ export default function FanMail() {
       const d = dealsById.get(a.dealId ?? '');
       if (d) {
         deals.show(d);
-        gus.open('tray');
+        gus.open('room');
       }
       return;
     }

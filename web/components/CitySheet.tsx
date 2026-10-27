@@ -30,7 +30,7 @@ export function CitySheet({ slug, d, opened, posting, onPost, onClose }: { slug:
   const asking = live.asking === d.metro.id || (live.deal?.city === d.metro.id && live.deal.status === 'talking');
   const ask = (roomId: string | null = null, name?: string) => {
     gus.flash(name ? `Asking ${name}` : `Asking rooms`, 2200);
-    deals.ask(slug, d.metro.id, roomId).then(() => gus.open('tray')).catch(() => gus.flash('Couldn’t reach them'));
+    deals.ask(slug, d.metro.id, roomId).then(() => gus.open('room')).catch(() => gus.flash('Couldn’t reach them'));
   };
   return (
     <div className="city">

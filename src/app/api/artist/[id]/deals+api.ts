@@ -1,5 +1,5 @@
 import { body, handler, HttpError, json, limit } from '@/server/http';
-import { advanceDeal, decideDeal, dealsFor, limitsFor, setLimits, startDeal } from '@/server/deals';
+import { advanceDeal, decideDeal, dealsFor, limitsFor, setLimits, startDeal, steerDeal } from '@/server/deals';
 import { requireArtist } from '@/server/service';
 import { env } from '@/server/env';
 
@@ -10,14 +10,15 @@ export const GET = handler(async (_req: Request, { id }: Record<string, string>)
   return json({ deals, limits, rail: env.stripeTestKey ? 'stripe-test' : 'sandbox' });
 });
 
-type In = { review?: { version: number; hash: string }; city?: string; roomId?: string | null; deal?: string; yes?: boolean; next?: number; limits?: { maxDeposit?: number; minSplit?: number } };
+type In = { review?: { version: number; hash: string }; city?: string; roomId?: string | null; deal?: string; yes?: boolean; next?: number; steer?: { maxDeposit?: number; minSplit?: number }; limits?: { maxDeposit?: number; minSplit?: number } };
 
-/** `{ city, roomId? }` sends Gus to ask; `{ deal, next }` takes the next turn; `{ deal, yes }` is the artist's call; `{ limits }` changes them. */
+/** `{ city, roomId? }` sends Gus to ask; `{ deal, next }` takes the next turn; `{ deal, steer }` moves this deal's limits mid-talk; `{ deal, yes }` is the artist's call; `{ limits }` changes them. */
 export const POST = handler(async (req: Request, { id }: Record<string, string>) => {
   await limit(req, 'deals', 30);
   const artist = await requireArtist(id);
   const input = await body<In>(req);
   if (input.limits) return json({ limits: await setLimits(artist.id, input.limits) });
+  if (input.deal && input.steer) return json({ deal: await steerDeal(artist, input.deal, input.steer) });
   if (input.deal && typeof input.next === 'number') return json({ deal: await advanceDeal(artist, input.deal, input.next) });
   if (input.deal) {
     if (typeof input.yes !== 'boolean') throw new HttpError(400, 'A boolean yes or no is required.');

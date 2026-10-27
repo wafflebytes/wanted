@@ -240,7 +240,7 @@ export type InboxMessage = {
  */
 export type DealTerms = { dealType?: 'door-split'; moneyDirection?: 'artist-to-venue'; basis?: 'simulation'; date: string; day: DayKey; /** The artist's share of the door, in percent. */ split: number; deposit: number; capacity: number | null };
 /** One step of the conversation: a letter between the agents, or a tool Gus ran, with what it found. */
-export type DealLetter = { from: 'gus' | 'house'; kind: 'letter' | 'tool'; text: string; tool?: string; terms: Pick<DealTerms, 'split' | 'deposit'> | null };
+export type DealLetter = { from: 'gus' | 'house' | 'you'; kind: 'letter' | 'tool'; text: string; tool?: string; terms: Pick<DealTerms, 'split' | 'deposit'> | null };
 export type DealPayment = {
   /** Stripe test mode when a test key is set, else Wanted's own sandbox ledger. Never live. */
   rail: 'stripe-test' | 'sandbox';
@@ -267,6 +267,8 @@ export type Deal = {
   terms: DealTerms | null;
   thread: DealLetter[];
   withinLimits: boolean;
+  /** The lines Gus worked inside on this deal (the saved limits, plus anything said mid-talk). */
+  limits?: DealLimits;
   payment: DealPayment | null;
   createdAt: number;
   updatedAt: number;
