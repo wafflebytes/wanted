@@ -11,6 +11,7 @@
  * web/public/art.
  */
 import { chromium } from 'playwright';
+import { cellToLatLng } from 'h3-js';
 import { resolve } from 'node:path';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
@@ -58,6 +59,8 @@ const chip = (html, { x, y, rot = 0, z = 4, tone = '' }) => `<div class="chip ${
 const at = (html, { x, y, z = 4, rot = 0, zoom = 1, tilt = '', center = false }) =>
   center
     ? `<div class="at" style="left:0; right:0; top:${y}px; z-index:${z}; display:flex; justify-content:center">${html}</div>`
+    : y === 'mid'
+    ? `<div class="at" style="left:${x}px; top:0; bottom:0; z-index:${z}; display:flex; align-items:center"><div style="transform:${tilt}; zoom:${zoom}">${html}</div></div>`
     : `<div class="at" style="left:${x / zoom}px; top:${y / zoom}px; z-index:${z}; transform:${tilt || `rotate(${rot}deg)`}; transform-origin: 0 0; zoom:${zoom}">${html}</div>`;
 
 // The Dynamic Island, as the app draws it (web/app/shell.css), at 2x.
@@ -76,7 +79,58 @@ const wave = (y, x0 = 0, x1 = 1500) => {
   }
   return `<svg class="deco" width="1500" height="1000">${bars.join('')}</svg>`;
 };
+// The live map's data (Qloo heatmap cells and the metros Gus scored), cached beside the shots.
+const BASE = process.env.BASE ?? 'https://trywanted.vercel.app';
+let map;
+try {
+  map = await (await fetch(`${BASE}/api/artist/maya-ortiz/map`)).json();
+  writeFileSync(`${shots}/map.json`, JSON.stringify(map));
+} catch {
+  map = JSON.parse(readFileSync(`${shots}/map.json`, 'utf8'));
+}
+
+/** The lower 48 as Qloo's heatmap cells, in an Albers projection, with the top sleepers marked. */
+const usMap = ({ cx, cy, w }) => {
+  const r = Math.PI / 180, p1 = 29.5 * r, p2 = 45.5 * r, p0 = 37.5 * r, l0 = -96 * r;
+  const n = (Math.sin(p1) + Math.sin(p2)) / 2, C = Math.cos(p1) ** 2 + 2 * n * Math.sin(p1), r0 = Math.sqrt(C - 2 * n * Math.sin(p0)) / n;
+  const proj = (lat, lon) => {
+    const rho = Math.sqrt(C - 2 * n * Math.sin(lat * r)) / n, t = n * (lon * r - l0);
+    return [rho * Math.sin(t), -(r0 - rho * Math.cos(t))]; // screen y runs down
+  };
+  const cells = map.hexes.map((h) => [...cellToLatLng(h.h3), h.heat]).filter(([la, lo]) => la > 24 && la < 49.6 && lo > -125 && lo < -66);
+  const pts = cells.map(([la, lo, heat]) => [...proj(la, lo), heat]);
+  const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const k = w / (x1 - x0), h = (y1 - y0) * k;
+  const at = (x, y) => [cx - w / 2 + (x - x0) * k, cy - h / 2 + (y - y0) * k];
+  const dots = pts.map(([x, y, heat]) => {
+    const [X, Y] = at(x, y);
+    return `<circle cx="${X.toFixed(1)}" cy="${Y.toFixed(1)}" r="${(2 + 2.4 * heat).toFixed(2)}" fill="${heat > 0.55 ? '#F2541B' : 'var(--ink)'}" fill-opacity="${heat > 0.55 ? (0.25 + (heat - 0.55) * 1.6).toFixed(2) : 0.09}"/>`;
+  });
+  // The best sleepers, skipping any too close to one already marked so labels never collide.
+  const top = [];
+  for (const m of map.metros.filter((m) => m.sleeper).sort((a, b) => b.score - a.score))
+    if (top.length < 4 && top.every((t) => Math.hypot(t.lat - m.lat, t.lon - m.lon) > 6)) top.push(m);
+  const marks = top.map((m) => {
+    const [X, Y] = at(...proj(m.lat, m.lon));
+    const left = m.lon < -110;
+    return `<div class="mk" style="left:${X}px; top:${Y}px"><i></i><span class="${left ? 'r' : 'l'}"><b>${m.name}</b><em>sleeper</em></span></div>`;
+  });
+  return `<svg class="deco" style="z-index:2" width="1500" height="1000">${dots.join('')}</svg>${marks.join('')}`;
+};
+
+// Stacks of coins, the deal's answer to Ask Gus's voice wave.
+const coins = (y, x0 = 0, x1 = 1500) => {
+  const out = [];
+  for (let x = x0 + 8; x < x1; x += 54) {
+    const n = Math.round(2 + Math.abs(Math.sin(x / 83) * Math.cos(x / 37)) * 9 * (0.4 + 0.6 * Math.sin(((x - x0) / (x1 - x0)) * Math.PI)));
+    for (let i = 0; i < n; i++) out.push(`<rect x="${x}" y="${y + 130 - i * 17}" width="40" height="14" rx="7" fill="rgba(214,140,30,.16)"/><rect x="${x + 6}" y="${y + 133 - i * 17}" width="28" height="2.5" rx="1.25" fill="rgba(214,140,30,.22)"/>`);
+  }
+  return `<svg class="deco" width="1500" height="1000">${out.join('')}</svg>`;
+};
+
 const deco = {
+  '4-one-decision': () => coins(480),
   '5-fan-mail': () => `<div class="airmail top"></div><div class="airmail bot"></div>`,
   '6-ask-gus': () => wave(520),
   '7-logbook': () => `<div class="ruled"></div>`,
@@ -111,12 +165,10 @@ const cards = [
         </div>`, { x: 0, y: 641, z: 5, center: true })}`,
   },
   {
-    name: '2-sleeper-cities', theme: 'cream', kicker: 'Where you’re wanted',
+    name: '2-sleeper-cities', theme: 'cream', layout: 'top', kicker: 'Where you’re wanted',
     title: 'He finds the cities nobody plays yet.',
-    body: 'Every US city and neighborhood is scored for your sound on Qloo’s taste graph. Sleepers like Ithaca have far more fans than their size predicts.',
-    stage: () => `
-      <div class="halo" style="left:700px; top:60px; width:900px; height:900px"></div>
-      ${phone('city', { h: 900, x: 920, y: 150, tilt: 'perspective(2600px) rotateY(-24deg) rotateX(8deg) rotateZ(5deg)' })}`,
+    body: 'Every dot is a patch of the US, lit by how much your sound is heard there on Qloo’s taste graph. Sleepers have far more fans than their size predicts.',
+    stage: () => usMap({ cx: 750, cy: 665, w: 1000 }),
   },
   {
     name: '3-wanted-poster', theme: 'dark', layout: 'top', kicker: 'Proof',
@@ -138,7 +190,7 @@ const cards = [
           <p class="ap-next">Then the date is yours, and everyone who signed in Portland hears first.</p>
           <div class="slide"><span class="slide-fill"></span><span class="slide-l">Slide to pay $80</span><span class="knob">${svg('forward', 26)}</span></div>
           <div class="ap-no">Not this one</div>
-        </div>`, { x: 840, y: 120, z: 3, zoom: 1.0, tilt: 'perspective(2400px) rotateY(-14deg) rotateX(5deg) rotateZ(-2deg)' })}`,
+        </div>`, { x: 800, y: 'mid', z: 3, zoom: 0.95, tilt: 'perspective(2400px) rotateY(-14deg) rotateX(5deg) rotateZ(-2deg)' })}`,
   },
   {
     name: '5-fan-mail', theme: 'dark', layout: 'right', kicker: 'Fan Mail',
@@ -165,7 +217,7 @@ const cards = [
           <div class="prop">Ask The Flynn for a date ${svg('forward', 20)}</div>
           <div class="vbar"><span class="side">${svg('keys', 22)}</span><span class="tk"><span class="ring"></span><img src="${art('gus-glyph')}"></span><span class="side">${svg('close', 22)}</span></div>
           <div class="tcap">Tap to talk</div>
-        </div>`, { x: 140, y: 110, z: 3, zoom: 1.0, tilt: 'perspective(2400px) rotateY(14deg) rotateX(5deg) rotateZ(2deg)' })}`;
+        </div>`, { x: 140, y: 'mid', z: 3, zoom: 1.0, tilt: 'perspective(2400px) rotateY(14deg) rotateX(5deg) rotateZ(2deg)' })}`;
     },
   },
   {
@@ -394,6 +446,14 @@ h1 { font-weight: 900; font-size: 78px; line-height: 1.02; letter-spacing: -.03e
 .airmail { position: absolute; left: 0; right: 0; height: 16px; z-index: 1; opacity: .85; background: repeating-linear-gradient(-45deg, #E5484D 0 26px, transparent 26px 40px, #3A7BF2 40px 66px, transparent 66px 80px); }
 .airmail.top { top: 0; } .airmail.bot { bottom: 0; }
 .ruled { position: absolute; inset: 0; z-index: 0; background: linear-gradient(90deg, transparent 72px, rgba(255,90,31,.22) 72px 74px, transparent 74px), repeating-linear-gradient(180deg, transparent 0 47px, var(--wmc) 47px 49px); }
+
+
+.mk { position: absolute; z-index: 4; width: 0; height: 0; }
+.mk i { position: absolute; left: -11px; top: -11px; width: 22px; height: 22px; border-radius: 50%; background: #FF5A1F; box-shadow: 0 0 0 5px #fff, 0 0 0 14px rgba(255,90,31,.2), 0 10px 18px -6px rgba(200,60,0,.6); }
+.mk span { position: absolute; top: -26px; display: flex; flex-direction: column; padding: 9px 18px 10px; border-radius: 18px; background: #15130F; color: #FFF7EE; white-space: nowrap; box-shadow: 0 16px 30px -14px rgba(0,0,0,.5); }
+.mk span.l { left: 30px; } .mk span.r { right: 30px; text-align: right; }
+.mk b { font-weight: 800; font-size: 22px; letter-spacing: -.01em; }
+.mk em { font-style: normal; font-weight: 700; font-size: 15px; letter-spacing: .1em; text-transform: uppercase; color: #FF8A4C; margin-top: 2px; }
 
 /* Layouts */
 .text.right { left: 860px; width: 560px; }
