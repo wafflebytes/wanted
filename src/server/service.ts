@@ -3,7 +3,7 @@
  * pitches and posters from the modules below it.
  */
 import { cellToLatLng } from 'h3-js';
-import { applyFix, plan as planRoute, rescore, resequence, swapCandidates, tryFix, roasts as findRoasts, namesFrom, roastCard, type PlanInput, type PlannerRoom } from '../lib/tour';
+import { applyFix, driveHours, plan as planRoute, rescore, resequence, swapCandidates, tryFix, roasts as findRoasts, namesFrom, roastCard, type PlanInput, type PlannerRoom } from '../lib/tour';
 import type { Region } from '../lib/regions';
 import type { CityProof, DayKey, Locality, Receipt, Roast, RoastFix, RoomBand, TourConstraints, TourPlan, TourStop } from '../lib/types';
 import { getArtist, openCity, openedCities, type ArtistRow } from './artists';
@@ -13,7 +13,7 @@ import { cityCount, claimByDevice, proofFor, recentSignatures, wearLevel } from 
 import { config } from './config';
 import { crowdCard } from './crowd';
 import { deviceHash, id } from './crypto';
-import { all, one, run } from './db';
+import { all, kvGet, kvSet, one, run } from './db';
 import { pitchEmail, routeLines, type PitchEvidence } from './gus/agent';
 import { HttpError } from './http';
 import { cityNeighborhoods, rooms as qlooRooms } from './qloo/api';
@@ -326,7 +326,9 @@ export type PlanAction =
   | { kind: 'drop'; stopIndex: number }
   | { kind: 'swap'; stopIndex: number; metroId: string }
   | { kind: 'room'; stopIndex: number; roomId: string }
-  | { kind: 'replan' };
+  | { kind: 'replan' }
+  /** Put back the plan as it was before the last edit (and keep this one, so undo twice is redo). */
+  | { kind: 'undo' };
 
 export async function planFor(
   artist: ArtistRow,
@@ -335,6 +337,15 @@ export async function planFor(
   /** What Gus is doing right now, in a few plain words, for the island while the plan changes. */
   say: (words: string) => void = () => {},
 ): Promise<TourPlan & { receipts: Receipt[] }> {
+  const snapKey = `plan-prev:${artist.id}`;
+  if (action.kind === 'undo') {
+    const [was, now] = await Promise.all([kvGet<TourPlan>(snapKey), loadPlan(artist.id)]);
+    if (!was) throw new HttpError(409, 'Nothing to put back.');
+    if (now) await kvSet(snapKey, now);
+    const back = { ...was, updatedAt: Date.now() };
+    await savePlan(back);
+    return { ...back, receipts: [] };
+  }
   say('Reading your cities');
   const scout = await scoutFor(artist);
   const proof = await proofFor(artist.id, { includeDemo: artist.isDemo });
@@ -401,10 +412,62 @@ export async function planFor(
     gusModel: lines.model,
     updatedAt: Date.now(),
   };
+  if (previous) await kvSet(snapKey, previous);
   await savePlan(result);
   // Warm neighborhoods for every stop so room-fit improves on the next edit.
   for (const s of result.stops) void neighborhoodsFast(artist, s.metroId, 0);
   return { ...result, receipts: [] };
+}
+
+/**
+ * What Gus shows for "swap Albany": the tour as it stands, and the two cities that could take
+ * that stop's night (in your regions, off the route, not sharing a crowd with another stop),
+ * each with how much driving it adds or saves against the city it replaces.
+ */
+export async function swapOptions(artist: ArtistRow, metroId: string) {
+  const plan = await loadPlan(artist.id);
+  const i = plan?.stops.findIndex((s) => s.metroId === metroId) ?? -1;
+  if (!plan || i < 0) return null;
+  const scout = await scoutFor(artist);
+  const c = plan.constraints as TourConstraints & { regions: Region[]; excluded?: string[] };
+  const home = c.homeBase ? metroById(c.homeBase) : null;
+  const input: PlanInput = {
+    candidates: scout.metros,
+    regions: c.regions ?? [],
+    startDate: c.startDate,
+    dates: c.dates,
+    roomBand: c.roomBand,
+    homeBase: home ? { lat: home.lat, lon: home.lon, id: home.id } : null,
+    proof: {},
+    rooms: {},
+    excluded: c.excluded ?? [],
+    config: config.tour,
+  };
+  const cfg = config.tour;
+  const stop = plan.stops[i];
+  const prev = plan.stops[i - 1] ?? input.homeBase;
+  const next = plan.stops[i + 1] ?? null;
+  const legs = (p: { lat: number; lon: number }) => (prev ? driveHours(prev, p, cfg) : 0) + (next ? driveHours(p, next, cfg) : 0);
+  const now = legs(stop);
+  const proof = await proofFor(artist.id, { includeDemo: artist.isDemo });
+  const options = swapCandidates(plan.stops, i, input, 2).map((m) => ({
+    id: m.id,
+    name: m.name,
+    state: m.state,
+    lat: m.lat,
+    lon: m.lon,
+    sleeper: !!m.sleeper,
+    rank: m.rank ?? null,
+    signatures: proof.find((p) => p.city === m.id)?.signatures ?? 0,
+    /** Hours of driving it adds (negative saves), against the stop it replaces. */
+    driveDelta: Math.round((legs(m) - now) * 10) / 10,
+  }));
+  return {
+    stopIndex: i,
+    stop: { id: stop.metroId, name: stop.city, state: stop.state, date: stop.date, rank: scout.metros.find((m) => m.id === stop.metroId)?.rank ?? null },
+    route: plan.stops.map((s) => ({ id: s.metroId, name: s.city, lat: s.lat, lon: s.lon })),
+    options,
+  };
 }
 
 // ---------- pitch ----------

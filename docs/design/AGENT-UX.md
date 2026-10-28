@@ -103,7 +103,7 @@ The ask: "Put Burlington's poster up near the colleges."
 The same choreography works for any rung-1 job: reorder the tour ("move Ithaca to Friday"),
 lock a night, pick the draw winner.
 
-### 3.5 Controls Gus hands you (Built: limits, quiet hours and day chips; swap and draw next)
+### 3.5 Controls Gus hands you (Built: limits, quiet hours, day chips and swap; draw next)
 
 Wanted has few knobs, so this is a short catalogue, and that's the point: Gus brings the
 control only when it's the fastest way to say yes.

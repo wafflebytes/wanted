@@ -467,6 +467,30 @@ button.ml { cursor: pointer; }
 .qp-step button:active { transform: scale(var(--press)); box-shadow: var(--bevel), var(--drop-press); }
 
 /* Poster spots Gus found: rows you can drop before pinning. */
+/* Swap a city: the tour drawn small, candidates as ghosts on the line. */
+.sw-map { margin: 2px 0 10px; border-radius: var(--r-m); background: var(--well-bg); box-shadow: var(--well); overflow: hidden; }
+.sw-map svg { display: block; width: 100%; height: auto; }
+.sw-route { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; opacity: 0.85; }
+.sw-leaving { fill: none; stroke: var(--ink-3); stroke-width: 1.5; stroke-dasharray: 2 4; stroke-linecap: round; opacity: 0.7; }
+.sw-ghost { fill: none; stroke: var(--wanted); stroke-width: 2; stroke-dasharray: 4 5; stroke-linecap: round; opacity: 0.3; transition: opacity var(--t-fade) var(--ease); animation: fade var(--t-enter) var(--ease) 300ms both; }
+.sw-ghost.on { opacity: 1; }
+.sw-stop { fill: var(--card); stroke: var(--ink); stroke-width: 2; }
+.sw-out { fill: var(--card); stroke: var(--ink-3); stroke-width: 2.5; stroke-dasharray: 3 3; }
+.sw-near { font: 600 11px var(--body); fill: var(--ink-2); paint-order: stroke; stroke: var(--well-bg); stroke-width: 3px; }
+.sw-out-t { font: 600 11px var(--body); fill: var(--ink-3); text-decoration: line-through; }
+.sw-cand { cursor: pointer; animation: fade var(--t-enter) var(--ease) 380ms both; }
+.sw-cand circle { fill: var(--card); stroke: var(--wanted); stroke-width: 2; stroke-dasharray: 3 2.5; opacity: 0.6; transition: fill var(--t-fade) var(--ease), opacity var(--t-fade) var(--ease); }
+.sw-cand text { font: 700 12px var(--display); fill: var(--ink-3); paint-order: stroke; stroke: var(--well-bg); stroke-width: 3px; transition: fill var(--t-fade) var(--ease); }
+.sw-cand.on circle { fill: var(--wanted); stroke-dasharray: none; opacity: 1; }
+.sw-cand.on text { fill: var(--wanted-text); }
+.sw-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sw-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: var(--r-m); text-align: left; background: var(--raise); box-shadow: var(--bevel), var(--drop); color: var(--ink); transition: background-color var(--t-fade) var(--ease), color var(--t-fade) var(--ease); }
+.sw-opt:active { transform: scale(var(--press)); }
+.sw-opt b { font: 700 16px/1.2 var(--display); }
+.sw-opt span { font: 600 12.5px/1.3 var(--body); color: var(--ink-2); }
+.sw-opt em { font: 500 12px/1.3 var(--body); font-style: normal; color: var(--ink-3); }
+.sw-opt.on { background: var(--ink); color: var(--on-ink); box-shadow: var(--drop); }
+.sw-opt.on span, .sw-opt.on em { color: color-mix(in srgb, var(--on-ink) 72%, transparent); }
 /* Which night: day chips, best first. */
 .np-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .np-chip { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 4px 10px; border-radius: var(--r-m); background: var(--raise); box-shadow: var(--bevel), var(--drop); color: var(--ink); animation: rise var(--t-move) var(--ease) both; animation-delay: calc(300ms + var(--i) * 60ms); transition: background-color var(--t-fade) var(--ease), color var(--t-fade) var(--ease); }

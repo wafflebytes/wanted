@@ -403,6 +403,7 @@ function Proposal({ action }: { action: GusAction }) {
   if (action.type === 'quiet') return <QuietProposal action={action} />;
   if (action.type === 'spots') return <SpotsProposal action={action} />;
   if (action.type === 'night') return <NightProposal action={action} />;
+  if (action.type === 'swap') return <SwapProposal action={action} />;
   return <Offer action={action} />;
 }
 
@@ -502,6 +503,90 @@ function SpotsProposal({ action }: { action: Extract<GusAction, { type: 'spots' 
       <span className="lp-where">Places your fans already hang out. Ask the staff before you put one up.</span>
       <button className="btn hot block" disabled={!picked.length} onClick={() => (haptic('tap'), gus.act({ ...action, spots: picked }))}>
         {picked.length ? `Pin ${picked.length} spot${picked.length === 1 ? '' : 's'}` : 'Pick at least one'}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * "Swap Albany": the tour drawn small, with the city going out marked and the two that could
+ * take its night as ghosts on the line, each with the detour it costs. Pick one, one tap swaps
+ * it, the island offers Undo.
+ */
+function SwapProposal({ action }: { action: Extract<GusAction, { type: 'swap' }> }) {
+  const [pick, setPick] = useState(action.options[0]?.id);
+  const to = action.options.find((o) => o.id === pick) ?? action.options[0];
+  const i = action.stopIndex;
+  const prev = action.route[i - 1] ?? null;
+  const next = action.route[i + 1] ?? null;
+  // Equirectangular, squashed by latitude, framed on the stretch around the swap (the rest of
+  // the tour runs off the edges) with room for labels.
+  const pts = [...action.route.slice(Math.max(0, i - 1), i + 2), ...action.options];
+  const k = Math.cos(((pts.reduce((a, p) => a + p.lat, 0) / pts.length) * Math.PI) / 180);
+  const xs = pts.map((p) => p.lon * k);
+  const ys = pts.map((p) => -p.lat);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const W = 320;
+  const H = 190;
+  const pad = 34;
+  const sc = Math.min((W - pad * 2) / (x1 - x0 || 1), (H - pad * 2) / (y1 - y0 || 1));
+  const ox = (W - (x1 - x0) * sc) / 2;
+  const oy = (H - (y1 - y0) * sc) / 2;
+  const P = (p: { lat: number; lon: number }) => [ox + (p.lon * k - x0) * sc, oy + (-p.lat - y0) * sc] as const;
+  const line = (ps: { lat: number; lon: number }[]) => ps.map((p, j) => `${j ? 'L' : 'M'}${P(p)[0].toFixed(1)} ${P(p)[1].toFixed(1)}`).join(' ');
+  const hrs = (h: number) => (Math.abs(h) < 0.25 ? 'Same driving' : `${Math.abs(h) < 1 ? `${Math.round(Math.abs(h) * 60)} min` : `${Math.abs(h)} hr`} ${h > 0 ? 'more' : 'less'} driving`);
+  const out = P(action.route[i]);
+  return (
+    <div className="pc sw">
+      <span className="pc-k">Your tour</span>
+      <p className="pc-line">
+        Swap <b className="tok">{action.name}</b> on {niceDate(action.stop.date)}
+      </p>
+      <div className="sw-map">
+        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`The tour, with ${action.options.map((o) => o.name).join(' and ')} as options for ${action.name}`}>
+          {i > 0 && <path className="sw-route" d={line(action.route.slice(0, i))} />}
+          {i < action.route.length - 1 && <path className="sw-route" d={line(action.route.slice(i + 1))} />}
+          <path className="sw-leaving" d={line(action.route.slice(Math.max(0, i - 1), i + 2))} />
+          {action.options.map((o) => (
+            <path key={o.id} className={`sw-ghost ${o.id === pick ? 'on' : ''}`} d={line([prev, o, next].filter((p): p is NonNullable<typeof p> => !!p))} />
+          ))}
+          {action.route.map((s, j) => {
+            const [x, y] = P(s);
+            return (
+              <g key={s.id}>
+                <circle className={j === i ? 'sw-out' : 'sw-stop'} cx={x} cy={y} r={j === i ? 6 : 3.5} />
+                {Math.abs(j - i) === 1 && (
+                  <text className="sw-near" x={x} y={y + 16} textAnchor="middle">
+                    {s.name}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+          {action.options.map((o) => {
+            const [x, y] = P(o);
+            return (
+              <g key={o.id} className={`sw-cand ${o.id === pick ? 'on' : ''}`} onClick={() => (haptic('tick'), setPick(o.id))}>
+                <circle cx={x} cy={y} r={7} />
+                <text x={x} y={y - 12} textAnchor="middle">{o.name}</text>
+              </g>
+            );
+          })}
+          <text className="sw-out-t" x={out[0]} y={out[1] + 20} textAnchor="middle">{action.name}</text>
+        </svg>
+      </div>
+      <div className="sw-opts" role="radiogroup" aria-label={`Cities that could take ${action.name}’s night`}>
+        {action.options.map((o) => (
+          <button key={o.id} role="radio" aria-checked={o.id === pick} className={`sw-opt ${o.id === pick ? 'on' : ''}`} onClick={() => (haptic('tick'), setPick(o.id))}>
+            <b>{o.name}</b>
+            <span>{hrs(o.driveDelta)}</span>
+            <em>{o.signatures ? `${o.signatures} fans signed` : o.sleeper ? 'Nobody plays there yet' : o.rank ? `#${o.rank} for your sound` : 'No poster yet'}</em>
+          </button>
+        ))}
+      </div>
+      <span className="lp-where">Gus re-plans the dates around it. It’s all on Tour, and Undo puts {action.name} back.</span>
+      <button className="btn hot block" disabled={!to} onClick={() => (haptic('tap'), gus.act({ ...action, options: [to] }))}>
+        {to ? `Swap in ${to.name}` : 'Pick a city'}
       </button>
     </div>
   );

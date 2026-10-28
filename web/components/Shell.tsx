@@ -6,7 +6,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Deal, DealLetter, LogEntry, Mandate } from '@/lib/types';
+import type { Deal, DealLetter, LogEntry, Mandate, TourPlan } from '@/lib/types';
 import type { ArtistState } from '@/ui/types';
 import { deals, useDeal } from '@web/lib/deals';
 import { haptic } from '@web/lib/haptics';
@@ -149,6 +149,28 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
             });
           })
           .catch(() => gus.flash('Couldn’t pin those'));
+        return;
+      }
+      if (a.type === 'swap') {
+        // Rung 1: a change to your own plan. Re-routing takes a few seconds; the island holds the words.
+        const url = `/artist/${slug}/plan`;
+        const to = a.options[0];
+        if (!to) return;
+        gus.flash(`Swapping ${a.name} for ${to.name}`, 20_000);
+        api
+          .get<{ plan: TourPlan | null }>(url)
+          .then(async ({ plan }) => {
+            if (!plan) throw new Error('no plan');
+            await api.post(url, { constraints: plan.constraints, action: { kind: 'swap', stopIndex: a.stopIndex, metroId: to.id } });
+            mutate(url).catch(() => {});
+            haptic('commit');
+            gus.did(`${to.name} is in, ${a.name} is out`, () => {
+              api.post(url, { constraints: plan.constraints, action: { kind: 'undo' } }).then(() => mutate(url)).catch(() => {});
+              haptic('tap');
+              gus.flash(`${a.name} is back`, 1600);
+            });
+          })
+          .catch(() => gus.flash('Couldn’t change the tour'));
         return;
       }
       if (a.type === 'night') {

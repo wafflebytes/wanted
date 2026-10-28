@@ -20,7 +20,18 @@ export type GusAction =
   | { type: 'limit'; key: 'maxDeposit' | 'minSplit'; value: number; label: string }
   | { type: 'quiet'; start: number; end: number; label: string }
   | { type: 'spots'; id: string; name: string; spots: Spot[]; label: string }
-  | { type: 'night'; id: string; name: string; current: string; nights: Night[]; label: string };
+  | { type: 'night'; id: string; name: string; current: string; nights: Night[]; label: string }
+  | {
+      type: 'swap';
+      id: string;
+      name: string;
+      label: string;
+      stopIndex: number;
+      stop: { id: string; name: string; state: string; date: string; rank: number | null };
+      route: { id: string; name: string; lat: number; lon: number }[];
+      options: SwapCity[];
+    };
+export type SwapCity = { id: string; name: string; state: string; lat: number; lon: number; sleeper: boolean; rank: number | null; signatures: number; driveDelta: number };
 export type Night = { date: string; day: string; open: number; venues: number };
 export type Spot = { id: string; name: string; neighborhood: string | null; address: string | null; lat: number | null; lon: number | null };
 export type GusStep = { id: string; tool: string; label: string; source: 'qloo' | 'fans' | 'wanted'; status: 'running' | 'done' | 'failed'; found: string | null; ms: number };
@@ -287,7 +298,9 @@ export const gus = {
   /** Gus changed something reversible: say it by the island with Undo, then let it settle. */
   did(words: string, run: () => void, ms = 6000) {
     if (undoTimer) clearTimeout(undoTimer);
-    set({ undo: { words, run } });
+    // What it was busy saying ("Swapping…") is done: the Undo line replaces it.
+    if (flashTimer) clearTimeout(flashTimer);
+    set({ undo: { words, run }, flash: null });
     undoTimer = setTimeout(() => set({ undo: null }), ms);
   },
   undo() {

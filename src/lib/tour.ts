@@ -172,6 +172,7 @@ type Pt = { lat: number; lon: number };
 function hours(a: Pt, b: Pt, cfg: TourConfig) {
   return driveEstimate(a.lat, a.lon, b.lat, b.lon, cfg.roadFactor, cfg.vanKmh).hours;
 }
+export const driveHours = hours;
 
 function routeCost(order: Pt[], start: Pt | null, cfg: TourConfig) {
   let total = 0;

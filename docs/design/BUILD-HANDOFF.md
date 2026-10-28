@@ -139,6 +139,11 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 - **Which night** (AGENT-UX 3.5): `pick_night` tool and `src/server/nights.ts`. "Which night should I play Ithaca?" brings three day chips, best first (weekends draw, how many of the venues that suit you are open that night from Qloo hours, never a night the artist told Gus they won't play). One tap, Undo by the island. The picked night is what venues get asked for (`startDeal` and `autoBook` both read `nightFor`), and the city card says "Gus asks for Fri, Dec 18 · Change". A tour-plan date on a ruled-out day slides to the next night they play. Route `/artist/:id/nights`.
 - No signer availability exists yet, so chips show venues open instead of "how many signers can make it".
 
+## Session 16: swap a city
+
+- **Swap** (AGENT-UX 3.5): "Swap Albany" runs `swap_options` (`swapOptions` in `service.ts`: the planner's own `swapCandidates`, top two, with driving added or saved against the stop it replaces and fans signed). The card draws the tour small, framed on the stretch around the stop: the city going out struck and its legs faint, the two candidates as dashed orange ghosts through the neighbours, chips with the detour. One tap re-plans via `{kind:'swap'}`; Undo posts `{kind:'undo'}`, which restores the plan snapshot `planFor` saves before every edit (kv `plan-prev:<id>`, instant, undo twice is redo).
+- Checks run in dark at 375 px only (the user's call).
+
 ## Next steps
 
 (Tour and Posters done. Dark is the main mode: design there first, then check light. Use the material system above for every new control. Judge product and copy as well as pixels: one job per screen, one primary key, plain musician words.)

@@ -16,7 +16,7 @@ import { recordOutbound } from '../outbound';
 import { env, redact } from '../env';
 import { isOpenOn, type RoomView } from '../city';
 import { METROS } from '../score';
-import { cityData, crowdFor, mapData } from '../service';
+import { cityData, crowdFor, mapData, swapOptions } from '../service';
 import { config } from '../config';
 import { pickSpots, type Spot } from '../spots';
 import { suggestNights, type Night } from '../nights';
@@ -35,7 +35,9 @@ export type GusAction =
   | { type: 'limit'; key: 'maxDeposit' | 'minSplit'; value: number; label: string }
   | { type: 'quiet'; start: number; end: number; label: string }
   | { type: 'spots'; id: string; name: string; spots: Spot[]; label: string }
-  | { type: 'night'; id: string; name: string; current: string; nights: Night[]; label: string };
+  | { type: 'night'; id: string; name: string; current: string; nights: Night[]; label: string }
+  | ({ type: 'swap'; id: string; name: string; label: string } & Swap);
+type Swap = NonNullable<Awaited<ReturnType<typeof swapOptions>>>;
 
 /** One thing Gus looked up. `found` is what he'd tell you he saw, in a few words. */
 export type GusStep = { id: string; tool: string; label: string; source: 'qloo' | 'fans' | 'wanted'; status: 'running' | 'done' | 'failed'; found: string | null; ms: number };
@@ -173,6 +175,10 @@ function spotsAction(city: Metro, spots: Spot[]): GusAction {
   return { type: 'spots', id: city.id, name: city.name, spots, label: `Pin ${spots.length} spot${spots.length === 1 ? '' : 's'} in ${city.name}` };
 }
 
+function swapAction(city: Metro, sw: Swap): GusAction {
+  return { type: 'swap', id: city.id, name: city.name, label: `Swap ${city.name}`, ...sw };
+}
+
 function nightAction(city: Metro, n: { current: string; nights: Night[] }): GusAction {
   return { type: 'night', id: city.id, name: city.name, current: n.current, nights: n.nights, label: `Pick a night in ${city.name}` };
 }
@@ -259,6 +265,14 @@ const TOOLS: ToolDef[] = [
   {
     type: 'function',
     function: {
+      name: 'swap_options',
+      description: 'For a city already on the tour: the two cities that could take its night instead, with fans signed and how much driving each adds or saves. Use when they ask to swap, replace or drop a tour stop.',
+      parameters: { type: 'object', properties: { city: { type: 'string' } }, required: ['city'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'remember',
       description: 'Write down something lasting the artist just told you about themselves or how they tour (nights they won’t play, their van, the band, cities to skip, how far they’ll drive). Not for questions or one-off asks.',
       parameters: { type: 'object', properties: { fact: { type: 'string', description: 'In their words, third person, under 15 words, e.g. "Won’t play Mondays"' } }, required: ['fact'] },
@@ -274,6 +288,7 @@ const LABEL: Record<string, (a: Record<string, string>) => { label: string; sour
   crowd: () => ({ label: 'Seeing what else your fans love', source: 'qloo' }),
   fan_proof: () => ({ label: 'Counting signatures on your posters', source: 'fans' }),
   poster_spots: (a) => ({ label: `Finding where your fans hang out in ${a.city}`, source: 'qloo' }),
+  swap_options: (a) => ({ label: `Looking for a city to take ${a.city}’s night`, source: 'qloo' }),
   pick_night: (a) => ({ label: `Looking at which nights work in ${a.city}`, source: 'qloo' }),
   remember: () => ({ label: 'Writing that down', source: 'wanted' }),
 };
@@ -291,6 +306,8 @@ type Ctx = {
   seenSpots: Map<string, Spot[]>;
   /** Nights Gus suggested, per city, so a "night" action only offers those. */
   seenNights: Map<string, { current: string; nights: Night[] }>;
+  /** Swap options per tour stop, so a "swap" action only offers those. */
+  seenSwaps: Map<string, Swap>;
   /** What he already knows about this act from earlier conversations. */
   memories: Memory[];
   memo: Map<string, Promise<unknown>>;
@@ -421,6 +438,16 @@ async function execTool(ctx: Ctx, name: string, args: Record<string, string>): P
     const out = { city: `${m.name}, ${m.state}`, neighborhoods, spots: spots.map((s) => ({ name: untrusted(s.name), neighborhood: s.neighborhood })) };
     return { out, found: spots.length ? `${spots.length} spots around ${neighborhoods.join(' and ')}` : 'nowhere I’d trust yet' };
   }
+  if (name === 'swap_options') {
+    const m = city();
+    if (!m) return notMine(args.city ?? 'That city');
+    const sw = await swapOptions(artist, m.id);
+    if (!sw) return { out: { city: m.name, onTour: false, note: 'This city is not on the tour.' }, found: 'not on your tour' };
+    ctx.seenSwaps.set(m.id, sw);
+    const hrs = (h: number) => (h === 0 ? 'the same driving' : `${Math.abs(h)} hours ${h > 0 ? 'more' : 'less'} driving`);
+    const out = { city: `${m.name}, ${m.state}`, night: spokenNight(sw.stop.date), couldTakeItsNight: sw.options.map((o) => ({ city: `${o.name}, ${o.state}`, fansSigned: o.signatures, driving: hrs(o.driveDelta), nobodyPlaysThereYet: o.sleeper })) };
+    return { out, found: sw.options.length ? `${sw.options.map((o) => o.name).join(' or ')}` : 'nothing better nearby' };
+  }
   if (name === 'pick_night') {
     const m = city();
     if (!m) return notMine(args.city ?? 'That city');
@@ -547,6 +574,18 @@ async function liteAgent(ctx: Ctx, heard: string): Promise<Omit<GusAnswer, 'hear
     };
   }
 
+  if (city && /\b(swap|replace|switch|instead of|swap out|trade)\b/.test(t)) {
+    await runTool(ctx, 'swap_options', { city: city.name });
+    const sw = ctx.seenSwaps.get(city.id);
+    if (!sw) return { reply: `${city.name} isn’t on your tour, so there’s nothing to swap.`, mood: 'idle', action: null };
+    if (!sw.options.length) return { reply: `Nothing near ${city.name} would do better on that night. I’d keep it.`, mood: 'idle', action: null };
+    const [a, b] = sw.options;
+    return {
+      reply: `${a.name}${b ? ` or ${b.name}` : ''} could take ${city.name}’s night. Have a look at the route.`,
+      mood: 'proud',
+      action: swapAction(city, sw),
+    };
+  }
   if (city && /\b(which|what|best|good|better) (night|day)\b|\bwhen should (i|we) play\b/.test(t)) {
     await runTool(ctx, 'pick_night', { city: city.name });
     const n = ctx.seenNights.get(city.id);
@@ -658,10 +697,11 @@ Rules:
 - Changing what you may agree to (the biggest deposit, the smallest cut of ticket sales) needs no lookups: never say it's changed. Offer it with action "limit" and the value they asked for; they confirm it on the slider.
 - You can open one screen or start one thing. Booking: you only ASK a room for a date (action "book"); the artist approves any money later. Hotels and dinner open a search; you never claim to have booked them.
 - Asked where to put posters up: call poster_spots, name one or two places, and offer action "spots" for that city so they can pin them.
+- Asked to swap, replace or drop a city on the tour: call swap_options, name the one or two cities that could take its night, and offer action "swap" for the city being replaced. Never say it's swapped.
 - Asked which night or day to play a city: call pick_night, say the best night and why in a few words, and offer action "night" for that city so they can pick.
 - When the artist tells you something lasting about how they tour (nights they won't play, their van, cities to skip), call remember once, then say you've noted it. Use what you remember: never suggest a night or a city they ruled out.
 When you are done, reply with ONLY this JSON:
-{"reply": "<one or two spoken sentences, under 35 words, with the specific answer>", "mood": "idle|proud|unimpressed", "action": {"type": "none|city|tab|pitch|book|spots|night|stay|eat|limit", "city": "<city name, if any>", "tab": "<map|tour|pulse|posters, if type is tab>", "room": "<exact room name from a rooms result, if type is book>", "limit": "<deposit|cut, if type is limit>", "value": <number, if type is limit>}}`;
+{"reply": "<one or two spoken sentences, under 35 words, with the specific answer>", "mood": "idle|proud|unimpressed", "action": {"type": "none|city|tab|pitch|book|spots|night|swap|stay|eat|limit", "city": "<city name, if any>", "tab": "<map|tour|pulse|posters, if type is tab>", "room": "<exact room name from a rooms result, if type is book>", "limit": "<deposit|cut, if type is limit>", "value": <number, if type is limit>}}`;
 
 export async function answer(artist: ArtistRow, heard: string, screen: string | null, emit: (e: GusEvent) => void = () => {}, history: GusTurn[] = []): Promise<GusAnswer> {
   history = history.slice(-3).map((t) => ({ heard: String(t.heard ?? '').slice(0, 300), reply: String(t.reply ?? '').slice(0, 300) }));
@@ -678,6 +718,7 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     seenRooms: new Map(),
     seenSpots: new Map(),
     seenNights: new Map(),
+    seenSwaps: new Map(),
     memories: await recall(artist.id).catch(() => []),
     memo: new Map(),
     emit,
@@ -781,6 +822,7 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
   else if (city && a.type === 'pitch') action = { type: 'pitch', id: city.id, name: city.name, label: `Pitch ${city.name}` };
   else if (city && (a.type === 'stay' || a.type === 'eat')) action = stayLink(city, a.type);
   else if (city && a.type === 'spots' && ctx.seenSpots.get(city.id)?.length) action = spotsAction(city, ctx.seenSpots.get(city.id)!);
+  else if (city && a.type === 'swap' && ctx.seenSwaps.get(city.id)?.options.length) action = swapAction(city, ctx.seenSwaps.get(city.id)!);
   else if (city && a.type === 'night' && ctx.seenNights.get(city.id)?.nights.length) action = nightAction(city, ctx.seenNights.get(city.id)!);
   else if (city && a.type === 'book') {
     // Only a room a tool actually returned for that city.
@@ -803,6 +845,9 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     const found = [...ctx.seenSpots].find(([, s]) => s.length);
     const fm = found && metros.find((x) => x.id === found[0]);
     if (!action && found && fm) action = spotsAction(fm, found[1]);
+    const swaps = [...ctx.seenSwaps].find(([, x]) => x.options.length);
+    const sm = swaps && metros.find((x) => x.id === swaps[0]);
+    if (!action && swaps && sm) action = swapAction(sm, swaps[1]);
     const nights = [...ctx.seenNights].find(([, n]) => n.nights.length);
     const nm = nights && metros.find((x) => x.id === nights[0]);
     if (!action && nights && nm) action = nightAction(nm, nights[1]);
