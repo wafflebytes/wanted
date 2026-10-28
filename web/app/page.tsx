@@ -10,6 +10,11 @@
  *
  * Then Gus reads where your people are, the cities come in one by one, and you land on your map.
  * No account, no sign-in.
+ *
+ * The demo path (the default; `?new=1` is the real one): you play Maya Ortiz. Her link types
+ * itself, the lookalikes and venue size are real questions with her answers filled in, and the
+ * run shows what Qloo does with them (the cities come from her live map). A short "why" under
+ * each question says what the answer is for. It ends on the story.
  */
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -17,6 +22,7 @@ import type { ActEntity, RoomBand } from '@/lib/types';
 import { Art, type ArtName } from '@web/components/Art';
 import { Gus, type GusMood } from '@web/components/Gus';
 import { Icon } from '@web/components/Icon';
+import type { ArtistState, MapData } from '@/ui/types';
 import { api, streamNdjson } from '@web/lib/api';
 import { defaultStart, session } from '@web/lib/session';
 import './welcome.css';
@@ -67,6 +73,16 @@ export default function Page() {
   if (phase === 'splash') return <Splash onDone={done} />;
   if (phase !== 'welcome') return <main className="wl" />;
   return <Welcome />;
+}
+
+/** A line under a question saying what the answer is for. */
+function Why({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="wl-why">
+      <b>Why</b>
+      {children}
+    </p>
+  );
 }
 
 /** What Gus is doing above each Welcome card. */
@@ -131,8 +147,36 @@ function Welcome() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [run, setRun] = useState<{ title: string; line: string | null; picks: Pick[] }>({ title: 'Reading where your people are', line: null, picks: [] });
+  const [lines, setLines] = useState<string[]>([]);
+  const [ready, setReady] = useState(false);
   const abort = useRef<AbortController | null>(null);
-  useEffect(() => () => abort.current?.abort(), []);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const typed = useRef(false);
+  const demo = useRef(typeof location !== 'undefined' && !new URLSearchParams(location.search).has('new'));
+  useEffect(
+    () => () => {
+      abort.current?.abort();
+      timers.current.forEach(clearTimeout);
+    },
+    [],
+  );
+  const later = (ms: number, f: () => void) => void timers.current.push(setTimeout(f, ms));
+
+  // Demo: Maya's link types itself, then Gus finds her.
+  useEffect(() => {
+    if (!demo.current || step !== 'link' || typed.current) return;
+    typed.current = true;
+    const target = 'open.spotify.com/artist/maya-ortiz';
+    let i = 0;
+    const tick = () => {
+      i++;
+      setText(target.slice(0, i));
+      if (i < target.length) later(30 + (i % 3) * 12, tick);
+      else later(700, () => readDemo());
+    };
+    later(700, tick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   const flow: Step[] = fresh.current ? ['link', 'sound', 'rooms'] : ['who', 'link', 'sound', 'rooms'];
   const at = flow.indexOf(step);
@@ -167,6 +211,56 @@ function Welcome() {
     }
   };
 
+  /** The demo's "find me": Maya, with the two acts her page already knows she sounds like. */
+  const readDemo = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const [a, m] = await Promise.all([api.get<ArtistState>(`/artist/${DEMO}`), new Promise((r) => setTimeout(r, 1100))]);
+      void m;
+      const similar: Similar[] = a.artist.sound.entities.map((e) => ({ name: e.name, image: null, fans: null, entity: e as unknown as ActEntity }));
+      const self = { name: a.artist.name, image: '/img/maya-avatar.webp', fans: null, genres: [] as string[], self: null, similar, source: 'demo' } satisfies Found;
+      setFound(self);
+      setMatched({ self: null, genres: [], similar });
+      setKeep(Object.fromEntries(similar.map((x) => [x.name, true])));
+      go('sound');
+    } catch {
+      setErr('Couldn’t reach the demo. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** The demo's run: what Qloo does with her sound, one line at a time, then her real top cities. */
+  const startDemo = async () => {
+    go('run');
+    setLines([]);
+    setReady(false);
+    const sims = (matched?.similar ?? []).filter((x) => keep[x.name]).map((x) => x.name);
+    const map = api.get<MapData>(`/artist/${DEMO}/map`).catch(() => null);
+    const say = (ms: number, t: string) => later(ms, () => setLines((l) => [...l, t]));
+    say(150, `Hearing the sound: ${sims.join(' and ') || 'Maya’s'}`);
+    say(1200, 'Qloo scores every neighborhood for it');
+    say(2400, 'Against 20 other acts, so big cities don’t win by size');
+    say(3600, 'Flagging cities with more fans than their size');
+    later(4800, async () => {
+      const d = await map;
+      const top = d ? d.metros.filter((x) => x.rank).sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)).slice(0, 5) : [];
+      const picks: Pick[] = top.length
+        ? top.map((x) => ({ metroId: x.id, name: x.name, state: x.state, reason: '', sleeper: x.sleeper }))
+        : [
+            { metroId: 'burlington-vt', name: 'Burlington', state: 'VT', reason: '', sleeper: false },
+            { metroId: 'portland-me', name: 'Portland', state: 'ME', reason: '', sleeper: false },
+            { metroId: 'ithaca-ny', name: 'Ithaca', state: 'NY', reason: '', sleeper: true },
+          ];
+      setRun({ title: 'Here’s where Maya is wanted', line: 'The first poster goes up in each of these.', picks });
+      later(1000 + picks.length * 220, () => setReady(true));
+    });
+    session.setConstraints(DEMO, { regions: [], dates: 10, roomBand: band, homeBase: null, startDate: defaultStart() });
+    session.setLastArtist(DEMO);
+    session.setOnboarded(true);
+  };
+
   const paste = async () => {
     try {
       const t = (await navigator.clipboard.readText()).trim();
@@ -179,6 +273,7 @@ function Welcome() {
   };
 
   const start = async () => {
+    if (demo.current) return startDemo();
     if (!found || !matched) return;
     const refs = matched.similar.filter((s) => keep[s.name] && s.entity).map((s) => s.entity!);
     if (!refs.length && !matched.self) return setErr('Keep at least one act you sound like.');
@@ -234,10 +329,24 @@ function Welcome() {
         <section className="wl-hero" key="who">
           <div className="wl-who">
             <span className="wl-tag">Gus, your tour manager</span>
-            <Gus mood="wave" size={220} className="wl-gus" label="Gus, your tour manager" />
+            <Gus mood="wave" size={168} className="wl-gus" label="Gus, your tour manager" />
           </div>
           <h1>Find the cities that want you.</h1>
-          <p>I read where your listeners live, put a WANTED poster up in their city, and ask venues for a date once enough of them sign.</p>
+          <p>Most bands guess where to tour. I read where your listeners already live, so you play to a full room, not an empty one.</p>
+          <ol className="wl-how" aria-label="How it works">
+            <li>
+              <b>1</b>
+              <span>Qloo’s taste graph finds the cities where your sound already has a crowd</span>
+            </li>
+            <li>
+              <b>2</b>
+              <span>Fans there sign a WANTED poster</span>
+            </li>
+            <li>
+              <b>3</b>
+              <span>At 50 names I ask the venues. You only say yes or no.</span>
+            </li>
+          </ol>
           <div className="wl-acts">
             <button className="btn hot block" onClick={() => go('link')}>
               I make music
@@ -245,11 +354,12 @@ function Welcome() {
             <button className="btn light block" onClick={() => go('fan')}>
               I’m a fan
             </button>
-            <button className="wl-demo" onClick={() => router.push(`/a/${DEMO}?tour=1`)}>
-              Take a quick tour with Gus first
+            <button className="wl-demo" onClick={() => router.push(`/a/${DEMO}?story=1`)}>
+              Skip setup and watch Gus work
               <Icon name="chevron" size={14} />
             </button>
           </div>
+          {demo.current && <p className="wl-note">Demo: you’ll play Maya Ortiz, an indie songwriter. Her cities come live from Qloo. Venues and money are stand-ins.</p>}
         </section>
       )}
 
@@ -286,6 +396,7 @@ function Welcome() {
             <>
               <h2>Where can I hear you?</h2>
               <p>Paste a Spotify, Apple Music, Bandcamp, SoundCloud or YouTube link. Or just type your name.</p>
+              {demo.current && <Why>No account and no sign-in. Gus only needs a sound to start from, and Qloo turns it into taste signals.</Why>}
               <form
                 className="wl-field"
                 onSubmit={(e) => {
@@ -293,8 +404,8 @@ function Welcome() {
                   read();
                 }}
               >
-                <input value={text} onChange={(e) => setText(e.target.value)} placeholder="open.spotify.com/artist/… or your name" autoFocus autoCapitalize="off" autoCorrect="off" spellCheck={false} enterKeyHint="go" aria-label="Your link or name" />
-                {!text && (
+                <input value={text} onChange={(e) => setText(e.target.value)} placeholder="open.spotify.com/artist/… or your name" autoFocus={!demo.current} autoCapitalize="off" autoCorrect="off" spellCheck={false} enterKeyHint="go" aria-label="Your link or name" readOnly={demo.current} />
+                {!text && !demo.current && (
                   <button type="button" className="btn xs light" onClick={paste}>
                     Paste
                   </button>
@@ -319,6 +430,7 @@ function Welcome() {
               </div>
               <h2>Who do you sound like?</h2>
               <p>Your listeners also play these. Keep the ones that fit; Gus finds your crowd through theirs.</p>
+              {demo.current && <Why>This is how Qloo finds your fans without a mailing list: people who love these acts, and where they live.</Why>}
               <div className="wl-sims">
                 {sims.slice(0, 8).map((s) => (
                   <button key={s.name} className={`wl-sim${keep[s.name] ? ' on' : ''}`} aria-pressed={!!keep[s.name]} onClick={() => setKeep((k) => ({ ...k, [s.name]: !k[s.name] }))}>
@@ -339,6 +451,7 @@ function Welcome() {
             <>
               <h2>How big are the venues you play?</h2>
               <p>Be honest. Nobody fills a theater on hope.</p>
+              {demo.current && <Why>It sets which venues Gus will ever ask, so he never pitches you to a room you can’t fill.</Why>}
               <div className="wl-rooms" role="radiogroup">
                 {ROOMS.map((r) => (
                   <button key={r.band} role="radio" aria-checked={band === r.band} className={`wl-room${band === r.band ? ' on' : ''}`} onClick={() => setBand(r.band)}>
@@ -360,8 +473,18 @@ function Welcome() {
           {step === 'run' && (
             <div className="wl-run" aria-live="polite">
               <Gus mood={run.picks.length ? 'proud' : 'working'} size={150} />
-              <h2>{run.title}</h2>
+              <h2>{demo.current && !run.picks.length ? 'Reading where Maya’s people are' : run.title}</h2>
               {run.line && <p>{run.line}</p>}
+              {demo.current && !run.picks.length && (
+                <ul className="wl-lines">
+                  {lines.map((l, i) => (
+                    <li key={l} className={i === lines.length - 1 ? 'now' : ''}>
+                      {i === lines.length - 1 ? <i className="spin" /> : <Icon name="check" bold size={14} />}
+                      {l}
+                    </li>
+                  ))}
+                </ul>
+              )}
               {run.picks.length > 0 ? (
                 <ol className="wl-picks">
                   {run.picks.map((p, i) => (
@@ -373,11 +496,18 @@ function Welcome() {
                   ))}
                 </ol>
               ) : (
-                <div className="wl-wait">
-                  <i />
-                  <i />
-                  <i />
-                </div>
+                !demo.current && (
+                  <div className="wl-wait">
+                    <i />
+                    <i />
+                    <i />
+                  </div>
+                )
+              )}
+              {demo.current && ready && (
+                <button className="btn hot block wl-go" onClick={() => router.replace(`/a/${DEMO}?story=1`)}>
+                  Watch Gus work
+                </button>
               )}
             </div>
           )}

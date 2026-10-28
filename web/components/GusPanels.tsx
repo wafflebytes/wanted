@@ -230,7 +230,7 @@ function VoiceCard({ open, suggest }: { open: boolean; suggest: Tile[] }) {
           )}
           {g.phase === 'listening' && !g.heard && <p className="vc-you vc-listen">Go ahead, I’m listening…</p>}
           {g.heard && (
-            <p className="vc-you" key={g.heard}>
+            <p className="vc-you" key={g.phase === 'listening' ? 'live' : g.heard}>
               {g.heard}
             </p>
           )}

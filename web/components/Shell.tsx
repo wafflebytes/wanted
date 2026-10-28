@@ -19,6 +19,7 @@ import { session } from '@web/lib/session';
 import { Gus, type GusMood } from './Gus';
 import { GusPanels } from './GusPanels';
 import { Guide } from './Guide';
+import { Story } from './Story';
 import { MapStage } from './map/MapStage';
 import { ProgressiveBlur } from './ProgressiveBlur';
 import { Icon, type IconName } from './Icon';
@@ -253,6 +254,7 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
       {!hideChrome && <Dock slug={slug} tab={tab} badge={!!waiting} />}
       <GusPanels slug={slug} artist={artist.data} waiting={waiting ?? null} entries={book.data?.entries ?? []} />
       <Guide slug={slug} />
+      <Story slug={slug} />
     </div>
   );
 }

@@ -124,6 +124,23 @@ export default function Settings() {
         </button>
       </div>
 
+      <section id="story">
+        <ul className="st-group">
+          <li>
+            <Link href={`/a/${slug}?story=1`} className="st-row">
+              <span className="st-av">
+                <Icon name="play" bold size={18} />
+              </span>
+              <span className="st-t">
+                <b>Watch Gus work</b>
+                <em>A three-minute story of what Wanted does</em>
+              </span>
+              <Icon name="chevron" size={16} className="ink-4" />
+            </Link>
+          </li>
+        </ul>
+      </section>
+
       <section id="acts">
         <div className="section-h">
           <h2>Your acts</h2>

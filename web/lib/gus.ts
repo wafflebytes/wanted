@@ -355,6 +355,26 @@ export const gus = {
     }
     if (state.phase === 'listening') finish(true);
   },
+  /**
+   * The story's voice: the question appears in the voice card as if you were saying it (the
+   * ring pulses, the words arrive), then it goes to Gus like any other ask.
+   */
+  async dictate(text: string, alive: () => boolean = () => true) {
+    audio?.pause();
+    set({ panel: 'voice', phase: 'listening', error: null, answer: null, steps: [], aside: null, spoken: 0, speaking: false, intro: false, heard: null });
+    await new Promise((r) => setTimeout(r, 650));
+    const words = text.split(' ');
+    for (let i = 1; i <= words.length; i++) {
+      if (!alive()) return;
+      set({ heard: words.slice(0, i).join(' '), level: 0.35 + 0.4 * Math.abs(Math.sin(i * 1.7)) });
+      await new Promise((r) => setTimeout(r, 150 + words[i - 1].length * 18));
+    }
+    if (!alive()) return;
+    set({ level: 0 });
+    await new Promise((r) => setTimeout(r, 420));
+    if (!alive()) return;
+    gus.ask(text);
+  },
   ask(text: string) {
     if (!text.trim()) return;
     gus.flash('On it');
