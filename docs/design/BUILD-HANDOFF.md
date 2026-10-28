@@ -153,6 +153,12 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 - **Thank-you story**: `?kind=thanks&n=<room count>` on the story route (`renderAnnounce` thanks branch): "Thank you, Burlington.", how many came, how many signed to start it. "Thank Burlington" on Settle up once it's settled (the count is the scanner's, a fixture until wired).
 - **First dibs** (`src/server/dibs.ts`, POST `/w/:artist/:city/dibs {tickets}`, `dibs` in `posterState`): once a city has a held date, a signer holds 1 or 2 tickets (4 if they brought two friends) by their own device's signature. The link opens for signers 21 days before the show (never before tomorrow), the public two days later. Nothing is charged: no ticket seller is connected. Wanted's $1 a ticket is the venue's, shown to the artist on Posters with how many tickets signers are holding. Tested end to end with two local test signatures, then removed.
 
+## Session 18: production check and the docs pass
+
+- **Production** checked on 0ddeef8: health green, every main page 200, tour poster, booked and thank-you stories render with the trywanted.vercel.app link, and Columbus (the demo's held show) carries `dibs`. Burlington has no held show on production, so its story kinds 404 by design. The tour poster's "Your city on it?" got 40 px above it.
+- **README** rewritten: the problem with sources, the gallery cards in pairs, the three story posters, the chatbot table, and six Mermaid diagrams (Qloo calls, one question, memory, money, reaching you, the whole system). Four README cards (`r-grounded`, `r-memory`, `r-money`, `r-ladder`) are drawn by `scripts/gallery-cards.mjs` in the gallery's look and land in `docs/readme` (`ONLY=r-`). The user wants the gallery's simplicity: one headline, one sentence, one visual; technical detail goes in Mermaid, not in images.
+- **Devpost** (`docs/DEVPOST.md`): voice notes, tagline, spoken pitch, About the project, Built with, About me. `llms.txt` and `llms-full.txt` cover memory, reaching you, the loops, eleven tools and plain words.
+
 ## Next steps
 
 (Tour and Posters done. Dark is the main mode: design there first, then check light. Use the material system above for every new control. Judge product and copy as well as pixels: one job per screen, one primary key, plain musician words.)

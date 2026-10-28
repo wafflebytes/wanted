@@ -517,7 +517,7 @@ export async function renderTour(d: TourPosterData): Promise<Buffer> {
         ))}
       </div>
       <div style={{ display: 'flex', flexGrow: 1 }} />
-      <div style={{ display: 'flex', marginBottom: 40, fontWeight: 800, fontSize: 52, letterSpacing: -1 }}>Your city on it?</div>
+      <div style={{ display: 'flex', marginTop: 40, marginBottom: 40, fontWeight: 800, fontSize: 52, letterSpacing: -1 }}>Your city on it?</div>
       <Key label="Sign for your city" link={d.link} />
       <div style={{ display: 'flex', marginTop: 40, marginBottom: 72 }}>
         <MadeWith />

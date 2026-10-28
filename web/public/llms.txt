@@ -1,6 +1,6 @@
 # Wanted
 
-> Wanted is an agent-native tour manager for independent musicians. Its agent, Gus, uses Qloo's taste graph to predict which US cities (and which neighborhoods in them) love an act's sound. He puts up a WANTED poster in those cities that fans sign as proof. Once a city proves itself, he negotiates a date with the room inside limits the artist sets, and brings back one decision to approve. Built for the Qloo Agentic Hackathon ("Agents, but with taste").
+> Wanted is an agent-native tour manager for independent musicians. Its agent, Gus, uses Qloo's taste graph to predict which US cities (and which neighborhoods in them) love an act's sound. He puts up a WANTED poster in those cities that fans sign as proof. Once fifty fans sign in a city, he negotiates a date with a venue that fits, inside limits the artist sets, and brings back one decision to approve. Built for the Qloo Agentic Hackathon ("Agents, but with taste").
 
 - Live app (works on a phone): https://trywanted.vercel.app
 - Demo act: https://trywanted.vercel.app/a/maya-ortiz
@@ -10,7 +10,9 @@
 
 ## What a judge or agent should know first
 
-- Gus is ambient. Calls to venues advance on the server whether or not a screen is open (`src/server/ambient.ts`). When you arrive, the Dynamic Island already shows a call in progress, an offer waiting on you, and a date already held.
+- Gus is ambient. Calls to venues advance on the server whether or not a screen is open (`src/server/ambient.ts`). When you arrive, the Dynamic Island already shows a call in progress, an offer waiting on you, and a show already booked.
+- Gus remembers how an artist tours (nights they won't play, how far they drive) and keeps to it; every answer is checked so he can't name a venue no lookup returned.
+- Every show feeds the next: a tour poster, a booked story and a thank-you story for Instagram, and first dibs on tickets for the fans who signed.
 - Qloo decides where and to whom; the LLM only writes and plans. Money and terms are enforced by server policy (`src/server/deals.ts`, `src/server/deal-scope.ts`). Payments are test-mode only, each against an exact reviewed hash.
 - Fan data (signatures, neighborhoods, contacts) never goes to Qloo or to any model.
 - What's simulated is labeled: venue booking agents are stand-ins, deposits are sandbox/Stripe test, and demo signatures are flagged as demo.
@@ -20,7 +22,7 @@
 - Sound to entities: `/search` and entities by ID or Spotify ID.
 - Every US city ranked for the crowd: `/v2/insights` with `filter.type=urn:heatmap`, normalized against a panel of other acts (`src/server/score.ts`).
 - Neighborhoods inside a city: `urn:heatmap` scoped to the city.
-- Rooms ranked for the act's taste, with the reason: `urn:entity:place` with explainability.
+- Venues ranked for the act's taste, with the reason and open nights: `urn:entity:place` with explainability and hours.
 - Poster spots where the crowd hangs out: `urn:entity:place` in the top neighborhoods.
 - Who the fans are: `urn:demographics`; cross-domain `podcast`, `tv_show`, `movie`, `brand`; `urn:tag`.
 - An opener who shares the crowd: `urn:entity:artist` / `person`, then `/v2/analysis/compare`.
@@ -29,15 +31,15 @@
 ## Gus as an MCP connector
 
 - Endpoint: `https://trywanted.vercel.app/api/mcp` (remote MCP, streamable HTTP, no sign-in). Add it as a custom connector in Claude or ChatGPT.
-- Tools: `where_am_i_wanted`, `city_brief`, `deals`, `ask_gus` (Gus runs his own Qloo lookups and answers), `ask_rooms` (starts a negotiation; it never pays).
-- In Claude the answers come back as cards (an MCP App) you can tap: open a city, then send Gus to ask the room.
+- Tools: `where_am_i_wanted`, `city_brief`, `deals`, `ask_gus` (Gus runs his own Qloo lookups and answers), `ask_rooms` (starts a negotiation with a venue; it never pays).
+- In Claude the answers come back as cards (an MCP App) you can tap: open a city, then send Gus to ask the venue.
 - Money never moves through the connector. A deposit needs the artist's yes in the app, on the exact offer they reviewed (`src/server/mcp.ts`).
 
 ## Public JSON API (read-only for the demo act)
 
 - `GET /api/artist/maya-ortiz`: the act, its sound, opened cities.
 - `GET /api/artist/maya-ortiz/map`: city heat, proof (signatures by city), sleepers.
-- `GET /api/artist/maya-ortiz/city/{metroId}`: neighborhoods, rooms, crowd for one city.
+- `GET /api/artist/maya-ortiz/city/{metroId}`: neighborhoods, venues, crowd for one city.
 - `GET /api/artist/maya-ortiz/deals`: deals Gus is negotiating, with full letter threads.
 - `GET /api/artist/maya-ortiz/plan`: the tour plan and Gus's suggested changes.
 - `GET /api/artist/maya-ortiz/logbook`: everything Gus did, in plain words, and his mandate.
@@ -48,6 +50,6 @@
 - [README](https://github.com/wafflebytes/wanted#readme): the pitch, try-it path, architecture, evals.
 - [Agent UX spec](https://github.com/wafflebytes/wanted/blob/main/docs/design/AGENT-UX.md): approvals ladder, surfaces, loops.
 - [Asking Gus eval](https://github.com/wafflebytes/wanted/blob/main/evals/gus.md): 16 live questions, the right lookup and a next step each time.
-- [Qloo vs a plain chatbot](https://github.com/wafflebytes/wanted/blob/main/evals/qloo-vs-chatbot.md): how much of a chatbot's room advice holds up, over 8 cities.
+- [Qloo vs a plain chatbot](https://github.com/wafflebytes/wanted/blob/main/evals/qloo-vs-chatbot.md): how much of a chatbot's venue advice holds up, over 8 cities.
 - [Agent gate](https://github.com/wafflebytes/wanted/blob/main/evals/report.md): 12 policy scenarios (approval, changed terms, untrusted text).
 - [Research](https://github.com/wafflebytes/wanted/tree/main/docs/research): customers, touring operating model, voice of customer, market.

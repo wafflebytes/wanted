@@ -296,6 +296,56 @@ const cards = [
     stage: () => `
       <div class="try"><div class="qr">${readFileSync(`${shots}/qr.svg`, 'utf8')}</div><b>trywanted.vercel.app</b></div>`,
   },
+
+  // The README's cards: how Gus works inside, in the same look. They land in docs/readme.
+  {
+    name: 'r-grounded', readme: true, theme: 'dark', kicker: 'Grounded',
+    title: 'He can’t make up a venue.',
+    body: 'Every place he names came back from a lookup. If one didn’t, a simpler Gus answers from the same facts.',
+    stage: () => {
+      const steps = [
+        ['pin-room', 'He looks it up', 'Eleven lookups, most of them on Qloo.'],
+        ['self-approved', 'He checks every name', 'Against what the lookups returned.'],
+        ['act-reply', 'He answers short', 'A sentence or two, and one next step.'],
+      ];
+      return `<div class="halo" style="left:760px; top:100px; width:800px; height:800px"></div>
+        <div class="how mid">${steps.map(([a, t, d], k) => `<div class="tok"><span class="num">${k + 1}</span><img src="${art(a)}"><div><b>${t}</b><small>${d}</small></div></div>`).join('')}</div>`;
+    },
+  },
+  {
+    name: 'r-memory', readme: true, theme: 'cream', kicker: 'Memory',
+    title: 'He remembers how you tour.',
+    body: 'Tell him once and he keeps to it. You can strike anything he wrote down.',
+    stage: () => `
+      <div class="halo" style="left:700px; top:60px; width:900px; height:900px"></div>
+      ${at(`<div class="memo">
+          <div class="q">We don’t play Mondays.</div>
+          <div class="mh"><img src="${art('gus-working')}"><b>What Gus remembers</b></div>
+          <ul><li>${svg('pen', 22)}Won’t play Mondays</li><li>${svg('pen', 22)}Five hours of driving, max</li><li class="x">${svg('pen', 22)}Skip Boston</li></ul>
+        </div>`, { x: 820, y: 'mid', z: 3, tilt: 'perspective(2400px) rotateY(-14deg) rotateX(5deg) rotateZ(-2deg)' })}`,
+  },
+  {
+    name: 'r-money', readme: true, theme: 'cream', kicker: 'Money',
+    title: 'Only you can say yes.',
+    body: 'Gus negotiates. Your yes covers one exact offer, and the model can’t pay for anything.',
+    stage: () => {
+      const steps = [
+        ['receipt-paper', 'One offer', 'Sealed to its exact terms.'],
+        ['act-deposit', 'Your yes', 'If the terms change, it’s void.'],
+        ['obj-ticket', 'Paid once', 'That amount, that venue, 48 hours.'],
+      ];
+      return `<div class="halo" style="left:760px; top:100px; width:800px; height:800px"></div>
+        <div class="how mid">${steps.map(([a, t, d], k) => `<div class="tok"><span class="num">${k + 1}</span><img src="${art(a)}"><div><b>${t}</b><small>${d}</small></div></div>`).join('')}</div>`;
+    },
+  },
+  {
+    name: 'r-ladder', readme: true, theme: 'dark', kicker: 'Reaching you',
+    title: 'He knows when to bother you.',
+    body: 'Most things go in the Logbook. A phone call is rare, and he’s quiet from 10 pm.',
+    stage: () => `
+      <div class="halo" style="left:760px; top:100px; width:800px; height:800px"></div>
+      <div class="ladder">${['A Logbook line', 'A note', 'A question', 'A card to review', 'A phone call'].map((t, k) => `<div class="rung" style="margin-left:${k * 34}px"><span class="lv l${k}">${k === 4 ? svg('mic', 24) : ''}</span><b>${t}</b></div>`).join('')}</div>`,
+  },
 ];
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -455,6 +505,22 @@ h1 { font-weight: 900; font-size: 78px; line-height: 1.02; letter-spacing: -.03e
 .mk b { font-weight: 800; font-size: 22px; letter-spacing: -.01em; }
 .mk em { font-style: normal; font-weight: 700; font-size: 15px; letter-spacing: .1em; text-transform: uppercase; color: #FF8A4C; margin-top: 2px; }
 
+/* README cards */
+.how.mid { top: 0; bottom: 0; justify-content: center; }
+.memo { width: 560px; padding: 34px 36px 22px; border-radius: 44px; background: linear-gradient(180deg, #FFFFFF, #FBF8F2); color: #15130F; box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(21,19,15,.06), 0 60px 100px -40px rgba(70,40,10,.45), 0 20px 40px -20px rgba(70,40,10,.25); }
+.mh { display: flex; align-items: center; gap: 16px; margin-top: 26px; padding-bottom: 8px; }
+.mh img { width: 84px; height: 84px; object-fit: contain; filter: drop-shadow(0 10px 12px rgba(70,40,10,.3)); }
+.mh b { font-weight: 900; font-size: 30px; letter-spacing: -.01em; }
+.memo ul { list-style: none; }
+.memo li { display: flex; align-items: center; gap: 14px; height: 70px; border-top: 1.5px solid rgba(21,19,15,.07); font-weight: 800; font-size: 27px; }
+.memo li svg { color: #E8490F; flex: none; }
+.memo li.x { color: #A29E95; text-decoration: line-through; text-decoration-thickness: 3px; text-decoration-color: #F2510F; }
+.ladder { position: absolute; left: 820px; top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; gap: 18px; z-index: 3; }
+.rung { display: flex; align-items: center; gap: 20px; width: 470px; padding: 16px 30px 16px 16px; border-radius: 30px; background: linear-gradient(180deg, var(--p1), var(--p2)); box-shadow: inset 0 1px 0 var(--hl), 0 0 0 1px var(--hair), 0 24px 40px -26px var(--drop); }
+.rung b { font-weight: 800; font-size: 29px; letter-spacing: -.01em; }
+.lv { flex: none; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+.l0 { background: rgba(245,240,230,.14); } .l1 { background: rgba(255,106,43,.3); } .l2 { background: rgba(255,106,43,.5); } .l3 { background: rgba(255,106,43,.75); } .l4 { background: linear-gradient(180deg, #FF7637, #F2510F); box-shadow: 0 0 0 8px rgba(255,90,31,.18); }
+
 /* Layouts */
 .text.right { left: 860px; width: 560px; }
 .foot.right { left: 860px; }
@@ -491,7 +557,7 @@ for (const c of cards) {
   writeFileSync(`${shots}/card.html`, html);
   await p.goto(`file://${shots}/card.html`, { waitUntil: 'load' });
   await p.evaluate(() => document.fonts.ready);
-  await p.screenshot({ path: `${out}/${c.name}.jpg`, quality: 90 });
+  await p.screenshot({ path: `${c.readme ? 'docs/readme' : out}/${c.name}.jpg`, quality: 90 });
   console.log('ok', c.name);
 }
 await b.close();
