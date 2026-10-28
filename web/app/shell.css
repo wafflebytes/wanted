@@ -530,16 +530,21 @@ button.ml { cursor: pointer; }
 
 /* ---------- a computer (900 px and up): one rail on the left holds what the phone shows (header,
    page, dock, Gus), and the map fills the rest beside every tab. */
-.rail-bg { display: none; }
+/* Registered so a computer's panel can fold its head card in one move instead of resting half cut. */
+@property --p { syntax: '<number>'; inherits: true; initial-value: 0; }
 @media (min-width: 900px) {
   :root { --col: 468px; --rail: 468px; }
-  .rail-bg { display: block; position: fixed; top: 0; bottom: 0; left: 0; width: var(--rail); z-index: 1; background: var(--page, var(--bg)); box-shadow: 0.5px 0 0 var(--line-2), 24px 0 60px -30px rgba(0, 0, 0, 0.5); pointer-events: none; }
-  .tab-map .rail-bg, .tab-tour .rail-bg { display: none; }
   .hdr, .dock, .tiles, .vc, .tray, .isl-card, .undo-chip { left: calc(var(--rail) / 2); }
   .sheet { left: 0; margin-left: 0; }
-  .shell :is(.page, .fm, .lb, .pw, .st, .rd, .sd) { margin: 0; max-width: var(--rail); z-index: 2; }
-  .shell :is(.page, .rd, .sd) { position: relative; }
-  .shell :is(.fm > .fm-ground, .lb > .lb-ground, .pw > .pw-ground) { right: auto; width: var(--rail); }
-  .pblur { right: auto; width: var(--rail); }
-  .edge-top, .edge-bottom { right: auto; width: var(--rail); }
+  /* Every tab floats over the map in the same card Map and Tour use, and scrolls inside it. */
+  .shell :is(.page, .fm, .lb, .pw, .st, .rd, .sd) {
+    position: fixed; top: 76px; left: 24px; bottom: 96px; width: 420px; max-width: none; margin: 0; z-index: 2;
+    padding: 18px var(--gutter) 28px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: none;
+    border-radius: var(--r-l); background: var(--card); box-shadow: var(--shadow-1), var(--rim);
+    animation: fade var(--t-move) var(--ease) both;
+  }
+  .shell :is(.page, .fm, .lb, .pw, .st, .rd, .sd)::-webkit-scrollbar { display: none; }
+  /* A page's own ground (Fan Mail's airmail blue, the poster wall's grain) becomes the card's paper. */
+  .shell :is(.fm > .fm-ground, .lb > .lb-ground, .pw > .pw-ground) { top: 76px; left: 24px; bottom: 96px; right: auto; width: 420px; border-radius: var(--r-l); }
+  .pblur, .edge-top, .edge-bottom { display: none; }
 }

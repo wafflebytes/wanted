@@ -16,7 +16,7 @@ import { Sheet } from '@web/components/Sheet';
 import { api } from '@web/lib/api';
 import { deals } from '@web/lib/deals';
 import { gus } from '@web/lib/gus';
-import { mutate, useApi, useViewport } from '@web/lib/hooks';
+import { foldPanel, mutate, useApi, useViewport } from '@web/lib/hooks';
 import { stage } from '@web/lib/stage';
 import '../../home.css';
 
@@ -204,12 +204,7 @@ function Home() {
         <aside className="home-panel card">
           {head && <div className="sheet-head">{head}</div>}
           {/* On a computer the panel's own scroll folds the card, the way the drawer does on a phone. */}
-          <div className="home-panel-body" onScroll={(e) => {
-              const p = Math.min(1, e.currentTarget.scrollTop / 140);
-              const panel = e.currentTarget.parentElement!;
-              panel.style.setProperty('--p', p.toFixed(3));
-              panel.toggleAttribute('data-folded', p > 0.5);
-            }}>
+          <div className="home-panel-body" onScroll={foldPanel}>
             {body}
           </div>
         </aside>

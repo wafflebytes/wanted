@@ -14,7 +14,7 @@ import { Icon } from '@web/components/Icon';
 import { Sheet } from '@web/components/Sheet';
 import { ApiError, streamNdjson } from '@web/lib/api';
 import { gus } from '@web/lib/gus';
-import { mutate, useApi, useViewport } from '@web/lib/hooks';
+import { foldPanel, mutate, useApi, useViewport } from '@web/lib/hooks';
 import { stage } from '@web/lib/stage';
 import '../../../home.css';
 import '../../../tour.css';
@@ -225,12 +225,7 @@ export default function TourPage() {
           {head && <div className="sheet-head">{head}</div>}
           <div
             className="home-panel-body"
-            onScroll={(e) => {
-              const p = Math.min(1, e.currentTarget.scrollTop / 140);
-              const panel = e.currentTarget.parentElement!;
-              panel.style.setProperty('--p', p.toFixed(3));
-              panel.toggleAttribute('data-folded', p > 0.5);
-            }}
+            onScroll={foldPanel}
           >
             {body}
           </div>

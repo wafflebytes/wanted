@@ -127,14 +127,31 @@ export function usePrevious<T>(v: T) {
   return r.current;
 }
 
+/** The last size seen, so a tab opened later starts at the real width (no phone drawer flashing in on a computer). */
+let lastViewport: { w: number; h: number } | null = null;
+
 /** Window size, for drawer detents. */
 export function useViewport() {
-  const [v, setV] = useState({ w: 390, h: 844 });
+  const [v, setV] = useState(() => lastViewport ?? { w: 390, h: 844 });
   useEffect(() => {
-    const on = () => setV({ w: window.innerWidth, h: window.innerHeight });
+    const on = () => setV((lastViewport = { w: window.innerWidth, h: window.innerHeight }));
     on();
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
   }, []);
   return v;
+}
+
+/**
+ * A computer's side panel folds its head card as it scrolls, in one move: a little way down it folds,
+ * back at the top it opens, so it never rests half cut. (Only when there's enough below to fold for.)
+ */
+export function foldPanel(e: { currentTarget: HTMLElement }) {
+  const el = e.currentTarget;
+  const panel = el.parentElement!;
+  const folded = panel.hasAttribute('data-folded');
+  const next = folded ? el.scrollTop > 8 : el.scrollTop > 40 && el.scrollHeight - el.clientHeight > 420;
+  if (next === folded) return;
+  panel.toggleAttribute('data-folded', next);
+  panel.style.setProperty('--p', next ? '1' : '0');
 }

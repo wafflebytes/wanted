@@ -46,8 +46,8 @@
 .home-sum .stat b { font-size: 22px; }
 .home-sum .stat > span { font-size: 12.5px; }
 
-/* Your five: a pager of poster cards. */
-.five { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 calc(-1 * var(--gutter)); padding: 4px var(--gutter) 14px; scrollbar-width: none; touch-action: pan-x; }
+/* Your five: a pager of poster cards. The first card lines up with the heading (inset 4px from the gutter), and every snap lands there too. */
+.five { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: calc(var(--gutter) + 4px); margin: 0 calc(-1 * var(--gutter)); padding: 4px calc(var(--gutter) + 4px) 14px; scrollbar-width: none; touch-action: pan-x; }
 .five::-webkit-scrollbar { display: none; }
 .five-card { flex: none; width: 46%; max-width: 190px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 8px; text-align: left; animation: rise var(--t-hero) var(--ease) both; animation-delay: calc(var(--i) * 50ms); transition: transform var(--t-move) var(--ease); }
 .five-card:active { transform: scale(var(--press)); }
@@ -111,7 +111,7 @@
 .love img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
 
 /* Desktop: the drawer becomes a floating panel left of the map. */
-.home-panel { position: fixed; top: 76px; left: 24px; bottom: 96px; width: 420px; z-index: 20; display: flex; flex-direction: column; padding-top: 16px; overflow: hidden; }
+.home-panel { position: fixed; top: 76px; left: 24px; bottom: 96px; width: 420px; z-index: 20; display: flex; flex-direction: column; padding-top: 16px; overflow: hidden; transition: --p 420ms var(--ease); }
 .home-panel-body { flex: 1; overflow: auto; padding: 0 var(--gutter) 24px; }
 
 /* ---------- a plain chatbot's answer, checked (components/PlainChatbot.tsx) */
