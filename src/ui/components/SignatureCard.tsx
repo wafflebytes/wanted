@@ -78,7 +78,7 @@ export function SignatureCard({
           </T>
           <View style={{ height: 1, backgroundColor: 'rgba(58,34,19,0.3)' }} />
           <View style={{ gap: 2 }}>
-            <T style={{ fontFamily: F.display, fontSize: 15, color: INK, textTransform: 'uppercase' }} numberOfLines={1} maxFontSizeMultiplier={1.3}>
+            <T style={{ fontFamily: F.display, fontSize: 15, color: INK }} numberOfLines={1} maxFontSizeMultiplier={1.3}>
               {artistName}
             </T>
             <T style={{ fontFamily: F.head, fontSize: 14, color: INK, opacity: 0.8 }} numberOfLines={2} maxFontSizeMultiplier={1.3}>

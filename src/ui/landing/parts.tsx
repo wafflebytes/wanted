@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   passSticker: { position: 'absolute', right: -6, top: -4, width: 116, height: 116, transform: [{ rotate: '7deg' }] },
   passTitle: { fontFamily: F.displayBlack, fontSize: 18, lineHeight: 22, letterSpacing: 0.6, color: C.cream },
   passTongues: { fontFamily: F.monoMed, fontSize: 9, lineHeight: 12, letterSpacing: 1.1, color: 'rgba(255,176,0,0.75)' },
-  passLabel: { fontFamily: F.monoMed, fontSize: 10, lineHeight: 13, letterSpacing: 1, color: 'rgba(255,176,0,0.8)', textTransform: 'uppercase' },
+  passLabel: { fontFamily: F.monoMed, fontSize: 10, lineHeight: 13, letterSpacing: 1, color: 'rgba(255,176,0,0.8)' },
   passValue: { fontFamily: F.displayBold, fontSize: 28, lineHeight: 32, color: C.text, letterSpacing: -0.5 },
   passUnit: { fontFamily: F.head, fontSize: 15, color: 'rgba(244,233,211,0.7)', letterSpacing: 0 },
   passSub: { fontFamily: F.body, fontSize: 12, lineHeight: 16, color: 'rgba(244,233,211,0.6)' },
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   passBtnText: { fontFamily: F.rounded ?? F.head, fontWeight: '600', fontSize: 16, color: C.cream },
 
   step: { borderRadius: R.card, borderCurve: 'continuous', padding: S.xl, gap: S.md, overflow: 'hidden', minHeight: 196 },
-  stepKicker: { fontFamily: F.monoMed, fontSize: 11, lineHeight: 14, letterSpacing: 1.1, textTransform: 'uppercase', opacity: 0.8 },
+  stepKicker: { fontFamily: F.monoMed, fontSize: 11, lineHeight: 14, letterSpacing: 1.1, opacity: 0.8 },
   stepBig: { fontFamily: F.displayBlack, fontSize: 48, lineHeight: 54, letterSpacing: -1.5 },
   stepUnit: { fontFamily: F.serif, fontSize: 20, lineHeight: 22, marginTop: -2 },
 });

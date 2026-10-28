@@ -263,7 +263,7 @@ function Landing() {
 }
 
 const styles = StyleSheet.create({
-  wordmark: { fontFamily: F.displayBlack, fontSize: 44, lineHeight: 48, letterSpacing: -1.2, color: C.text, textTransform: 'uppercase' },
+  wordmark: { fontFamily: F.displayBlack, fontSize: 44, lineHeight: 48, letterSpacing: -1.2, color: C.text },
   search: {
     minHeight: 52,
     borderRadius: 16,

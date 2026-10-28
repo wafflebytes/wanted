@@ -208,7 +208,7 @@ img, svg { display: block; }
 .b-17 { font-size: 17px; line-height: 1.4; }
 .b-15 { font-size: 15px; line-height: 1.45; }
 .b-13 { font-size: 13px; line-height: 1.4; }
-.kicker { font: 650 12px/1 var(--body); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.kicker { font: 650 12px/1 var(--body); font-weight: 600; color: var(--ink-3); }
 .ink-2 { color: var(--ink-2); }
 .ink-3 { color: var(--ink-3); }
 .unit { color: var(--ink-3); font-weight: 600; }

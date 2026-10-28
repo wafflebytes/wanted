@@ -11,7 +11,7 @@
 
 /* The room wrote: an amber card with the letter, Gus's read, and a hold key. */
 .sd-letter { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--r-l); background: color-mix(in srgb, var(--ask, #F5B400) 12%, var(--card)); box-shadow: var(--shadow-1), inset 0 0 0 1px color-mix(in srgb, var(--ask, #F5B400) 35%, transparent); animation: rise var(--t-enter) var(--ease) 120ms both; }
-.sd-letter-h { display: flex; align-items: center; gap: 8px; font: 700 13px/1 var(--body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ask-text); }
+.sd-letter-h { display: flex; align-items: center; gap: 8px; font: 700 13px/1 var(--body); color: var(--ask-text); }
 .sd-letter blockquote { margin: 0; font: 600 17px/1.38 var(--display); letter-spacing: -0.01em; color: var(--ink); text-wrap: pretty; }
 .sd-letter-g { display: flex; gap: 8px; align-items: flex-start; font: 500 14.5px/1.4 var(--body); color: var(--ink-2); }
 .sd-letter-g > :first-child { flex: none; margin-top: -2px; }
@@ -49,7 +49,7 @@
 .sd-what b { display: flex; align-items: center; gap: 8px; font: 650 16px/1.25 var(--body); color: var(--ink); }
 .sd-what > span { font: 500 13.5px/1.35 var(--body); color: var(--ink-2); }
 .s-asked .sd-what > span { color: var(--ask-text); }
-.sd-tag { flex: none; padding: 3px 7px; border-radius: var(--r-pill); background: var(--wanted); color: #fff; font: 700 10.5px/1 var(--body); letter-spacing: 0.04em; text-transform: uppercase; animation: dr-land 420ms var(--ease) both; }
+.sd-tag { flex: none; padding: 3px 7px; border-radius: var(--r-pill); background: var(--wanted); color: #fff; font: 700 10.5px/1 var(--body); animation: dr-land 420ms var(--ease) both; }
 /* A row that moved: the time glows orange and the row washes once, so the change is seen. */
 .sd-row.moved .sd-row-b { animation: sd-wash 1.8s var(--ease) both; }
 .sd-row.moved .sd-t b { color: var(--wanted-text); }
@@ -90,7 +90,7 @@
 .sd-thread { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; animation: rise 280ms var(--ease) both; }
 .sd-thread li { padding: 12px 14px; border-radius: var(--r-m); background: var(--raise); box-shadow: var(--bevel), var(--drop); max-width: 92%; }
 .sd-thread li.gus { align-self: flex-end; background: color-mix(in srgb, var(--wanted) 14%, var(--raise)); }
-.sd-thread span { font: 650 12px/1 var(--body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+.sd-thread span { font: 650 12px/1 var(--body); color: var(--ink-3); }
 .sd-thread p { margin-top: 6px; font: 500 14.5px/1.4 var(--body); color: var(--ink); }
 
 /* Fans, opener, money, road */

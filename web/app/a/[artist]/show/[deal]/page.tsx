@@ -94,12 +94,9 @@ function Sheet0({ day, setDay, slug, deal }: { day: Day; setDay: (d: Day) => voi
   return (
     <main className="sd">
       <header className="sd-hero">
-        <span className="kicker k-hot">
-          Show day · {nice(day.date)}
-        </span>
         <h1>{day.room}</h1>
         <span className="sd-city">
-          {day.city} · in {daysTo(day.date)} days
+          {nice(day.date)}, {day.city}, in {daysTo(day.date)} days
         </span>
         <p className="sd-say" key={say}>
           {say}

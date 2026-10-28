@@ -54,14 +54,14 @@
 .rd-lane-t > span { font: 500 13.5px/1.35 var(--body); color: var(--ink-2); text-wrap: pretty; }
 .rd-lane.no .rd-lane-t > span { color: var(--ask-text); }
 .rd-lane.no .rd-net { color: var(--ink-3); text-decoration: line-through; text-decoration-thickness: 1.5px; }
-.rd-pick { white-space: nowrap; padding: 3px 7px; border-radius: var(--r-pill); background: var(--wanted); color: #fff; font: 700 10.5px/1 var(--body); font-style: normal; letter-spacing: 0.04em; text-transform: uppercase; }
+.rd-pick { white-space: nowrap; padding: 3px 7px; border-radius: var(--r-pill); background: var(--wanted); color: #fff; font: 700 10.5px/1 var(--body); font-style: normal; }
 .rd-net { font: 800 19px/1 var(--display); letter-spacing: -0.02em; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .rd-net.up { color: var(--ok-text); }
 
 /* The nights between the two shows, as a strip of days. */
 .rd-nights { list-style: none; margin: 0; padding: 12px 8px; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 4px; border-radius: var(--r-l); background: var(--card); box-shadow: var(--shadow-1), var(--rim); }
 .rd-night { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; padding: 8px 2px 10px; border-radius: 14px; text-align: center; animation: rd-up 360ms var(--ease) calc(var(--i) * 60ms) both; }
-.rd-night em { font: 650 11px/1 var(--body); font-style: normal; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.rd-night em { font: 650 11px/1 var(--body); font-style: normal; color: var(--ink-3); }
 .rd-night b { font: 800 20px/1.1 var(--display); color: var(--ink); font-variant-numeric: tabular-nums; }
 .rd-night i { width: 8px; height: 8px; margin: 3px 0 2px; border-radius: 50%; background: var(--line-2); }
 .rd-night strong { font: 700 13px/1.15 var(--body); color: var(--ink); white-space: nowrap; }

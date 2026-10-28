@@ -98,9 +98,6 @@ function LegView({ leg, plan, slug }: { leg: Leg; plan: TourPlan; slug: string }
         <button className="rd-back" onClick={() => router.push(`/a/${slug}/tour`)} aria-label="Back to your tour">
           <Icon name="back" size={20} />
         </button>
-        <span className="kicker k-hot">
-          The road · {niceDate(leg.from.date).replace(/^.*, /, '')} to {niceDate(leg.to.date).replace(/^.*, /, '')}
-        </span>
         <h1>
           {leg.from.city} <i>to</i> {leg.to.city}
         </h1>

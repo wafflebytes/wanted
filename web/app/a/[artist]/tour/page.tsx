@@ -122,7 +122,6 @@ export default function TourPage() {
       </button>
       <div className="th" data-tour="run" ref={heroRef}>
         <Gus mood={busy ? 'working' : fixes.length ? 'thinking' : 'proud'} size={88} className="th-obj" />
-        <span className="kicker k-hot">Your tour</span>
         <h2 className="th-title">
           {md(first!.date)}
           <span className="th-arrow">→</span>

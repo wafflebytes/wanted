@@ -78,7 +78,7 @@
 @keyframes tr-flash { 0%, 30% { background: var(--wanted-tint); } }
 .tr-main { flex: 1; min-width: 0; display: flex; align-items: center; padding: 8px 0; text-align: left; }
 .tr-what { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.tr-what em { font: 700 11px/1.3 var(--body); font-style: normal; text-transform: uppercase; letter-spacing: 0.06em; color: var(--wanted-text); }
+.tr-what em { font: 700 11px/1.3 var(--body); font-style: normal; color: var(--wanted-text); }
 .tr-what b { display: flex; align-items: center; gap: 6px; font: 700 17px/1.2 var(--display); letter-spacing: -0.01em; }
 .tr-what b .tag { font-style: normal; }
 .tr-what span { font-size: 13.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -99,7 +99,7 @@
 .th-compact em { font: 500 13px var(--body); font-style: normal; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* A held night: its row opens the show day. */
-.tr-held { display: inline; font: 700 11px/1 var(--body) !important; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ok-text) !important; margin-right: 2px; }
+.tr-held { display: inline; font: 700 11px/1 var(--body) !important; color: var(--ok-text) !important; margin-right: 2px; }
 
 /* The longest drive, raised into the hero: it opens the road. */
 .th-road { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin-top: 2px; padding: 10px 14px; border-radius: var(--r-m, 16px); text-align: left; background: color-mix(in srgb, var(--wanted) 12%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wanted) 30%, transparent); color: var(--ink); font: 500 14.5px/1.3 var(--body); transition: transform 120ms var(--ease); }

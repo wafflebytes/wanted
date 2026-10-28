@@ -83,7 +83,6 @@ function Sheet({ s, slug, dealId, city, cityName }: { s: Settle; slug: string; d
         <button className="rd-back" onClick={() => router.push(`/a/${slug}/show/${dealId}`)} aria-label="Back to show day">
           <Icon name="back" size={20} />
         </button>
-        <span className="kicker k-hot">Getting paid · {nice(s.date)}</span>
         <h1>{s.room}</h1>
         <p className="sd-say" key={phase} aria-live="polite">
           {say}

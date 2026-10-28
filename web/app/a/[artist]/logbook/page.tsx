@@ -82,7 +82,6 @@ export default function Logbook() {
 
       <header className="lb-hero">
         <Gus mood={dealList.data?.deals.some((d) => d.status === 'talking') ? 'phone' : entries.length ? 'working' : 'waiting'} size={132} className="lb-gus" />
-        <span className="kicker">Gus’s logbook</span>
         {entries.length ? (
           <>
             <h1>

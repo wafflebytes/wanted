@@ -27,7 +27,7 @@ a.st-row:active { background: var(--veil); }
 
 .st-quiet { display: flex; align-items: center; gap: 10px; padding: 12px; }
 .st-hour { flex: 1; position: relative; display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: var(--r-m); background: var(--well-bg); box-shadow: var(--well); }
-.st-hour span { font: 600 11.5px var(--body); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); }
+.st-hour span { font: 600 11.5px var(--body); color: var(--ink-3); }
 .st-hour select { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
 .st-hour:has(select:focus-visible) { outline: 2px solid var(--wanted); outline-offset: 2px; }
 .st-hour-v { font: 700 20px var(--display); letter-spacing: -0.02em; color: var(--ink); }

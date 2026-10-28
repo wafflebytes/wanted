@@ -94,7 +94,7 @@
 .isl-top { display: flex; align-items: center; gap: 12px; }
 .isl-face { flex: none; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: rgba(246, 244, 239, 0.08); }
 .isl-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.isl-k { display: flex; align-items: center; gap: 6px; font: 650 11.5px/1 var(--body); letter-spacing: 0.06em; text-transform: uppercase; color: rgba(246, 244, 239, 0.55); }
+.isl-k { display: flex; align-items: center; gap: 6px; font: 650 11.5px/1 var(--body); color: rgba(246, 244, 239, 0.55); }
 .tone-ask .isl-k { color: #FFE08A; }
 .isl-who b { font: 800 20px/1.1 var(--display); letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .isl-trail { font: 800 26px/1 var(--display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
@@ -202,12 +202,12 @@
 .vc.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
 .vc-card { display: flex; flex-direction: column; border-radius: var(--r-xl); background: var(--card); box-shadow: var(--shadow-3), var(--rim); max-height: min(74dvh, 640px); overflow: hidden; }
 .vc-top { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 14px 0 20px; flex: none; }
-.vc-cap { flex: 1; font: 700 13px var(--display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.vc-cap { flex: 1; font: 700 13px var(--display); color: var(--ink-3); }
 .vc-hush { height: 30px; padding: 0 12px; border-radius: var(--r-m); font: 600 13px var(--body); color: var(--ink-2); background: var(--veil-2); }
 .vc-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 14px; padding: 8px 20px 16px; scroll-padding-bottom: 16px; }
 .vc-body.has-more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 44px), transparent); }
 .vc-you { font-size: 15.5px; line-height: 1.4; color: var(--ink-2); animation: rise var(--t-enter) var(--ease) both; }
-.vc-you::before { content: "You  "; font: 700 11px var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.vc-you::before { content: "You  "; font: 700 11px var(--display); color: var(--ink-3); }
 .vc-listen { color: var(--ink-3); }
 .vc-aside { font: 500 16px/1.4 var(--display); color: var(--ink-2); animation: word 360ms var(--ease) both; }
 .vc-hint { color: var(--ink-2); font-size: 16px; line-height: 1.4; }
@@ -280,7 +280,7 @@ img.gus { -webkit-touch-callout: none; }
 
 /* Generative UI: an offer you can edit, then a tap or a hold. */
 .pc { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--r-l); background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); animation: rise var(--t-enter) var(--ease) 260ms both; }
-.pc-k { font: 700 11px var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--wanted-text); }
+.pc-k { font: 700 11px var(--display); color: var(--wanted-text); }
 .pc-line { font: 600 18px/1.45 var(--display); letter-spacing: -0.01em; }
 .tok { display: inline-flex; align-items: center; gap: 3px; padding: 1px 9px; margin: 0 1px; border-radius: var(--r-s); font: inherit; color: var(--ink); background: var(--veil-2); }
 .tok.edit { color: var(--wanted-text); background: color-mix(in srgb, var(--wanted) 14%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in srgb, var(--wanted) 45%, transparent); transition: background-color var(--t-fade); }
@@ -322,7 +322,7 @@ img.gus { -webkit-touch-callout: none; }
 .job-top b { flex: 1; font: 700 15px var(--display); }
 .job-steps { list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .job-steps li { display: grid; grid-template-columns: 50px 1fr; gap: 6px; font-size: 13.5px; line-height: 1.35; animation: rise var(--t-enter) var(--ease) both; }
-.job-who { font: 700 11px/1.6 var(--body); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); }
+.job-who { font: 700 11px/1.6 var(--body); color: var(--ink-3); }
 .job-steps li.house .job-who { color: var(--sky); }
 .job-steps li.gus .job-who { color: var(--wanted-text); }
 .job-bar { height: 4px; border-radius: 2px; background: var(--veil-2); overflow: hidden; }
@@ -337,7 +337,7 @@ img.gus { -webkit-touch-callout: none; }
 .approve-to { color: var(--ink-2); font-size: 14px; }
 .approve-terms { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .approve-terms div { padding: 10px 12px; border-radius: var(--r-m); background: var(--veil); }
-.approve-terms dt { font: 600 11px var(--body); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); }
+.approve-terms dt { font: 600 11px var(--body); color: var(--ink-3); }
 .approve-terms dd { font: 650 14.5px/1.25 var(--display); font-weight: 600; margin-top: 2px; }
 .approve-next { font-size: 14px; color: var(--ink-2); }
 .approve-no { align-self: center; color: var(--ink-2); font: 600 14px var(--body); padding: 4px 8px; }
@@ -470,14 +470,14 @@ button.ml { cursor: pointer; }
 /* The draw: a ticket stub, perforated, that tears when you hold. */
 .tk-stub { display: grid; grid-template-columns: 1fr 92px; margin: 2px 0 10px; border-radius: var(--r-m); background: linear-gradient(180deg, #F7E7C6, #EBD3A4); color: #3A2A12; box-shadow: var(--drop); overflow: hidden; }
 .tk-main { display: flex; flex-direction: column; gap: 6px; padding: 14px 14px 14px 16px; }
-.tk-admit { font: 700 10.5px/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: #9A5B12; }
+.tk-admit { font: 700 10.5px/1 var(--display); color: #9A5B12; }
 .tk-prize { font: 700 16px/1.25 var(--display); }
 .tk-odds { font: 600 12.5px/1.3 var(--body); color: #6E5530; }
 .tk-tail { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 10px 6px; border-left: 2px dashed rgb(58 42 18 / 0.35); transition: transform var(--t-hero) var(--ease); }
 .tk-tail::before, .tk-tail::after { content: ''; position: absolute; left: -9px; width: 16px; height: 16px; border-radius: 50%; background: var(--card); }
 .tk-tail::before { top: -8px; }
 .tk-tail::after { bottom: -8px; }
-.tk-tail span { font: 700 10.5px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: #9A5B12; }
+.tk-tail span { font: 700 10.5px/1 var(--display); color: #9A5B12; }
 .tk-tail code { font: 600 12px/1.2 ui-monospace, monospace; color: #6E5530; }
 .tk-tail b { font: 800 30px/1 var(--display); font-variant-numeric: tabular-nums; animation: pop var(--t-move) var(--ease) both; }
 .tk-tail em { font: 600 11px/1.2 var(--body); font-style: normal; color: #6E5530; text-align: center; }

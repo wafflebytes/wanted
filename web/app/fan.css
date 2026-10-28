@@ -19,13 +19,13 @@
 
 /* The form: wells to write in, neighbourhoods as keys. */
 .fp-form { display: flex; flex-direction: column; margin-top: 24px; padding: 18px; border-radius: var(--r-l); background: var(--raise); box-shadow: var(--bevel), var(--drop), 0 24px 40px -24px rgba(0, 0, 0, 0.6); animation: rise var(--t-enter) var(--ease) 120ms both; }
-.fp-label { margin: 4px 2px 8px; font: 600 13px var(--body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+.fp-label { margin: 4px 2px 8px; font: 600 13px var(--body); color: var(--ink-3); }
 .fp-label ~ .fp-label { margin-top: 18px; }
 .fp-field { display: flex; align-items: center; height: 60px; padding: 0 16px; border-radius: var(--r-m); background: var(--well-bg); box-shadow: var(--well); }
 .fp-field.sm { height: 50px; margin-top: 10px; }
 .fp-field:focus-within { box-shadow: var(--well), 0 0 0 2px color-mix(in srgb, var(--wanted) 55%, transparent); }
 .fp-field input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; font: 600 17px var(--body); color: var(--ink); }
-#fp-in { font: 800 26px var(--display); letter-spacing: 0.06em; }
+#fp-in { font: 800 26px var(--display); }
 .fp-field input::placeholder { color: var(--ink-4); font-weight: 500; }
 .fp-hoods { display: flex; flex-wrap: wrap; gap: 8px; }
 .fp-hood { height: 40px; padding: 0 14px; border-radius: var(--r-l); font: 600 14.5px var(--body); color: var(--ink); background: var(--raise); box-shadow: var(--bevel), var(--drop); transition: transform var(--t-tap) var(--ease), color var(--t-fade); }
@@ -50,20 +50,20 @@
 @keyframes print { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
 .fp-rc-wrap { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3)) drop-shadow(0 14px 16px rgba(0, 0, 0, 0.45)); }
 .fp-rc-h { display: flex; flex-direction: column; align-items: center; gap: 2px; padding-bottom: 12px; border-bottom: 1.5px dashed rgba(42, 33, 25, 0.35); }
-.fp-rc-h b { font: 900 26px/1 var(--display); letter-spacing: 0.08em; }
-.fp-rc-h span { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #6B5D4C; }
+.fp-rc-h b { font: 900 26px/1 var(--display); }
+.fp-rc-h span { font-size: 12px; color: #6B5D4C; }
 .fp-rc-n { display: flex; align-items: baseline; justify-content: space-between; padding: 14px 0 10px; }
-.fp-rc-n span { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #6B5D4C; }
+.fp-rc-n span { font-size: 12px; color: #6B5D4C; }
 .fp-rc-n b { font: 800 36px/1 var(--display); letter-spacing: -0.02em; }
 .fp-receipt dl { display: flex; flex-direction: column; gap: 6px; padding-bottom: 12px; border-bottom: 1.5px dashed rgba(42, 33, 25, 0.35); }
 .fp-receipt dl div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
 .fp-receipt dt { color: #6B5D4C; }
 .fp-receipt dd { text-align: right; font-weight: 600; }
-.fp-rc-foot { padding-top: 12px; text-align: center; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+.fp-rc-foot { padding-top: 12px; text-align: center; font-size: 12px; }
 .fp-note { font-size: 14.5px; line-height: 1.42; color: var(--ink-2); text-align: center; }
 .fp-note.win { color: var(--ok-text); font-weight: 600; }
 
-.fp-brand { display: block; margin: 32px auto 0; width: max-content; padding: 10px; font: 700 13px var(--display); letter-spacing: 0.04em; color: var(--ink-3); }
+.fp-brand { display: block; margin: 32px auto 0; width: max-content; padding: 10px; font: 700 13px var(--display); color: var(--ink-3); }
 
 /* First dibs: a ticket stub under the receipt once the city has its show. */
 .fp-dibs { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: var(--r-l); background: var(--raise); box-shadow: var(--bevel), var(--drop); animation: rise var(--t-move) var(--ease) both; }

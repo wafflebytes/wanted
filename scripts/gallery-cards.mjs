@@ -369,7 +369,6 @@ body { width: 1500px; height: 1000px; overflow: hidden; font-family: WR, system-
   --p1: #FFFDF8; --p2: #F6F1E7; --hl: #fff; }
 
 .text { position: absolute; left: 104px; top: 0; bottom: 0; width: 590px; display: flex; flex-direction: column; justify-content: center; z-index: 10; }
-.kicker { align-self: flex-start; font-weight: 800; font-size: 21px; letter-spacing: .13em; text-transform: uppercase; color: var(--acc); margin-bottom: 26px; }
 h1 { font-weight: 900; font-size: 78px; line-height: 1.02; letter-spacing: -.03em; text-wrap: balance; }
 .text p { margin-top: 28px; font-weight: 600; font-size: 27px; line-height: 1.42; color: var(--ink2); text-wrap: pretty; }
 .foot { position: absolute; left: 104px; bottom: 50px; font-weight: 700; font-size: 19px; color: var(--ink2); opacity: .8; z-index: 10; display: flex; align-items: center; gap: 12px; }
@@ -406,7 +405,7 @@ h1 { font-weight: 900; font-size: 78px; line-height: 1.02; letter-spacing: -.03e
 .bump em { display: block; font-style: normal; font-weight: 600; font-size: 23px; color: rgba(246,244,239,.62); margin-top: 6px; }
 .lact { width: 560px; padding: 32px 34px 30px; border-radius: 58px; background: #0A0908; color: #F6F4EF; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), inset 0 2px 0 rgba(255,255,255,.08), 0 50px 90px -30px rgba(0,0,0,.8); }
 .lact-top { display: flex; gap: 20px; align-items: center; }
-.kick { display: block; font-weight: 800; font-size: 18px; letter-spacing: .12em; text-transform: uppercase; color: #FF8A4C; }
+.kick { display: block; font-weight: 800; font-size: 18px; color: #FF8A4C; }
 .kick.ok { color: #4CD38C; }
 .lact b { display: block; font-weight: 900; font-size: 40px; letter-spacing: -.02em; margin-top: 4px; }
 .lact em { display: block; font-style: normal; font-weight: 600; font-size: 22px; color: rgba(246,244,239,.62); margin-top: 4px; }
@@ -463,7 +462,7 @@ h1 { font-weight: 900; font-size: 78px; line-height: 1.02; letter-spacing: -.03e
 .vs { position: absolute; left: 790px; top: 150px; display: flex; gap: 24px; align-items: flex-start; z-index: 3; }
 .rcpt { position: relative; width: 300px; padding: 30px 30px 36px; border-radius: 26px; }
 .rcpt.good { margin-top: 60px; }
-.rh { display: flex; justify-content: space-between; font-weight: 800; font-size: 19px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink2); padding-bottom: 18px; border-bottom: 2px dashed var(--hair); }
+.rh { display: flex; justify-content: space-between; font-weight: 800; font-size: 19px; color: var(--ink2); padding-bottom: 18px; border-bottom: 2px dashed var(--hair); }
 .rh span { color: #FF6A2B; }
 .big { margin-top: 22px; font-weight: 900; font-size: 92px; line-height: 1; letter-spacing: -.03em; color: #2FB673; }
 .big.bad { color: #FF6A2B; }
@@ -503,7 +502,7 @@ h1 { font-weight: 900; font-size: 78px; line-height: 1.02; letter-spacing: -.03e
 .mk span { position: absolute; top: -26px; display: flex; flex-direction: column; padding: 9px 18px 10px; border-radius: 18px; background: #15130F; color: #FFF7EE; white-space: nowrap; box-shadow: 0 16px 30px -14px rgba(0,0,0,.5); }
 .mk span.l { left: 30px; } .mk span.r { right: 30px; text-align: right; }
 .mk b { font-weight: 800; font-size: 22px; letter-spacing: -.01em; }
-.mk em { font-style: normal; font-weight: 700; font-size: 15px; letter-spacing: .1em; text-transform: uppercase; color: #FF8A4C; margin-top: 2px; }
+.mk em { font-style: normal; font-weight: 700; font-size: 15px; color: #FF8A4C; margin-top: 2px; }
 
 /* README cards */
 .how.mid { top: 0; bottom: 0; justify-content: center; }
@@ -525,7 +524,6 @@ h1 { font-weight: 900; font-size: 78px; line-height: 1.02; letter-spacing: -.03e
 .text.right { left: 860px; width: 560px; }
 .foot.right { left: 860px; }
 .text.top { left: 150px; right: 150px; width: auto; top: 78px; bottom: auto; align-items: center; text-align: center; }
-.text.top .kicker { align-self: center; margin-bottom: 18px; }
 .text.top h1 { font-size: 74px; }
 .text.top p { margin-top: 18px; max-width: 900px; font-size: 26px; }
 .bd { position: absolute; inset: -120px; width: calc(100% + 240px); height: calc(100% + 240px); object-fit: cover; filter: blur(46px) brightness(.42) saturate(1.2); z-index: 0; }
@@ -552,7 +550,7 @@ for (const c of cards) {
   }
   const text = c.cover
     ? `<div class="text"><div class="brand"><i></i>Wanted</div><h1>${c.title}</h1><p>${c.body}</p><div class="pillq">Built on Qloo’s taste graph</div></div>`
-    : `<div class="text ${c.layout ?? ''}"><div class="kicker">${c.kicker}</div><h1>${c.title}</h1><p>${c.body}</p></div>${c.layout === 'top' ? '' : `<div class="foot ${c.layout ?? ''}">trywanted.vercel.app</div>`}`;
+    : `<div class="text ${c.layout ?? ''}"><h1>${c.title}</h1><p>${c.body}</p></div>${c.layout === 'top' ? '' : `<div class="foot ${c.layout ?? ''}">trywanted.vercel.app</div>`}`;
   const html = `<meta charset="utf-8"><style>${css}</style><div class="card ${c.theme} ${c.cover ? 'cover' : ''}">${deco[c.name]?.() ?? ''}${text}${c.stage()}</div>`;
   writeFileSync(`${shots}/card.html`, html);
   await p.goto(`file://${shots}/card.html`, { waitUntil: 'load' });

@@ -57,7 +57,7 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .five-paper { background: linear-gradient(160deg, #2E2820, #201C16); color: #F3E6CF; } }
 .five-rank { position: absolute; top: 12px; left: 14px; font: 800 15px var(--display); color: var(--wanted-text); }
 .five-name { position: relative; z-index: 1; font: 800 24px/1 var(--display); letter-spacing: -0.03em; }
-.five-state { position: relative; z-index: 1; font: 700 12px var(--body); letter-spacing: 0.08em; opacity: 0.6; margin-top: 4px; }
+.five-state { position: relative; z-index: 1; font: 700 12px var(--body); opacity: 0.6; margin-top: 4px; }
 .five-ht { position: absolute; top: 38px; left: 10px; right: 10px; width: calc(100% - 20px); fill: var(--wanted); opacity: 0.35; }
 .five-meta { display: flex; flex-direction: column; padding: 0 2px; }
 .five-meta b { font: 700 15px var(--display); display: flex; align-items: center; gap: 4px; }
