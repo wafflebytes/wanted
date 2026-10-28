@@ -114,10 +114,11 @@
 .sp.out > :not(.wl-ground) { opacity: 0; transform: scale(0.98); transition: opacity var(--t-move) var(--ease), transform var(--t-move) var(--ease); }
 
 /* ---------- the demo path: what the product is, and why each question is asked */
-.wl-how { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 18px; max-width: 38ch; }
-.wl-how li { display: grid; grid-template-columns: 24px 1fr; align-items: start; column-gap: 10px; font-size: 14.5px; line-height: 1.35; color: var(--ink-2); animation: rise var(--t-enter) var(--ease) both; }
-.wl-how li:nth-child(1) { animation-delay: 260ms; } .wl-how li:nth-child(2) { animation-delay: 340ms; } .wl-how li:nth-child(3) { animation-delay: 420ms; }
-.wl-how b { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; font: 800 13px var(--display); color: var(--wanted-text); background: var(--wanted-tint); }
+.wl-how { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px; }
+.wl-how li { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 10px 12px; border-radius: var(--r-m); background: var(--raise); box-shadow: var(--bevel), var(--drop); animation: rise var(--t-enter) var(--ease) calc(240ms + var(--i) * 80ms) both; }
+.wl-how li .art, .wl-how li img { margin: -2px 0 4px -4px; filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.35)); }
+.wl-how b { font: 800 14.5px/1.15 var(--display); letter-spacing: -0.015em; }
+.wl-how span { font-size: 12px; line-height: 1.3; color: var(--ink-2); }
 .wl-note { margin-top: 6px; font-size: 12.5px; line-height: 1.4; color: var(--ink-3); text-align: center; text-wrap: balance; }
 .wl-card > p.wl-why { display: flex; gap: 10px; align-items: baseline; margin-top: 12px; padding: 10px 12px; border-radius: var(--r-m); font-size: 13.5px; line-height: 1.4; background: var(--well-bg); box-shadow: var(--well); }
 .wl-why b { flex: none; font: 700 10.5px var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--wanted-text); }
@@ -131,3 +132,4 @@
 .wl-hero .wl-acts { margin-top: 20px; }
 .wl-hero .wl-how { margin-top: 14px; }
 .wl-hero h1 { font-size: 36px; }
+.wl-lines small { margin-left: auto; padding: 2px 7px; border-radius: var(--r-pill); font: 700 10px var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--wanted-text); background: var(--wanted-tint); }

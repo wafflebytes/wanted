@@ -75,6 +75,12 @@ export default function Page() {
   return <Welcome />;
 }
 
+const HOW: { art: ArtName; title: string; line: string }[] = [
+  { art: 'cassette', title: 'Find the crowd', line: 'Qloo reads where your sound already lives' },
+  { art: 'poster', title: 'Fans sign', line: 'A WANTED poster in each city' },
+  { art: 'ticket', title: 'You say yes', line: 'At 50 names Gus asks the venues' },
+];
+
 /** A line under a question saying what the answer is for. */
 function Why({ children }: { children: React.ReactNode }) {
   return (
@@ -329,23 +335,18 @@ function Welcome() {
         <section className="wl-hero" key="who">
           <div className="wl-who">
             <span className="wl-tag">Gus, your tour manager</span>
-            <Gus mood="wave" size={168} className="wl-gus" label="Gus, your tour manager" />
+            <Gus mood="wave" size={142} className="wl-gus" label="Gus, your tour manager" />
           </div>
           <h1>Find the cities that want you.</h1>
-          <p>Most bands guess where to tour. I read where your listeners already live, so you play to a full room, not an empty one.</p>
+          <p>Most bands guess where to tour. I read where your listeners already live, so you play to full rooms.</p>
           <ol className="wl-how" aria-label="How it works">
-            <li>
-              <b>1</b>
-              <span>Qloo’s taste graph finds the cities where your sound already has a crowd</span>
-            </li>
-            <li>
-              <b>2</b>
-              <span>Fans there sign a WANTED poster</span>
-            </li>
-            <li>
-              <b>3</b>
-              <span>At 50 names I ask the venues. You only say yes or no.</span>
-            </li>
+            {HOW.map((h, i) => (
+              <li key={h.title} style={{ ['--i' as string]: i }}>
+                <Art name={h.art} size={46} />
+                <b>{h.title}</b>
+                <span>{h.line}</span>
+              </li>
+            ))}
           </ol>
           <div className="wl-acts">
             <button className="btn hot block" onClick={() => go('link')}>
@@ -359,7 +360,7 @@ function Welcome() {
               <Icon name="chevron" size={14} />
             </button>
           </div>
-          {demo.current && <p className="wl-note">Demo: you’ll play Maya Ortiz, an indie songwriter. Her cities come live from Qloo. Venues and money are stand-ins.</p>}
+          {demo.current && <p className="wl-note">Demo: you play Maya Ortiz. Her cities are live Qloo data; venues and money are stand-ins.</p>}
         </section>
       )}
 
@@ -481,6 +482,7 @@ function Welcome() {
                     <li key={l} className={i === lines.length - 1 ? 'now' : ''}>
                       {i === lines.length - 1 ? <i className="spin" /> : <Icon name="check" bold size={14} />}
                       {l}
+                      {/^Qloo/.test(l) && <small>Qloo</small>}
                     </li>
                   ))}
                 </ul>

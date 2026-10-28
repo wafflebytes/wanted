@@ -137,15 +137,15 @@ export function Story({ slug }: { slug: string }) {
           <dl className="se-facts">
             <div>
               <dt>82%</dt>
-              <dd>of independent artists say they can’t afford to tour</dd>
+              <dd>of indie artists can’t afford to tour</dd>
             </div>
             <div>
               <dt>64%</dt>
-              <dd>of independent US venues lost money in 2024</dd>
+              <dd>of indie venues lost money in 2024</dd>
             </div>
             <div>
               <dt>0</dt>
-              <dd>places Gus can name that Qloo didn’t return</dd>
+              <dd>places Gus names that Qloo didn’t return</dd>
             </div>
           </dl>
           <div className="se-try">
@@ -179,11 +179,16 @@ export function Story({ slug }: { slug: string }) {
   const b = BEATS[s.i];
   return (
     <div className={`story is-${b.pos ?? 'top'} ${s.paused ? 'is-paused' : ''}`} role="status" aria-live="polite">
-      <div className="story-bar">
-        <i style={{ width: `${((s.i + 1) / BEATS.length) * 100}%` }} />
+      <div className="story-bar" aria-hidden>
+        {BEATS.map((x, i) => (
+          <i key={x.id} className={i < s.i ? 'is-done' : i === s.i ? 'is-now' : ''} />
+        ))}
       </div>
       <div className="story-head">
-        <span className="story-ch">{b.chapter}</span>
+        <span className="story-ch">
+          <Gus mood={s.paused ? 'idle' : 'talking'} size={22} sticker={false} />
+          {b.chapter}
+        </span>
         <div className="story-keys">
           <button onClick={() => (gus.close(), story.back())} disabled={s.i === 0} aria-label="Back">
             <Icon name="back" size={16} />
