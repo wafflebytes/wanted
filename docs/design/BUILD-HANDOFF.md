@@ -156,7 +156,7 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 ## Session 18: production check and the docs pass
 
 - **Production** checked on 0ddeef8: health green, every main page 200, tour poster, booked and thank-you stories render with the trywanted.vercel.app link, and Columbus (the demo's held show) carries `dibs`. Burlington has no held show on production, so its story kinds 404 by design. The tour poster's "Your city on it?" got 40 px above it.
-- **README** rewritten: the problem with sources, the gallery cards in pairs, the three story posters, the chatbot table, and six Mermaid diagrams (Qloo calls, one question, memory, money, reaching you, the whole system). Four README cards (`r-grounded`, `r-memory`, `r-money`, `r-ladder`) are drawn by `scripts/gallery-cards.mjs` in the gallery's look and land in `docs/readme` (`ONLY=r-`). The user wants the gallery's simplicity: one headline, one sentence, one visual; technical detail goes in Mermaid, not in images.
+- **README** rewritten: the problem with sources, the gallery cards in pairs, the chatbot table, and six Mermaid diagrams (Qloo calls, one question, memory, money, reaching you, the whole system). Four README cards (`r-grounded`, `r-memory`, `r-money`, `r-ladder`) are drawn by `scripts/gallery-cards.mjs` in the gallery's look and land in `docs/readme` (`ONLY=r-`). The user wants the gallery's simplicity: one headline, one sentence, one visual; technical detail goes in Mermaid, not in images.
 - **Devpost** (`docs/DEVPOST.md`): voice notes, tagline, spoken pitch, About the project, Built with, About me. `llms.txt` and `llms-full.txt` cover memory, reaching you, the loops, eleven tools and plain words.
 
 ## Next steps
