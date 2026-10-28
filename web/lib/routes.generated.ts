@@ -38,6 +38,7 @@ export const routes: { re: RegExp; params: string[]; load: () => Promise<RouteMo
   { re: /^receipt\/([^\/]+)$/, params: ["rid"], load: () => import("../../src/app/api/receipt/[rid]+api") as Promise<RouteModule> },
   { re: /^artist\/([^\/]+)\/city\/([^\/]+)$/, params: ["id","city"], load: () => import("../../src/app/api/artist/[id]/city/[city]+api") as Promise<RouteModule> },
   { re: /^og\/poster\/([^\/]+)\/([^\/]+)$/, params: ["artist","city"], load: () => import("../../src/app/api/og/poster/[artist]/[city]+api") as Promise<RouteModule> },
+  { re: /^w\/([^\/]+)\/([^\/]+)\/dibs$/, params: ["artist","city"], load: () => import("../../src/app/api/w/[artist]/[city]/dibs+api") as Promise<RouteModule> },
   { re: /^w\/([^\/]+)\/([^\/]+)\/sign$/, params: ["artist","city"], load: () => import("../../src/app/api/w/[artist]/[city]/sign+api") as Promise<RouteModule> },
   { re: /^w\/([^\/]+)\/([^\/]+)$/, params: ["artist","city"], load: () => import("../../src/app/api/w/[artist]/[city]/index+api") as Promise<RouteModule> },
   { re: /^og\/card\/([^\/]+)\/([^\/]+)\/([^\/]+)$/, params: ["artist","city","n"], load: () => import("../../src/app/api/og/card/[artist]/[city]/[n]+api") as Promise<RouteModule> },

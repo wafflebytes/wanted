@@ -64,3 +64,12 @@
 .fp-note.win { color: var(--ok-text); font-weight: 600; }
 
 .fp-brand { display: block; margin: 32px auto 0; width: max-content; padding: 10px; font: 700 13px var(--display); letter-spacing: 0.04em; color: var(--ink-3); }
+
+/* First dibs: a ticket stub under the receipt once the city has its show. */
+.fp-dibs { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: var(--r-l); background: var(--raise); box-shadow: var(--bevel), var(--drop); animation: rise var(--t-move) var(--ease) both; }
+.fp-dibs-h { display: flex; flex-direction: column; gap: 4px; }
+.fp-dibs-h b { font: 700 19px/1.2 var(--display); letter-spacing: -0.01em; }
+.fp-dibs-say { font-size: 14.5px; line-height: 1.42; color: var(--ink-2); }
+.fp-dibs-say b { color: var(--ink); font-weight: 650; }
+.fp-dibs.held { box-shadow: var(--bevel), var(--drop), inset 0 0 0 1.5px color-mix(in srgb, var(--ok) 55%, transparent); }
+.fp-dibs-change { align-self: flex-start; min-height: 44px; font: 600 14px var(--body); color: var(--ink-3); }

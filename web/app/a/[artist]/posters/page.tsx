@@ -159,6 +159,8 @@ export default function PostersPage() {
 
       {p?.bounty && o && <Bounty slug={slug} city={o.city} artist={state.data?.artist.name.split(' ')[0] ?? 'you'} b={p.bounty} booked={!!(o.playedAt || p.show || live?.status === 'held')} />}
 
+      {p?.dibs && <FirstDibs d={p.dibs} />}
+
       {o?.proof && o.proof.neighborhoods.length > 0 && (
         <section className="pw-sec">
           <div className="section-h">
@@ -409,5 +411,32 @@ function Lift({ src, name, onShare, onClose }: { src: string; name: string; onSh
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * First dibs, from the artist's side: the city's signers get tickets two days before the public
+ * sale, and the count of tickets they're holding is the room's proof before a single one sells.
+ */
+function FirstDibs({ d }: { d: NonNullable<PosterState['dibs']> }) {
+  const on = new Date(`${d.signersOn}T12:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return (
+    <section className="pw-sec">
+      <div className="section-h">
+        <h2>First dibs</h2>
+        <span className="ink-3 b-13">Signers buy first</span>
+      </div>
+      <div className="pw-dibs card">
+        <div className="pw-dibs-n">
+          <b>
+            <Reel value={d.tickets} />
+          </b>
+          <span>{d.holders ? `tickets held by ${d.holders} ${d.holders === 1 ? 'signer' : 'signers'}` : 'tickets held so far'}</span>
+        </div>
+        <p className="ink-2">
+          The people who signed get the ticket link on {on}, two days before everyone else. Wanted’s ${d.fee} a ticket comes from the venue, never your fans.
+        </p>
+      </div>
+    </section>
   );
 }

@@ -382,7 +382,11 @@ export async function renderPoster(d: PosterData, format: 'story' | 'wide' | 'po
  * next city.
  */
 export type AnnounceData = PosterData &
-  ({ kind: 'winner'; number: number; neighborhood: string | null; prize: string; entries: number } | { kind: 'booked'; venue: string; date: string });
+  (
+    | { kind: 'winner'; number: number; neighborhood: string | null; prize: string; entries: number }
+    | { kind: 'booked'; venue: string; date: string }
+    | { kind: 'thanks'; venue: string; date: string; came: number }
+  );
 
 export async function renderAnnounce(d: AnnounceData): Promise<Buffer> {
   const first = d.artistName.split(' ')[0];
@@ -391,6 +395,7 @@ export async function renderAnnounce(d: AnnounceData): Promise<Buffer> {
   const figH = 660;
   const figW = figH * FIGURE_RATIO;
   const booked = d.kind === 'booked';
+  const thanks = d.kind === 'thanks';
   const [day, md] = booked ? (d.date.includes(', ') ? d.date.split(', ') : ['', d.date]) : ['', ''];
   return render(
     <div style={{ ...ground(1080, 1920, '50% 40%', t), flexDirection: 'column', alignItems: 'center' }}>
@@ -411,9 +416,15 @@ export async function renderAnnounce(d: AnnounceData): Promise<Buffer> {
             <img src={art.face} width={300} height={300} style={{ position: 'absolute', left: 248, top: 260, borderRadius: 999, border: `10px solid ${C.ink}` }} />
           ) : null}
         </div>
-        {booked ? null : <img src={img('art-ticket')} width={260} height={260} style={{ position: 'absolute', right: -60, top: 270, transform: 'rotate(-10deg)' }} />}
-        <Kicker size={28} color={mix(t.accent, '#FFFFFF', 0.35)}>{booked ? `Booked · ${d.cityName}` : `The ${d.cityName} draw`}</Kicker>
-        {booked ? (
+        {booked || thanks ? null : <img src={img('art-ticket')} width={260} height={260} style={{ position: 'absolute', right: -60, top: 270, transform: 'rotate(-10deg)' }} />}
+        <Kicker size={28} color={mix(t.accent, '#FFFFFF', 0.35)}>{booked ? `Booked · ${d.cityName}` : thanks ? `Last night · ${d.venue}` : `The ${d.cityName} draw`}</Kicker>
+        {d.kind === 'thanks' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', marginTop: 20 }}>
+            <div style={{ display: 'flex', fontWeight: 800, fontSize: fit(`Thank you, ${d.cityName}.`, 660, 104, 0.56), lineHeight: 1.02, letterSpacing: -3 }}>{`Thank you, ${d.cityName}.`}</div>
+            <div style={{ display: 'flex', marginTop: 30, fontWeight: 900, fontSize: 200, lineHeight: 0.92, letterSpacing: -7, color: mix(t.accent, '#FFFFFF', 0.35) }}>{String(d.came)}</div>
+            <div style={{ display: 'flex', marginTop: 12, fontWeight: 700, fontSize: 44, color: C.ink2 }}>of you came out</div>
+          </div>
+        ) : booked ? (
           <div style={{ display: 'flex', flexDirection: 'column', marginTop: 20 }}>
             <div style={{ display: 'flex', fontWeight: 800, fontSize: 112, lineHeight: 1.02, letterSpacing: -3 }}>{md}</div>
             <div style={{ display: 'flex', fontWeight: 800, fontSize: 64, lineHeight: 1.08, letterSpacing: -1.5, color: C.ink2 }}>{day}</div>
@@ -430,22 +441,84 @@ export async function renderAnnounce(d: AnnounceData): Promise<Buffer> {
         <div style={{ display: 'flex', height: 2, marginTop: 56, marginBottom: 48, backgroundColor: 'rgba(255,248,230,0.08)' }} />
 
         <div style={{ display: 'flex', alignItems: 'baseline' }}>
-          <div style={{ display: 'flex', fontWeight: 900, fontSize: 112, lineHeight: 1, letterSpacing: -3, color: mix(t.accent, '#FFFFFF', 0.35) }}>{String(booked ? d.count : d.entries)}</div>
-          <div style={{ display: 'flex', marginLeft: 20, fontWeight: 700, fontSize: 38, color: C.ink2 }}>{booked ? 'fans signed for this' : 'chances in the hat'}</div>
+          <div style={{ display: 'flex', fontWeight: 900, fontSize: 112, lineHeight: 1, letterSpacing: -3, color: thanks ? C.ink : mix(t.accent, '#FFFFFF', 0.35) }}>{String(d.kind === 'winner' ? d.entries : d.count)}</div>
+          <div style={{ display: 'flex', marginLeft: 20, fontWeight: 700, fontSize: 38, color: C.ink2 }}>{d.kind === 'winner' ? 'chances in the hat' : thanks ? 'signed a poster to start it' : 'fans signed for this'}</div>
         </div>
-        {booked ? (
+        {booked || thanks ? (
           <div style={{ display: 'flex', marginTop: 24 }}>
             <Meter count={d.count} width={796} height={30} on={t.accent} />
           </div>
         ) : null}
         <div style={{ display: 'flex', marginTop: 24, fontWeight: 600, fontSize: 32, lineHeight: 1.3, color: C.ink2 }}>
-          {booked ? `${d.cityName} asked, so ${first} is coming.` : 'Picked fairly, one chance per signature.'}
+          {booked ? `${d.cityName} asked, so ${first} is coming.` : thanks ? `It started with a poster. ${first} will be back.` : 'Picked fairly, one chance per signature.'}
         </div>
       </div>
 
       <div style={{ display: 'flex', flexGrow: 1 }} />
-      <div style={{ display: 'flex', marginTop: 56, marginBottom: 44, fontWeight: 800, fontSize: 52, letterSpacing: -1 }}>{booked ? 'Want your city next?' : 'Your city next?'}</div>
+      <div style={{ display: 'flex', marginTop: 56, marginBottom: 44, fontWeight: 800, fontSize: 52, letterSpacing: -1 }}>{booked || thanks ? 'Want your city next?' : 'Your city next?'}</div>
       <Key label="Sign a poster" link={d.link} />
+      <div style={{ display: 'flex', marginTop: 40, marginBottom: 72 }}>
+        <MadeWith />
+      </div>
+    </div>,
+    1080,
+    1920,
+  );
+}
+
+// ---------- tour poster: every night on one image ----------
+
+export type TourPosterData = {
+  artistName: string;
+  /** First and last night ("Dec 7", "21"); drawn with an arrow between, which the font lacks. */
+  span: [string, string];
+  sub: string;
+  stops: { day: string; date: string; city: string; state: string; room: string | null; booked: boolean; signed: number }[];
+  link: string;
+};
+
+/**
+ * The old-school tour poster, as a story: the run's dates big, then every night down the page
+ * with the venue where one's booked. Booked nights are lit; the rest say how many signed there,
+ * so a fan in a city that's still asking knows to sign.
+ */
+export async function renderTour(d: TourPosterData): Promise<Buffer> {
+  const rows = d.stops.slice(0, 10);
+  const rowH = rows.length > 8 ? 92 : 104;
+  return render(
+    <div style={{ ...ground(1080, 1920, '50% 16%'), flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ display: 'flex', marginTop: 96 }}>
+        <Island text={d.artistName} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', width: 936, marginTop: 64 }}>
+        <Kicker size={28}>On the road</Kicker>
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: 10, fontWeight: 800, fontSize: 128, lineHeight: 1, letterSpacing: -4 }}>
+          {d.span[0]}
+          <svg width="96" height="64" viewBox="0 0 96 64" style={{ margin: '0 22px' }}>
+            <path d="M8 32h76M60 10l24 22-24 22" fill="none" stroke={C.ink3} strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {d.span[1]}
+        </div>
+        <div style={{ display: 'flex', marginTop: 16, fontWeight: 700, fontSize: 36, color: C.ink2 }}>{d.sub}</div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', width: 936, marginTop: 48, padding: '10px 40px', borderRadius: 48, backgroundImage: C.raise, boxShadow: 'inset 0 2px 0 rgba(255,248,230,0.08), 0 30px 60px rgba(0,0,0,0.5)' }}>
+        {rows.map((r, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', height: rowH, borderTop: i ? '2px solid rgba(255,248,230,0.07)' : '0px solid transparent' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', width: 150 }}>
+              <div style={{ display: 'flex', fontWeight: 700, fontSize: 22, letterSpacing: 2, color: r.booked ? C.wantedText : C.ink3 }}>{r.day.toUpperCase()}</div>
+              <div style={{ display: 'flex', fontWeight: 800, fontSize: 34, color: r.booked ? C.ink : C.ink2 }}>{r.date}</div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, width: 480 }}>
+              <div style={{ display: 'flex', fontWeight: 800, fontSize: fit(`${r.city}, ${r.state}`, 480, 38, 0.56), color: r.booked ? C.ink : C.ink2 }}>{`${r.city}, ${r.state}`}</div>
+              <div style={{ display: 'flex', fontWeight: 600, fontSize: 25, color: C.ink3 }}>{r.booked && r.room ? r.room : r.signed ? `${r.signed} signed so far` : 'Still asking'}</div>
+            </div>
+            <div style={{ display: 'flex', fontWeight: 800, fontSize: 24, padding: '10px 18px', borderRadius: 999, color: r.booked ? C.paperInk : C.ink2, backgroundColor: r.booked ? C.wantedText : C.veil }}>{r.booked ? 'Booked' : 'Sign'}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexGrow: 1 }} />
+      <div style={{ display: 'flex', marginBottom: 40, fontWeight: 800, fontSize: 52, letterSpacing: -1 }}>Your city on it?</div>
+      <Key label="Sign for your city" link={d.link} />
       <div style={{ display: 'flex', marginTop: 40, marginBottom: 72 }}>
         <MadeWith />
       </div>

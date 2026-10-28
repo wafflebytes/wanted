@@ -223,8 +223,8 @@ export default function FanPoster() {
               </dl>
               <p className="fp-rc-foot">
                 {mine.earlyAccess
-                  ? "Early access: unlocked"
-                  : `Bring 2 friends: first dibs on tickets`}
+                  ? "Brought 2 friends: first dibs on 4 tickets"
+                  : "Bring 2 friends: first dibs on 4 tickets"}
               </p>
             </div>
           </div>
@@ -233,6 +233,7 @@ export default function FanPoster() {
             Send it to two friends
           </button>
           {err && <p className="fp-note">{err}</p>}
+          {p.dibs?.mine && <FirstDibs d={p.dibs} path={path} />}
           {p.bounty && !p.bounty.drawn && (
             <p className="fp-note">
               You’re in the draw. Once there’s a show, one signer here meets{" "}
@@ -325,5 +326,88 @@ export default function FanPoster() {
         Made with Wanted
       </a>
     </main>
+  );
+}
+
+const day = (iso: string) =>
+  new Date(`${iso}T12:00`).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+
+/**
+ * First dibs: the city got its show, and the people who asked for it get tickets first. Pick how
+ * many, hold them, and the ticket link opens here for signers two days before everyone else.
+ * Nothing is charged now; you pay when the link opens.
+ */
+function FirstDibs({
+  d,
+  path,
+}: {
+  d: NonNullable<PosterState["dibs"]>;
+  path: string;
+}) {
+  const mine = d.mine!;
+  const [want, setWant] = useState(mine.tickets || Math.min(2, mine.max));
+  const [busy, setBusy] = useState(false);
+  const held = mine.tickets > 0;
+  const hold = async (n: number) => {
+    setBusy(true);
+    try {
+      await api.post(`${path}/dibs`, { tickets: n });
+      await mutate(path);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className={`fp-dibs${held ? " held" : ""}`} aria-label="First dibs on tickets">
+      <div className="fp-dibs-h">
+        <span className="kicker">First dibs</span>
+        <b>
+          {d.room} · {day(d.date)}
+        </b>
+      </div>
+      {held ? (
+        <p className="fp-dibs-say">
+          <b>
+            {mine.tickets} {mine.tickets === 1 ? "ticket" : "tickets"} held for #{mine.number}.
+          </b>{" "}
+          The link opens right here on {day(d.signersOn)}, two days before everyone else. You pay
+          then, not now.
+        </p>
+      ) : (
+        <p className="fp-dibs-say">
+          You asked for this show, so you get tickets first: on {day(d.signersOn)}, two days
+          before the public sale.
+          {d.holders > 0 && ` ${d.holders} ${d.holders === 1 ? "signer is" : "signers are"} holding ${d.tickets} ${d.tickets === 1 ? "ticket" : "tickets"}.`}
+        </p>
+      )}
+      {!held && (
+        <div className="seg" role="radiogroup" aria-label="How many tickets">
+          {Array.from({ length: mine.max }, (_, i) => i + 1).map((n) => (
+            <button
+              key={n}
+              role="radio"
+              aria-checked={want === n}
+              className={want === n ? "on" : ""}
+              onClick={() => setWant(n)}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      )}
+      {held ? (
+        <button className="fp-dibs-change" disabled={busy} onClick={() => hold(0)}>
+          {busy ? "Letting go…" : "Let them go"}
+        </button>
+      ) : (
+        <button className="btn light block" disabled={busy} onClick={() => hold(want)}>
+          {busy ? "Holding…" : `Hold ${want} ${want === 1 ? "ticket" : "tickets"}`}
+        </button>
+      )}
+    </section>
   );
 }

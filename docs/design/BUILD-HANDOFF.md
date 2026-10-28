@@ -146,6 +146,13 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 - Browser checks only when a change needs a look, dark at 375 px (the user's call).
 - **Folds** (AGENT-UX 3.8): Fan Mail's Earlier is city stacks (`fm-stack`, `is-stacked`/`is-deep` draw the sheets underneath) instead of one fold; the city sheet shows three neighbourhoods and three venues with a `fold-more` row each.
 
+## Session 17: desktop as one piece, and the loops
+
+- **Desktop**: every tab floats over the map in the same card as Map and Tour (`.shell :is(.page, .fm, .lb, .pw, .st, .rd, .sd)` fixed at the `home-panel` rect, scrolling inside; page grounds pinned to the same rect as the card's paper). `.rail-bg`, `.pblur` and the edge strips are gone at 900 px and up. `useViewport` starts from the last size seen, so no phone drawer flashes between tabs. The Map and Tour heads fold in one move (`foldPanel` in `hooks.ts`, `--p` registered with `@property` and transitioned). `.five` and `.fm-cards` line up with their heading (gutter + 4 px) via `scroll-padding-inline`.
+- **Tour poster** (AGENT-UX 4.7): `/img/story/<slug>/tour` (`tourPng` in `share.ts`, `renderTour` in `og.tsx`): the run's span, every night with the venue where booked and the signed count where still asking, key to the first city still asking. "Post the whole tour" on Tour.
+- **Thank-you story**: `?kind=thanks&n=<room count>` on the story route (`renderAnnounce` thanks branch): "Thank you, Burlington.", how many came, how many signed to start it. "Thank Burlington" on Settle up once it's settled (the count is the scanner's, a fixture until wired).
+- **First dibs** (`src/server/dibs.ts`, POST `/w/:artist/:city/dibs {tickets}`, `dibs` in `posterState`): once a city has a held date, a signer holds 1 or 2 tickets (4 if they brought two friends) by their own device's signature. The link opens for signers 21 days before the show (never before tomorrow), the public two days later. Nothing is charged: no ticket seller is connected. Wanted's $1 a ticket is the venue's, shown to the artist on Posters with how many tickets signers are holding. Tested end to end with two local test signatures, then removed.
+
 ## Next steps
 
 (Tour and Posters done. Dark is the main mode: design there first, then check light. Use the material system above for every new control. Judge product and copy as well as pixels: one job per screen, one primary key, plain musician words.)

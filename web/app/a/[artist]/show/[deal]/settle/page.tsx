@@ -15,6 +15,7 @@ import { Icon } from '@web/components/Icon';
 import { Reel } from '@web/components/Reel';
 import { gus } from '@web/lib/gus';
 import { haptic } from '@web/lib/haptics';
+import { shareStory } from '@web/lib/share';
 import { useApi } from '@web/lib/hooks';
 import { settleFor, type Settle } from '@web/lib/settle';
 import '../../../../../showday.css';
@@ -40,10 +41,10 @@ export default function SettleUp() {
         </div>
       </main>
     );
-  return <Sheet s={s} slug={slug} dealId={dealId} />;
+  return <Sheet s={s} slug={slug} dealId={dealId} city={deal!.city} cityName={deal!.cityName} />;
 }
 
-function Sheet({ s, slug, dealId }: { s: Settle; slug: string; dealId: string }) {
+function Sheet({ s, slug, dealId, city, cityName }: { s: Settle; slug: string; dealId: string; city: string; cityName: string }) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>('checking');
   const [seen, setSeen] = useState(0); // how many of the three counts have landed
@@ -176,6 +177,13 @@ function Sheet({ s, slug, dealId }: { s: Settle; slug: string; dealId: string })
         </section>
       )}
 
+      {/* The morning after: thank the city with the room's count, and point the next one at a poster. */}
+      {phase === 'fixed' && (
+        <button className="btn hot block" onClick={() => shareStory(`/img/story/${slug}/${city}?kind=thanks&n=${s.counts[1].n}`, `${city}-thanks`, { text: `Thank you, ${cityName}. Your city next?`, url: `${location.origin}/w/${slug}/${city}` })}>
+          <Icon name="share" size={18} />
+          Thank {cityName}
+        </button>
+      )}
       {phase === 'fixed' && (
         <button className="btn light block" onClick={() => router.push(`/a/${slug}/show/${dealId}`)}>
           Back to show day

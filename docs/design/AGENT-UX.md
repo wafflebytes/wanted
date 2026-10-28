@@ -203,9 +203,13 @@ attached. Built ones are marked.
 5. **Meet the signers after** (Built, fixture send): the after-show hang at a place the crowd
    already loves. Turns a show into a night fans talk about.
 6. **Couch offers** (Built, fixture): the most DIY form of fandom, and a reason to sign.
-7. **Next:** the tour poster (all held dates on one image), the thank-you story the morning
-   after with the room's count, and first-dibs tickets as the revenue edge: signers buy first,
-   Wanted takes a small fee from the room, not the fan.
+7. **The tour poster** (Built): every night on one story, booked ones with their venue, the
+   rest with how many signed, and "Your city on it? Sign for your city."
+8. **Thank you** (Built, fixture count): the morning after, "Thank you, Burlington", how many
+   came and how many signed to start it. From Settle up.
+9. **First dibs** (Built, no ticket seller yet): signers hold tickets for their city's show and
+   get the link two days before the public sale. The revenue edge: Wanted's $1 a ticket comes
+   from the venue, never the fan, and the held count is the room's proof before a ticket sells.
 
 ---
 

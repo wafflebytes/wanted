@@ -14,6 +14,7 @@ import { Icon } from '@web/components/Icon';
 import { Sheet } from '@web/components/Sheet';
 import { ApiError, streamNdjson } from '@web/lib/api';
 import { gus } from '@web/lib/gus';
+import { shareStory } from '@web/lib/share';
 import { foldPanel, mutate, useApi, useViewport } from '@web/lib/hooks';
 import { stage } from '@web/lib/stage';
 import '../../../home.css';
@@ -210,6 +211,14 @@ export default function TourPage() {
           />
         ))}
       </ol>
+      {/* The tour poster: every night on one story, so each city still asking can sign. */}
+      <button
+        className="btn light block tr-replan"
+        onClick={() => shareStory(`/img/story/${slug}/tour`, `${slug}-tour`, { text: 'On the road. Is your city on it?', url: `${location.origin}/w/${slug}/${plan.stops[0].metroId}` })}
+      >
+        <Icon name="share" size={18} />
+        Post the whole tour
+      </button>
       <button className="btn light block tr-replan" disabled={!!busy} onClick={() => run({ kind: 'replan' }, 'replan', 'Replanning around the nights you kept')}>
         <Icon name="refresh" size={18} />
         {busy === 'replan' ? 'Replanning…' : 'Replan, keep my locked nights'}

@@ -13,6 +13,7 @@ import { cityCount, claimByDevice, proofFor, recentSignatures, wearLevel } from 
 import { config } from './config';
 import { crowdCard } from './crowd';
 import { deviceHash, id } from './crypto';
+import { dibsFor } from './dibs';
 import { all, kvGet, kvSet, one, run } from './db';
 import { pitchEmail, routeLines, type PitchEvidence } from './gus/agent';
 import { HttpError } from './http';
@@ -202,6 +203,7 @@ export async function posterState(slug: string, metroId: string, deviceToken: st
   const score = r?.metros.find((x) => x.id === metroId) ?? null;
   // Mini heat map: the city's street-level hexes as points (no fan data).
   const city = await cityDetail(artist.sound, metroId, { kind: artist.kind, scope: `poster:${artist.id}` }).catch(() => null);
+  const show = await heldShow(artist.id, metroId);
   return {
     artist: { slug: artist.slug, name: artist.name, kind: artist.kind, portrait: artist.portrait, imageUrl: artist.imageUrl, isDemo: artist.isDemo },
     city: { id: metro.id, name: metro.name, state: metro.state, lat: metro.lat, lon: metro.lon },
@@ -216,7 +218,8 @@ export async function posterState(slug: string, metroId: string, deviceToken: st
     played: opened.playedAt ? { at: opened.playedAt, venue: opened.playedVenue } : null,
     rank: score?.rank ?? null,
     bounty: await bountyView(artist, metroId, deviceToken ? deviceHash(deviceToken) : null),
-    show: await heldShow(artist.id, metroId),
+    show,
+    dibs: await dibsFor(artist.id, metroId, show, mine),
     hexes: (city?.hexes ?? []).slice(0, 400).map((h) => {
       const [lat, lon] = cellToLatLng(h.h3);
       return { h3: h.h3, heat: h.heat, lat, lon };

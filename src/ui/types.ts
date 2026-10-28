@@ -90,6 +90,8 @@ export type PosterState = {
   rank: number | null;
   /** A held date for this city: signers hear first. */
   show?: { room: string; date: string } | null;
+  /** First dibs on tickets for signers, once there's a date. */
+  dibs?: { room: string; date: string; signersOn: string; publicOn: string; holders: number; tickets: number; fee: number; mine: { number: number; tickets: number; max: number } | null } | null;
   /** The Bounty (FR-23d): one signer meets the artist. Mirrors the server's BountyView. */
   bounty?: {
     prize: string;
