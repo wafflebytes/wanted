@@ -120,3 +120,5 @@
 .approve-line { margin: 0 0 2px; font: 500 15px/1.35 var(--body); color: var(--ink-2); text-wrap: pretty; }
 .approve-line b { font: 800 17px/1 var(--display); color: var(--ink); }
 .dr-foot .approve.slim .approve-no { margin-top: 0; }
+
+@media (min-width: 900px) { .dr { left: calc(var(--rail) / 2); } }

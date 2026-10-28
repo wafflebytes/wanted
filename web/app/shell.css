@@ -527,3 +527,19 @@ button.ml { cursor: pointer; }
 .sp-txt { display: flex; flex-direction: column; min-width: 0; }
 .sp-txt b { font: 600 15px/1.25 var(--display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-txt em { font: 500 12.5px/1.3 var(--body); font-style: normal; color: var(--ink-3); }
+
+/* ---------- a computer (900 px and up): one rail on the left holds what the phone shows (header,
+   page, dock, Gus), and the map fills the rest beside every tab. */
+.rail-bg { display: none; }
+@media (min-width: 900px) {
+  :root { --col: 468px; --rail: 468px; }
+  .rail-bg { display: block; position: fixed; top: 0; bottom: 0; left: 0; width: var(--rail); z-index: 1; background: var(--page, var(--bg)); box-shadow: 0.5px 0 0 var(--line-2), 24px 0 60px -30px rgba(0, 0, 0, 0.5); pointer-events: none; }
+  .tab-map .rail-bg, .tab-tour .rail-bg { display: none; }
+  .hdr, .dock, .tiles, .vc, .tray, .isl-card, .undo-chip { left: calc(var(--rail) / 2); }
+  .sheet { left: 0; margin-left: 0; }
+  .shell :is(.page, .fm, .lb, .pw, .st, .rd, .sd) { margin: 0; max-width: var(--rail); z-index: 2; }
+  .shell :is(.page, .rd, .sd) { position: relative; }
+  .shell :is(.fm > .fm-ground, .lb > .lb-ground, .pw > .pw-ground) { right: auto; width: var(--rail); }
+  .pblur { right: auto; width: var(--rail); }
+  .edge-top, .edge-bottom { right: auto; width: var(--rail); }
+}

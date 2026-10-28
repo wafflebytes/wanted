@@ -20,6 +20,7 @@ import { haptic } from '@web/lib/haptics';
 import { shareStory } from '@web/lib/share';
 import { deals } from '@web/lib/deals';
 import { mutate, useApi } from '@web/lib/hooks';
+import { stage } from '@web/lib/stage';
 import '../../../posters.css';
 
 const PROOF = 50;
@@ -63,6 +64,13 @@ export default function PostersPage() {
   }, [state.data]);
   const [idx, setIdx] = useState(0);
   const o = opened[Math.min(idx, Math.max(0, opened.length - 1))] ?? null;
+  // On a computer the map beside the rail flies to the poster you're on (with its pinned spots).
+  const posterCity = o?.city ?? null;
+  useEffect(() => {
+    if (window.innerWidth < 900 || !posterCity) return;
+    stage.set({ city: posterCity, route: null, top: 72, bottom: 0 });
+    return () => stage.set({ city: null });
+  }, [posterCity]);
   const poster = useApi<PosterState>(o ? `/w/${slug}/${o.city}` : null, { every: 6000 });
   const p = poster.data?.city.id === o?.city ? poster.data : undefined;
   const live = dealList.data?.deals.find((d) => d.city === o?.city && (d.status === 'held' || d.status === 'waiting' || d.status === 'talking')) ?? null;

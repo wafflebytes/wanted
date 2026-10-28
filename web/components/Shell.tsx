@@ -246,6 +246,7 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
   return (
     <div className={`shell tab-${tab}`} data-panel={g.panel}>
       <MapStage slug={slug} />
+      <div className="rail-bg" aria-hidden />
       <Header slug={slug} artist={artist.data} onMap={onMap} />
       {children}
       {!onMap && <ProgressiveBlur side="top" />}

@@ -15,9 +15,19 @@ export function MapStage({ slug }: { slug: string }) {
   const s = useStage();
   const [mounted, setMounted] = useState(false);
   const [painted, setPainted] = useState(false);
+  const [w, setW] = useState(390);
   useEffect(() => {
-    if (s.show) setMounted(true);
-  }, [s.show]);
+    const on = () => setW(window.innerWidth);
+    on();
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  const wide = w >= 900;
+  // On a computer the map stays up beside every tab; on a phone only Map and Tour show it.
+  const show = s.show || wide;
+  useEffect(() => {
+    if (show) setMounted(true);
+  }, [show]);
   const dark = useDark();
   const reduce = usePrefersReducedMotion();
   const map = useApi<MapData>(mounted ? `/artist/${slug}/map` : null);
@@ -49,19 +59,11 @@ export function MapStage({ slug }: { slug: string }) {
   useEffect(() => {
     if (cityName) gus.glance(cityName);
   }, [cityName]);
-  const [w, setW] = useState(390);
-  useEffect(() => {
-    const on = () => setW(window.innerWidth);
-    on();
-    window.addEventListener('resize', on);
-    return () => window.removeEventListener('resize', on);
-  }, []);
-  const wide = w >= 900;
-  const padding = useMemo(() => (wide ? { top: 80, left: 520, bottom: 60, right: 40 } : { top: s.top, left: 24, bottom: s.bottom + 12, right: 24 }), [wide, s.top, s.bottom]);
+  const padding = useMemo(() => (wide ? { top: 80, left: 492, bottom: 60, right: 40 } : { top: s.top, left: 24, bottom: s.bottom + 12, right: 24 }), [wide, s.top, s.bottom]);
   const pickRef = useRef(stage.pick);
   if (!mounted) return null;
   return (
-    <div className={`stage ${s.show ? 'on' : ''} ${painted ? 'painted' : ''}`} aria-hidden={!s.show}>
+    <div className={`stage ${show ? 'on' : ''} ${painted ? 'painted' : ''}`} aria-hidden={!show}>
       {map.data && (
         <CrowdMap
           hexes={map.data.hexes}
@@ -72,7 +74,7 @@ export function MapStage({ slug }: { slug: string }) {
           city={cityProp}
           route={s.city ? null : s.route}
           dark={dark}
-          active={s.show}
+          active={show}
           reduceMotion={reduce}
           pulse={s.pulse}
           padding={padding}
