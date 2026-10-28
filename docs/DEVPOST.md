@@ -44,15 +44,26 @@ Gus works when the app is closed. When you open it, he's already mid-call, with 
 
 ### How we built it
 
-- **Web app** on Next.js 16. The same TypeScript server also backs an Expo iPhone app.
-- **Gus** is our own tool loop on OpenRouter, without an agent framework, so the checks sit exactly where we need them. He has eleven lookups, most of them on Qloo, and runs up to four lookups at once.
-- **Grounding.** A reply that names a city, venue or number no lookup returned is thrown out, and a rules planner answers from the same lookups instead.
-- **Memory.** A `remember` lookup writes down lasting facts in the artist's words. He reads them before every answer, as the artist's words rather than instructions, and the artist can strike any of them.
-- **Qloo** is behind every decision. Search and entities find the sound. Heatmaps score cities and neighborhoods against a 20-act panel. Place insights with explainability and hours pick the venues and the poster spots. Demographics plus podcasts, TV, films, brands and tags describe the crowd. Artist insights and the compare endpoint find openers.
-- **Always on.** Calls move forward on the server as time passes, with a scheduled sweep for the rest. How loudly he reaches you (a Logbook line, a note, a question, a card, a call) is decided in code from what's at stake, with quiet hours and one call a week at most.
-- **Money** is enforced by the server, so no prompt can change it. Each offer carries a fingerprint of its exact terms. A yes approves that fingerprint only and mints a one-time pass for that amount, that venue and 48 hours. Payments run in Stripe test mode.
-- **Story posters** are drawn on the server with satori and resvg, ready for Instagram and TikTok.
-- **Fan privacy.** Fan names and contacts never leave Wanted. Qloo and the models only see the act's taste and counts by neighborhood.
+Harrison Chase splits an agent into a model, a harness and context. We built Gus around that split, and each part has one job.
+
+**Context: what no model knows on its own.**
+- **Qloo's taste graph** is behind every decision. Search and entities find the sound. Heatmaps score every US city and its neighborhoods against a 20-act panel, so big cities don't win by size. Place insights with explainability and hours pick the venues and the poster spots. Demographics plus podcasts, TV, films, brands and tags describe the crowd. Artist insights and the compare endpoint find openers.
+- **What you've told him.** A `remember` lookup writes down lasting facts in your words ("won't play Mondays"). He reads them before every answer as your words, not as instructions, and you can strike any of them.
+- **A short brief per answer**, with the last few turns, so "there" means the right city.
+
+**The harness: ours, with no agent framework, on purpose.** For Gus the harness is the product. We looked at the frameworks, and none of them did the jobs that matter here, so we wrote one loop we can read end to end.
+- **Grounding.** Every city, venue and number in a reply has to come from a lookup, his notes or you. If not, the reply is thrown out and a rules planner answers from the same lookups.
+- **Actions a lookup backs.** He can only offer to ask a venue a lookup actually returned.
+- **A budget.** Up to four rounds, four lookups at once, 25 seconds, with each lookup streaming to the app as it runs.
+- **Money on the server.** Each offer carries a fingerprint of its exact terms. Your yes approves that fingerprint only and mints a one-time pass for that amount, that venue and 48 hours. Payments run in Stripe test mode.
+- **Always on.** Calls move forward on the server as time passes, with a scheduled sweep for the rest. How loudly he reaches you (a Logbook line, a note, a question, a card, a call) is decided in code, with quiet hours and one call a week at most.
+- **Fan privacy.** A gate checks every prompt for a fan's details before it's sent. Qloo and the models only see counts by neighborhood.
+
+**The model: the part we trust least.** Free OpenRouter models, tried in order, with a cache and a rules fallback that says when it's answering. Because facts come from context and safety comes from the harness, the model is the easiest part to swap. His phone voice is a Fish Audio voice.
+
+**Traces and evals.** Every Qloo call is kept, and each answer carries the lookups behind it. Our evals say what good looks like: the right lookup, a fitting next step, plain words, and no deposit without your yes on the exact terms. The stand-in venues and test money mean every eval runs the real loop end to end.
+
+**Around it:** a Next.js 16 web app and an Expo iPhone app on the same TypeScript server, libSQL on Turso, MapLibre and deck.gl for the map, story posters drawn with satori and resvg, and an MCP server so Gus works inside Claude and ChatGPT.
 
 ### Challenges we ran into
 
@@ -71,7 +82,7 @@ Gus works when the app is closed. When you open it, he's already mid-call, with 
 
 ### What we learned
 
-Taste data matters most where a general model is most confident: which neighborhood, and which venue. An LLM will name the famous venue in a city. Qloo knows whether your crowd goes there. We also learned that an agent that asks less gets trusted more, which is why Gus saves the phone call for when something is about to run out.
+Taste data matters most where a general model is most confident: which neighborhood, and which venue. An LLM will name the famous venue in a city. Qloo knows whether your crowd goes there. We also learned where an agent's quality lives: every fix our evals asked for landed in the harness or the context, never in the model. We also learned that an agent that asks less gets trusted more, which is why Gus saves the phone call for when something is about to run out.
 
 ### What's next for Wanted
 

@@ -4,6 +4,8 @@
 
 **Gus is an AI tour manager for independent musicians, and he runs on Qloo's taste graph.** He finds the cities where your sound already has fans, puts up a WANTED poster there for them to sign, and once fifty people sign, he asks the venues that fit for a date. He negotiates inside your limits and comes back with one question: yes or no.
 
+Under the hood he's three parts: a model we trust least, a harness we wrote ourselves, and context that no model has on its own, which is Qloo's taste graph and what you've told him.
+
 Built for the Qloo Agentic Hackathon, "Agents, but with taste."
 
 | | |
@@ -51,7 +53,25 @@ Wanted makes the posts for each step, so one show brings in the fans for the nex
 - **Thank you.** The morning after: how many came, and how many signed to start it.
 - **First dibs.** Once a city has a date, the people who signed hold tickets before anyone else and get the link two days early. Nothing is charged until then, and Wanted's fee comes from the venue, never the fans.
 
-## Why it needs Qloo
+## How Gus is built: model, harness, context
+
+<p><img src="docs/gallery/8-how-it-works.jpg" width="49%" alt="Taste data in, one yes out"> <img src="docs/readme/r-grounded.jpg" width="49%" alt="He can't make up a venue"></p>
+
+In his Interrupt talk, Harrison Chase splits an agent into [a model, a harness and context](https://youtu.be/xy_7SzwsIjM). The model reasons. The harness is everything around it: what the model sees, which actions actually happen, how results get checked, what gets saved, and who's in control. Context is what the agent knows. Gus is built the same way, and each part has one job.
+
+```mermaid
+flowchart LR
+  M["<b>Model</b><br/>free OpenRouter models,<br/>tried in order<br/>swappable, never trusted<br/>with money or facts"]
+  H["<b>Harness, ours</b><br/>the tool loop and its budget<br/>the grounding check<br/>rules before the model<br/>money rules on the server"]
+  C["<b>Context</b><br/>Qloo's taste graph<br/>his notes on you<br/>a short brief and<br/>the last few turns"]
+  M --- H --- C
+  classDef hot fill:#FF6A2B,stroke:#E8490F,color:#fff
+  class H hot
+```
+
+**No agent framework, on purpose.** For Gus the harness is the product. A venue that doesn't exist, a yes that covers the wrong offer, a deposit paid twice or a fan's name in a prompt would each cost a musician real money or trust. We looked at the frameworks, including durable runtimes built for agents that wait on people ([our notes](docs/research/07-AGENT-ARCHITECTURE-AND-EVE.md)). None of them did those jobs for us, so we wrote the harness ourselves: one loop of about 900 lines ([`ask.ts`](src/server/gus/ask.ts)) that we can read end to end.
+
+### Context: taste a model doesn't have
 
 <p><img src="docs/gallery/9-with-qloo.jpg" width="100%" alt="A plain chatbot gets most venues wrong"></p>
 
@@ -66,7 +86,7 @@ A plain LLM will name the famous venue in a city. Qloo knows whether your crowd 
 
 You can run the same check in the app: every city has **Ask a chatbot instead?**, which asks one live and shows what holds up.
 
-### Every Qloo call, and what it decides
+Every Qloo call, and what it decides:
 
 ```mermaid
 flowchart LR
@@ -84,15 +104,26 @@ flowchart LR
   class L you
 ```
 
-All of it goes through [`src/server/qloo/api.ts`](src/server/qloo/api.ts), and every answer keeps a receipt of the call behind it. Scoring is in [`src/server/score.ts`](src/server/score.ts): raw heat follows population, so each city's heat is compared with the panel's heat for the same city, and the Wanted Score blends the two.
+All of it goes through [`qloo/api.ts`](src/server/qloo/api.ts), and every call is kept so you can see how Gus used Qloo. Raw heat follows population, so each city's heat is compared with a 20-act panel's heat for the same city, and the Wanted Score blends the two ([`score.ts`](src/server/score.ts)).
 
-## How Gus works
+### Context: what you've told him
 
-<p><img src="docs/gallery/8-how-it-works.jpg" width="49%" alt="Taste data in, one yes out"> <img src="docs/readme/r-grounded.jpg" width="49%" alt="He can't make up a venue"></p>
+<p><img src="docs/readme/r-memory.jpg" width="100%" alt="He remembers how you tour"></p>
 
-### One question, start to finish
+```mermaid
+flowchart LR
+  Y(["We don't play Mondays."]) -- remember --> M[("His notes on you<br/>12 at most, no repeats")]
+  M --> E["Read before every answer,<br/>as your words, never as orders"]
+  M --> G2["Counts as something he knows,<br/>so the check lets it through"]
+  M --> L["Logbook: Noted: Won't play Mondays."]
+  S(["Settings"]) -- strike a line --> M
+  classDef dark fill:#15130F,stroke:#15130F,color:#F5F0E6
+  class Y,S dark
+```
 
-Gus is our own tool loop, with no agent framework, so the checks sit exactly where we need them ([`src/server/gus/ask.ts`](src/server/gus/ask.ts)).
+Tell him once how you tour (nights you won't play, how far the van goes, cities to skip) and he keeps to it in every later answer ([`memory.ts`](src/server/gus/memory.ts)). Each answer also gets a short brief (the act, the screen you're on, your best cities, where posters are up) and the last few turns, so "there" means the right city.
+
+### The harness: one question, start to finish
 
 ```mermaid
 flowchart LR
@@ -109,28 +140,16 @@ flowchart LR
   class Q,A dark
 ```
 
-- **Grounded.** A reply that names a city, venue or number no lookup returned is thrown out ([`grounding.ts`](src/server/gus/grounding.ts)). The next step he offers can only point at a venue a lookup actually returned.
-- **Fast enough to talk to.** Lookups in a round run side by side, the whole answer has 25 seconds, and his answer streams: you see each lookup as it runs.
-- **Honest when the model is down.** Gus runs on free OpenRouter models, tried in order. If all of them fail, a rules planner answers from the same lookups and says it's the simpler Gus.
+| The hard part | What the harness does | Where |
+|---|---|---|
+| Models invent venues | Every city, venue and number in a reply must come from a lookup, his notes or you. If not, the reply is dropped and a rules planner answers from the same lookups. | [`grounding.ts`](src/server/gus/grounding.ts) |
+| A next step that leads nowhere | He can only offer an action a lookup backs, like asking a venue the `rooms` lookup returned. If he names one without picking an action, the server attaches it. | [`ask.ts`](src/server/gus/ask.ts) |
+| Slow, rambling tool use | Up to 4 rounds, 4 lookups side by side, one 25-second budget. If time runs out, he answers from what he found. Each lookup streams to the app as it runs. | [`ask.ts`](src/server/gus/ask.ts) |
+| Prompt injection | Names from lookups, your words and his notes reach the model as untrusted text, never as instructions. | [`ask.ts`](src/server/gus/ask.ts) |
+| Things the model shouldn't decide | Changing a limit ("make it 250") and quiet hours are handled by rules before the model is called. | [`ask.ts`](src/server/gus/ask.ts) |
+| Fan privacy | A gate checks every prompt for a fan's details before it's sent. Qloo and the model only see counts by neighborhood. | [`outbound.ts`](src/server/outbound.ts) |
 
-### Memory
-
-<p><img src="docs/readme/r-memory.jpg" width="100%" alt="He remembers how you tour"></p>
-
-```mermaid
-flowchart LR
-  Y(["We don't play Mondays."]) -- remember --> M[("His notes on you<br/>12 at most, no repeats")]
-  M --> E["Read before every answer,<br/>as your words, never as orders"]
-  M --> G2["Counts as something he knows,<br/>so the check lets it through"]
-  M --> L["Logbook: Noted: Won't play Mondays."]
-  S(["Settings"]) -- strike a line --> M
-  classDef dark fill:#15130F,stroke:#15130F,color:#F5F0E6
-  class Y,S dark
-```
-
-Tell him once how you tour (nights you won't play, how far the van goes, cities to skip) and he keeps to it in every later answer ([`memory.ts`](src/server/gus/memory.ts)).
-
-### Money
+### The harness: money
 
 <p><img src="docs/readme/r-money.jpg" width="100%" alt="Only you can say yes"></p>
 
@@ -148,7 +167,7 @@ stateDiagram-v2
 
 Your limits (lowest cut, biggest deposit, nights you won't play) are enforced on the server, so no prompt can change them. Each offer carries a fingerprint of its exact terms, your yes approves that fingerprint only, and the deposit is paid once even if you tap twice ([`deals.ts`](src/server/deals.ts), [`deal-scope.ts`](src/server/deal-scope.ts)). Deposits run in Stripe test mode. None of the connector's tools in Claude or ChatGPT can approve or pay.
 
-### While you're away
+### The harness: while you're away
 
 <p><img src="docs/readme/r-ladder.jpg" width="100%" alt="He knows when to bother you"></p>
 
@@ -169,6 +188,10 @@ flowchart LR
 ```
 
 How loudly he reaches you is decided in code, never by the model ([`mandate.ts`](src/server/mandate.ts), [`ambient.ts`](src/server/ambient.ts)). He's quiet from 10 pm to 9 am, calls at most once a week, and every call ends in the same choice as the card, so missing one loses nothing. The first time you open the app he's already mid-call, with an offer waiting and a show booked.
+
+### The model: the part we trust least
+
+Gus runs on free OpenRouter models, tried in order, with quota backoff across keys and a cache by prompt ([`llm.ts`](src/server/gus/llm.ts)). If every model fails, Gus lite, a rules planner, answers from the same lookups and says it's the simpler Gus. Because facts come from context and safety comes from the harness, the model is the easiest part to swap. His phone voice is a Fish Audio voice picked for him.
 
 ### The whole system
 
@@ -197,39 +220,36 @@ flowchart LR
   class Gus hot
 ```
 
-- **Fan privacy.** Names, signatures and contacts never go to Qloo or to a model. Gus sees counts by city and neighborhood.
 - **Outside the app.** The MCP server ([`mcp.ts`](src/server/mcp.ts)) gives Claude or ChatGPT `where_am_i_wanted`, `city_brief`, `deals`, `ask_gus` and `ask_rooms`. In Claude each answer comes back as a card you can tap ([`mcp-view.html`](src/server/mcp-view.html)).
 - **Plain words.** Every screen speaks to a musician on a first tour: one number and a sentence, no charts to decode ([`plain.ts`](src/lib/plain.ts)).
 
-## Under the hood: the agent engineering
+## How Gus gets better: traces and evals
 
-Gus isn't a chatbot with a map. Most of the work went into the parts around the model, so it can be trusted with a musician's calendar and money.
+Chase's point is that agents improve through traces and evals, and that evals are the new PRD: they say what good looks like. That's the loop we ran all week, with a person deciding each fix.
 
-| The hard part | What we built | Where |
-|---|---|---|
-| Models invent venues | A grounding check on every reply: each city, venue and number must come from a lookup, his notes or the artist. If not, the reply is dropped and a rules planner answers from the same lookups. | [`grounding.ts`](src/server/gus/grounding.ts) |
-| A next step that leads nowhere | The model can only offer an action backed by what a lookup returned, like asking a venue the `rooms` lookup found. If it names one without picking an action, the server attaches the right one. | [`ask.ts`](src/server/gus/ask.ts) |
-| Slow, rambling tool use | Our own loop: up to 4 rounds, up to 4 lookups run side by side per round, one 25-second budget for the whole answer. If time runs out, he answers from what he found instead of giving up. | [`ask.ts`](src/server/gus/ask.ts) |
-| Prompt injection | Names from lookups, the artist's own words and his notes go to the model wrapped as untrusted text, never as instructions. Limits, approvals and payments live in server code the model can't reach. | [`ask.ts`](src/server/gus/ask.ts), [`deal-scope.ts`](src/server/deal-scope.ts) |
-| Context | Each answer gets a short brief: the act, the screen they're on, their best cities, where posters are up, his notes on them, and the last few turns so "there" means the right city. | [`ask.ts`](src/server/gus/ask.ts) |
-| Memory | A `remember` lookup writes lasting facts in the artist's words, deduped and capped at 12. They're read before every answer and count as grounded. | [`memory.ts`](src/server/gus/memory.ts) |
-| Free models fail | A chain of models and keys with quota backoff, a response cache by prompt, and a rules fallback that says when it's answering. | [`llm.ts`](src/server/gus/llm.ts) |
-| Things the model shouldn't decide | Changing a limit ("make it 250") and quiet hours are parsed by rules before the model is called. How loudly to reach you is scored in code. | [`ask.ts`](src/server/gus/ask.ts), [`mandate.ts`](src/server/mandate.ts) |
-| Working with no one watching | Calls advance by the time that passed on every read, plus a scheduled sweep. Every step lands in the Logbook in plain words. | [`ambient.ts`](src/server/ambient.ts) |
-| Showing the work | Answers stream: each lookup appears as it runs, then the reply. In Claude, the same tools come back as cards you can tap. | [`mcp.ts`](src/server/mcp.ts) |
-| Knowing it works | A 25-case eval through the app's own route that checks every name and number against the raw lookups, a 12-scenario policy gate, and a live chatbot baseline. | [`evals/`](evals) |
-
-## Evals
+```mermaid
+flowchart LR
+  R(["Gus answers"]) --> T["Traces<br/>every lookup he ran,<br/>every Qloo call kept"]
+  T --> E["Eval cases<br/>right lookup? fitting next step?<br/>plain words? every name real?"]
+  E --> F["A fix<br/>to the harness or the context"]
+  F --> R
+  S[("Stand-in venues<br/>and test-mode money")] -.-> E
+  classDef dark fill:#15130F,stroke:#15130F,color:#F5F0E6
+  class R dark
+```
 
 | Eval | Result | Run it |
 |---|---|---|
 | [Asking Gus](evals/gus.md): 16 live questions through the app's own route, live Qloo | 16 of 16 ran the right lookup, offered a fitting next step and stayed short | `npm run eval:gus` |
 | [Qloo against a plain chatbot](evals/qloo-vs-chatbot.md): 8 cities | 46% of the chatbot's venues held up | `npm run eval:chatbot` |
-| [Agent gate](evals/report.md): 12 policy scenarios | 12 of 12, no rejected tool calls | `npm run eval:llm -- --extended --strict-policy` |
+| [Agent gate](evals/report.md): 12 policy scenarios, graded on the end state | 12 of 12: no deposit without your yes on the exact terms | `npm run eval:llm -- --extended --strict-policy` |
 | Unit and policy tests | 236 pass | `npm test` |
 | Production smoke: pages, JSON, share images, MCP, time budgets | | `npm run smoke:prod` |
 
-The Gus eval has grown to 25 cases, including questions that need two or more lookups and follow-ups that only make sense with the turn before. Every number and name in an answer is checked against the raw lookups. Writing these caught real bugs, all fixed now: "Portland Maine" picked Oregon, Gus didn't know a poster needs fifty signatures, and he'd offer to ask a venue with no button to do it.
+- **Traces.** Each answer carries the lookups behind it, and every Qloo call is kept ([`trace`](src/app/api/artist/%5Bid%5D/trace+api.ts)).
+- **A safe place to fail.** Venue bookers are stand-ins and deposits are test money, so every eval runs the real loop end to end without touching a real venue or a real card.
+- **Fixes that came out of it.** "Portland Maine" picked Oregon. Gus didn't know a poster needs fifty signatures. He offered to ask a venue with no button to do it. Each became a case, then a fix. The Gus eval has since grown to 25 cases, including follow-ups that only make sense with the turn before, with every name and number checked against the raw lookups.
+- **Context that grows per artist.** His notes on each act improve on their own: every "we don't play Mondays" makes the next answer better for that artist.
 
 Not measured yet: real artist outcomes, real venue replies and ticket sales.
 
@@ -239,7 +259,7 @@ Not measured yet: real artist outcomes, real venue replies and ticket sales.
 |---|---|
 | Every Qloo call: cities, neighborhoods, venues, crowds, openers | Venue bookers and their replies (stand-ins that answer from templates and policy) |
 | Fan signatures, poster pages and first dibs holds | The demo act's signatures (flagged as demo) |
-| Gus's tool loop, his memory, his streaming answers and his voice | Deposits (Stripe test mode or a sandbox ledger, never live money) |
+| Gus's harness, his memory, his streaming answers and his voice | Deposits (Stripe test mode or a sandbox ledger, never live money) |
 | The MCP connector, approvals and payment rules | Notes to podcasts and openers aren't actually sent |
 | The story posters | Show-day details and the ticket counts after a show (fixtures until a scanner and the venue's email are wired) |
 

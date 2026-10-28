@@ -25,6 +25,14 @@ Independent singer-songwriters and small bands in the US with roughly 5k to 80k 
 5. **One decision.** When a venue agrees, the artist sees the offer next to their own limits and says yes or no. A yes pays a test deposit that locks in that exact offer.
 6. **Fill the venue, play, get paid.** Signers hear first and get first dibs on tickets. Booked nights join the tour route. Gus plans the show day, and afterwards checks the venue's ticket count against the scanner so the artist gets their full cut.
 
+## Model, harness, context
+
+Gus follows Harrison Chase's split of an agent into a model, a harness and context, with no agent framework:
+
+- Context: Qloo's taste graph (cities, neighborhoods, venues, crowd, openers), his notes on the act (`src/server/gus/memory.ts`), and a short brief with the last few turns.
+- Harness (ours, `src/server/gus/ask.ts`): the tool loop and its budget, the grounding check, actions only a lookup backs, rules before the model, money rules on the server, the privacy gate on every prompt (`src/server/outbound.ts`).
+- Model: free OpenRouter models tried in order, with a cache and a rules fallback ("Gus lite") that says when it answers. The easiest part to swap.
+
 ## Gus works when no screen is open
 
 Gus doesn't wait for a tab. Any read of an act's deals advances his calls by the time that passed, and a cron sweep does the same for every act with a call in progress (`src/server/ambient.ts`, `src/app/api/cron/gus+api.ts`). When you come back, the app's Dynamic Island shows what he's doing right now: a call with its progress, an offer waiting on you, a show just booked. The demo act always has one of each, so the first visit lands mid-work.
