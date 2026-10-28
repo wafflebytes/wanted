@@ -142,7 +142,8 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 ## Session 16: swap a city
 
 - **Swap** (AGENT-UX 3.5): "Swap Albany" runs `swap_options` (`swapOptions` in `service.ts`: the planner's own `swapCandidates`, top two, with driving added or saved against the stop it replaces and fans signed). The card draws the tour small, framed on the stretch around the stop: the city going out struck and its legs faint, the two candidates as dashed orange ghosts through the neighbours, chips with the detour. One tap re-plans via `{kind:'swap'}`; Undo posts `{kind:'undo'}`, which restores the plan snapshot `planFor` saves before every edit (kv `plan-prev:<id>`, instant, undo twice is redo).
-- Checks run in dark at 375 px only (the user's call).
+- **The draw** (AGENT-UX 3.5): "Who wins the draw in Ithaca?" runs `fan_draw` (`bountyView`). Open: a ticket stub (admit one, the prize, fans and chances, the sealed code) with Hold to draw, no Undo (a promise to a fan); the card posts `/posters {action:'draw'}` itself and the winning number lands on the torn stub. Already drawn: Gus names the winner. Classes are `tk-` (`.dr` is the deal room).
+- Browser checks only when a change needs a look, dark at 375 px (the user's call).
 
 ## Next steps
 

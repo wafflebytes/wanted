@@ -21,6 +21,7 @@ export type GusAction =
   | { type: 'quiet'; start: number; end: number; label: string }
   | { type: 'spots'; id: string; name: string; spots: Spot[]; label: string }
   | { type: 'night'; id: string; name: string; current: string; nights: Night[]; label: string }
+  | { type: 'draw'; id: string; name: string; prize: string; signers: number; chances: number; seal: string; label: string }
   | {
       type: 'swap';
       id: string;

@@ -467,6 +467,21 @@ button.ml { cursor: pointer; }
 .qp-step button:active { transform: scale(var(--press)); box-shadow: var(--bevel), var(--drop-press); }
 
 /* Poster spots Gus found: rows you can drop before pinning. */
+/* The draw: a ticket stub, perforated, that tears when you hold. */
+.tk-stub { display: grid; grid-template-columns: 1fr 92px; margin: 2px 0 10px; border-radius: var(--r-m); background: linear-gradient(180deg, #F7E7C6, #EBD3A4); color: #3A2A12; box-shadow: var(--drop); overflow: hidden; }
+.tk-main { display: flex; flex-direction: column; gap: 6px; padding: 14px 14px 14px 16px; }
+.tk-admit { font: 700 10.5px/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: #9A5B12; }
+.tk-prize { font: 700 16px/1.25 var(--display); }
+.tk-odds { font: 600 12.5px/1.3 var(--body); color: #6E5530; }
+.tk-tail { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 10px 6px; border-left: 2px dashed rgb(58 42 18 / 0.35); transition: transform var(--t-hero) var(--ease); }
+.tk-tail::before, .tk-tail::after { content: ''; position: absolute; left: -9px; width: 16px; height: 16px; border-radius: 50%; background: var(--card); }
+.tk-tail::before { top: -8px; }
+.tk-tail::after { bottom: -8px; }
+.tk-tail span { font: 700 10.5px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: #9A5B12; }
+.tk-tail code { font: 600 12px/1.2 ui-monospace, monospace; color: #6E5530; }
+.tk-tail b { font: 800 30px/1 var(--display); font-variant-numeric: tabular-nums; animation: pop var(--t-move) var(--ease) both; }
+.tk-tail em { font: 600 11px/1.2 var(--body); font-style: normal; color: #6E5530; text-align: center; }
+.tk-stub.is-torn .tk-tail { transform: translate(4px, 3px) rotate(3deg); }
 /* Swap a city: the tour drawn small, candidates as ghosts on the line. */
 .sw-map { margin: 2px 0 10px; border-radius: var(--r-m); background: var(--well-bg); box-shadow: var(--well); overflow: hidden; }
 .sw-map svg { display: block; width: 100%; height: auto; }

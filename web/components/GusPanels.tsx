@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import VoiceBeam from 'voice-glow';
 import type { Deal, LogEntry, Mandate } from '@/lib/types';
 import type { ArtistState, MapData, MapMetroRow } from '@/ui/types';
+import { api } from '@web/lib/api';
 import { deals, useDeal } from '@web/lib/deals';
 import { gus, useGus, type GusAction } from '@web/lib/gus';
 import { haptic } from '@web/lib/haptics';
@@ -404,6 +405,7 @@ function Proposal({ action }: { action: GusAction }) {
   if (action.type === 'spots') return <SpotsProposal action={action} />;
   if (action.type === 'night') return <NightProposal action={action} />;
   if (action.type === 'swap') return <SwapProposal action={action} />;
+  if (action.type === 'draw') return <DrawProposal action={action} />;
   return <Offer action={action} />;
 }
 
@@ -504,6 +506,67 @@ function SpotsProposal({ action }: { action: Extract<GusAction, { type: 'spots' 
       <button className="btn hot block" disabled={!picked.length} onClick={() => (haptic('tap'), gus.act({ ...action, spots: picked }))}>
         {picked.length ? `Pin ${picked.length} spot${picked.length === 1 ? '' : 's'}` : 'Pick at least one'}
       </button>
+    </div>
+  );
+}
+
+/**
+ * "Who wins the draw?": the ticket stub. It's a promise to a fan, so it takes a hold, not a
+ * tap, and there's no Undo. The seal shows the draw was locked before anyone signed; the stub
+ * tears and the winning number lands on it.
+ */
+function DrawProposal({ action }: { action: Extract<GusAction, { type: 'draw' }> }) {
+  const slug = gus.get().slug;
+  const [state, setState] = useState<'ready' | 'drawing' | 'failed' | { number: number; neighborhood: string | null }>('ready');
+  const draw = () => {
+    if (!slug) return;
+    setState('drawing');
+    api
+      .post<{ bounty: { drawn: { winner: { number: number; neighborhood: string | null } } | null } }>(`/artist/${slug}/posters`, { city: action.id, action: 'draw' })
+      .then(({ bounty }) => {
+        const w = bounty.drawn?.winner;
+        if (!w) return setState('failed');
+        haptic('commit');
+        setState(w);
+        gus.flash(`Fan #${w.number} meets you in ${action.name}`, 3200);
+      })
+      .catch(() => setState('failed'));
+  };
+  const won = typeof state === 'object' ? state : null;
+  return (
+    <div className="pc tk">
+      <span className="pc-k">The draw</span>
+      <div className={`tk-stub ${won ? 'is-torn' : ''}`}>
+        <div className="tk-main">
+          <span className="tk-admit">Admit one · {action.name}</span>
+          <b className="tk-prize">{action.prize}</b>
+          <span className="tk-odds">
+            {action.signers} fans signed, {action.chances} chances
+          </span>
+        </div>
+        <div className="tk-tail" aria-live="polite">
+          {won ? (
+            <>
+              <span>Fan</span>
+              <b>#{won.number}</b>
+              {won.neighborhood && <em>{won.neighborhood}</em>}
+            </>
+          ) : (
+            <>
+              <span>Sealed</span>
+              <code>{action.seal}</code>
+            </>
+          )}
+        </div>
+      </div>
+      <span className="lp-where">
+        {won
+          ? `I’ve told them and asked the venue for a +1. It’s on Posters and in your Logbook.`
+          : state === 'failed'
+            ? `I couldn’t draw just now. Nothing was picked; try again.`
+            : `Locked before anyone signed, so nobody can game it. Once you draw, it’s done.`}
+      </span>
+      {!won && (state === 'drawing' ? <button className="btn hot block" disabled>Drawing…</button> : <HoldKey label="Hold to draw" onDone={draw} />)}
     </div>
   );
 }
