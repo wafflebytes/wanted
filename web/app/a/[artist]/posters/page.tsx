@@ -15,7 +15,8 @@ import { Art } from '@web/components/Art';
 import { Icon } from '@web/components/Icon';
 import { Reel } from '@web/components/Reel';
 import { api } from '@web/lib/api';
-import { gus } from '@web/lib/gus';
+import { gus, type Spot } from '@web/lib/gus';
+import { haptic } from '@web/lib/haptics';
 import { shareStory } from '@web/lib/share';
 import { deals } from '@web/lib/deals';
 import { mutate, useApi } from '@web/lib/hooks';
@@ -66,6 +67,8 @@ export default function PostersPage() {
   const p = poster.data?.city.id === o?.city ? poster.data : undefined;
   const live = dealList.data?.deals.find((d) => d.city === o?.city && (d.status === 'held' || d.status === 'waiting' || d.status === 'talking')) ?? null;
   const [lifted, setLifted] = useState(false);
+  const pins = useApi<{ spots: Record<string, Spot[]> }>(`/artist/${slug}/spots`);
+  const spots = o ? (pins.data?.spots[o.city] ?? []) : [];
 
   // The wall has its own ground; the header and dock blur into it.
   useEffect(() => {
@@ -162,6 +165,37 @@ export default function PostersPage() {
             ))}
           </ol>
           <p className="fine ink-3 b-13">Put posters up here first. It’s where your people already are.</p>
+        </section>
+      )}
+
+      {o && pins.data && (
+        <section className="pw-sec">
+          <div className="section-h">
+            <h2>Where your posters go</h2>
+            {spots.length > 0 && <span className="ink-3 b-13">Picked with Gus</span>}
+          </div>
+          {spots.length ? (
+            <ol className="pw-spots card">
+              {spots.map((s, i) => (
+                <li key={s.id} style={{ ['--i' as string]: i }}>
+                  <a href={`https://maps.apple.com/?q=${encodeURIComponent(`${s.name}, ${s.address ?? o.name}`)}${s.lat !== null && s.lon !== null ? `&ll=${s.lat},${s.lon}` : ''}`} target="_blank" rel="noopener">
+                    <i aria-hidden>{i + 1}</i>
+                    <span>
+                      <b>{s.name}</b>
+                      {s.neighborhood && <em>{s.neighborhood}</em>}
+                    </span>
+                    <Icon name="location" size={18} className="ink-3" />
+                  </a>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <button className="btn light block" onClick={() => (haptic('tap'), gus.open('voice'), gus.ask(`Where should I put posters up in ${o.name}?`))}>
+              <Icon name="gus" size={18} />
+              Ask Gus where to put them up
+            </button>
+          )}
+          <p className="fine ink-3 b-13">{spots.length ? 'Bars and cafes where your fans already hang out. Ask the staff first.' : 'He looks for the bars and cafes your fans already hang out in.'}</p>
         </section>
       )}
 

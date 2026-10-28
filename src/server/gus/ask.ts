@@ -18,8 +18,12 @@ import { isOpenOn, type RoomView } from '../city';
 import { METROS } from '../score';
 import { cityData, crowdFor, mapData } from '../service';
 import { config } from '../config';
+import { pickSpots, type Spot } from '../spots';
+import { log } from '../logbook';
+import { mandateFor } from '../mandate';
 import { checkGrounded, digitize, numbersIn, wordCount, type Evidence } from './grounding';
 import { chat, LlmUnavailable, parseJson, type ChatMessage, type ToolDef } from './llm';
+import { note, recall, type Memory } from './memory';
 
 export type GusAction =
   | { type: 'tab'; tab: 'map' | 'tour' | 'pulse' | 'posters'; label: string }
@@ -27,7 +31,9 @@ export type GusAction =
   | { type: 'pitch'; id: string; name: string; label: string }
   | { type: 'deal'; id: string; name: string; roomId: string; label: string }
   | { type: 'link'; url: string; label: string }
-  | { type: 'limit'; key: 'maxDeposit' | 'minSplit'; value: number; label: string };
+  | { type: 'limit'; key: 'maxDeposit' | 'minSplit'; value: number; label: string }
+  | { type: 'quiet'; start: number; end: number; label: string }
+  | { type: 'spots'; id: string; name: string; spots: Spot[]; label: string };
 
 /** One thing Gus looked up. `found` is what he'd tell you he saw, in a few words. */
 export type GusStep = { id: string; tool: string; label: string; source: 'qloo' | 'fans' | 'wanted'; status: 'running' | 'done' | 'failed'; found: string | null; ms: number };
@@ -159,6 +165,10 @@ function dayIn(text: string): DayKey | null {
   return DAY_KEYS.find((d) => new RegExp(`\\b${d}s?\\b`).test(t) || new RegExp(`\\b${d.slice(0, 3)}\\b`).test(t)) ?? null;
 }
 
+function spotsAction(city: Metro, spots: Spot[]): GusAction {
+  return { type: 'spots', id: city.id, name: city.name, spots, label: `Pin ${spots.length} spot${spots.length === 1 ? '' : 's'} in ${city.name}` };
+}
+
 function stayLink(city: Metro, kind: 'stay' | 'eat'): GusAction {
   const q = encodeURIComponent(`${city.name}, ${city.state}`);
   return kind === 'stay'
@@ -221,6 +231,22 @@ const TOOLS: ToolDef[] = [
       parameters: { type: 'object', properties: {} },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'poster_spots',
+      description: 'Where to put up paper posters in one city: bars, coffee shops and cafes in the neighborhoods where this act’s crowd is thickest (Qloo). Use when they ask where to put posters or flyers up.',
+      parameters: { type: 'object', properties: { city: { type: 'string' } }, required: ['city'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'remember',
+      description: 'Write down something lasting the artist just told you about themselves or how they tour (nights they won’t play, their van, the band, cities to skip, how far they’ll drive). Not for questions or one-off asks.',
+      parameters: { type: 'object', properties: { fact: { type: 'string', description: 'In their words, third person, under 15 words, e.g. "Won’t play Mondays"' } }, required: ['fact'] },
+    },
+  },
 ];
 
 const LABEL: Record<string, (a: Record<string, string>) => { label: string; source: GusStep['source'] }> = {
@@ -230,6 +256,8 @@ const LABEL: Record<string, (a: Record<string, string>) => { label: string; sour
   openers: () => ({ label: 'Finding an opener your fans already like', source: 'qloo' }),
   crowd: () => ({ label: 'Seeing what else your fans love', source: 'qloo' }),
   fan_proof: () => ({ label: 'Counting signatures on your posters', source: 'fans' }),
+  poster_spots: (a) => ({ label: `Finding where your fans hang out in ${a.city}`, source: 'qloo' }),
+  remember: () => ({ label: 'Writing that down', source: 'wanted' }),
 };
 
 type Ctx = {
@@ -241,6 +269,10 @@ type Ctx = {
   evidence: Evidence;
   /** Rooms Gus has seen, per city, so a "book" action can only name a real one. */
   seenRooms: Map<string, RoomView[]>;
+  /** Poster spots Gus found, per city, so a "spots" action only pins real places. */
+  seenSpots: Map<string, Spot[]>;
+  /** What he already knows about this act from earlier conversations. */
+  memories: Memory[];
   memo: Map<string, Promise<unknown>>;
   emit: (e: GusEvent) => void;
   /** Earlier turns, newest last: only for working out which city "there" means. */
@@ -361,6 +393,24 @@ async function execTool(ctx: Ctx, name: string, args: Record<string, string>): P
     const out = { posters: cities.length, totalSignatures: total, signaturesBeforeAskingRooms: config.proof.minSignatures, cities, isDemoData: artist.isDemo };
     return { out, found: cities.length ? `${total} signatures across ${cities.length} posters` : 'no posters up yet' };
   }
+  if (name === 'poster_spots') {
+    const m = city();
+    if (!m) return notMine(args.city ?? 'That city');
+    const { spots, neighborhoods } = await pickSpots(artist, m.id);
+    ctx.seenSpots.set(m.id, spots);
+    const out = { city: `${m.name}, ${m.state}`, neighborhoods, spots: spots.map((s) => ({ name: untrusted(s.name), neighborhood: s.neighborhood })) };
+    return { out, found: spots.length ? `${spots.length} spots around ${neighborhoods.join(' and ')}` : 'nowhere I’d trust yet' };
+  }
+  if (name === 'remember') {
+    const fact = String(args.fact ?? '').slice(0, 200);
+    const m = await note(artist.id, fact);
+    if (!m) return { out: { error: 'Nothing to write down.' }, found: 'nothing to note' };
+    const known = ctx.memories.some((x) => x.fact.toLowerCase() === m.fact.toLowerCase());
+    ctx.memories = [...ctx.memories.filter((x) => x.fact !== m.fact), m];
+    if (!known)
+      await log(artist.id, { kind: 'decision', title: `Noted: ${m.fact}`, detail: 'Gus will keep this in mind. You can strike it in Settings.', source: 'artist' }).catch(() => {});
+    return { out: { saved: m.fact }, found: m.fact };
+  }
   return { out: { error: `Unknown tool ${name}` }, found: 'couldn’t check that' };
 }
 
@@ -397,6 +447,45 @@ function limitAsk(heard: string, history: GusTurn[] = []): Omit<GusAnswer, 'hear
   return { reply: cut ? `Fine. I won’t take less than ${v} percent of ticket sales. Slide it if that’s right.` : `Fine. I’ll put down up to ${v} dollars to book a night. Check the slider.`, mood: 'idle', action };
 }
 
+const hourWord = (h: number) => (h === 0 ? 'midnight' : h === 12 ? 'noon' : h < 12 ? `${h} in the morning` : `${h - 12} at night`);
+
+/**
+ * "Don't call me after 10", "no calls before 9", "keep quiet between 11 and 8": quiet hours,
+ * handed over as the real control. Evening numbers are read as pm, morning ones as am.
+ */
+async function quietAsk(artistId: string, heard: string): Promise<Omit<GusAnswer, 'heard' | 'model' | 'steps'> | null> {
+  const t = heard.toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ');
+  if (!/\b(call|ring|ping|bother|wake|disturb|text|buzz) me\b|quiet hours|keep quiet/.test(t) || !/(after|before|late|early|between|until|till|night|morning|quiet hours)/.test(t)) return null;
+  const m = await mandateFor(artistId);
+  let { quietStart: start, quietEnd: end } = m;
+  const pm = (n: number) => (n === 12 ? 0 : n < 6 ? n + 12 : n >= 6 && n <= 11 ? n + 12 : n % 24);
+  const am = (n: number) => (n === 12 ? 12 : n % 24);
+  const between = t.match(/between (\d{1,2})(?: ?(am|pm))? and (\d{1,2})(?: ?(am|pm))?/);
+  const after = t.match(/after (\d{1,2})(?: ?(am|pm))?/);
+  const before = t.match(/(?:before|until|till) (\d{1,2})(?: ?(am|pm))?/);
+  if (between) {
+    start = between[2] === 'am' ? am(+between[1]) : pm(+between[1]);
+    end = between[4] === 'pm' ? pm(+between[3]) : am(+between[3]);
+  } else {
+    if (after) start = after[2] === 'am' ? am(+after[1]) : pm(+after[1]);
+    if (before) end = before[2] === 'pm' ? pm(+before[1]) : am(+before[1]);
+    if (!after && !before) {
+      if (/late|night/.test(t)) start = Math.max(20, start - 1);
+      if (/early|morning/.test(t)) end = Math.min(11, end + 1);
+    }
+  }
+  start = Math.max(0, Math.min(23, start));
+  end = Math.max(0, Math.min(23, end));
+  return {
+    reply: `Fine. No calls from ${hourWord(start)} until ${hourWord(end)}. I keep working and tell you in the morning.`,
+    mood: 'idle',
+    action: { type: 'quiet', start, end, label: `Quiet from ${hourWord(start)} to ${hourWord(end)}` },
+  };
+}
+
+/** A lasting thing about how they tour, said plainly: write it down without a model. */
+const REMEMBER = /^(?:(?:please )?remember(?: that)?|(?:don[’']?t|do not) forget(?: that)?|keep in mind(?: that)?|note that|fyi|for the record)[, ]+(.{4,140})$/i;
+
 async function liteAgent(ctx: Ctx, heard: string): Promise<Omit<GusAnswer, 'heard' | 'model' | 'steps'>> {
   const t = norm(heard);
   const { metros, ranked } = ctx;
@@ -412,6 +501,23 @@ async function liteAgent(ctx: Ctx, heard: string): Promise<Omit<GusAnswer, 'hear
 
   const lim = limitAsk(heard, ctx.history);
   if (lim) return lim;
+  const quiet = await quietAsk(ctx.artist.id, heard);
+  if (quiet) return quiet;
+  const keep = heard.trim().match(REMEMBER);
+  if (keep) {
+    await runTool(ctx, 'remember', { fact: keep[1].replace(/[.!]+$/, '') });
+    return { reply: 'Noted. I’ll keep that in mind every time I plan for you.', mood: 'idle', action: null };
+  }
+  if (city && /(poster|flyer)/.test(t) && /(put|hang|where|spot|up|stick|staple)/.test(t)) {
+    await runTool(ctx, 'poster_spots', { city: city.name });
+    const spots = ctx.seenSpots.get(city.id) ?? [];
+    if (!spots.length) return { reply: `I can’t find good spots in ${city.name} yet. I won’t make one up.`, mood: 'unimpressed', action: null };
+    return {
+      reply: `Put them up at ${spots.slice(0, 2).map((s) => s.name).join(' and ')}. That’s where your fans in ${city.name} hang out.`,
+      mood: 'proud',
+      action: spotsAction(city, spots),
+    };
+  }
 
   if (named.length >= 2 && /( or |versus| vs |compare|better|which)/.test(` ${t} `)) {
     const [a, b] = named;
@@ -511,8 +617,10 @@ Rules:
 - When you call tools, also say one short line out loud about what you're checking ("Let me see how Ithaca's doing."), no numbers.
 - Changing what you may agree to (the biggest deposit, the smallest cut of ticket sales) needs no lookups: never say it's changed. Offer it with action "limit" and the value they asked for; they confirm it on the slider.
 - You can open one screen or start one thing. Booking: you only ASK a room for a date (action "book"); the artist approves any money later. Hotels and dinner open a search; you never claim to have booked them.
+- Asked where to put posters up: call poster_spots, name one or two places, and offer action "spots" for that city so they can pin them.
+- When the artist tells you something lasting about how they tour (nights they won't play, their van, cities to skip), call remember once, then say you've noted it. Use what you remember: never suggest a night or a city they ruled out.
 When you are done, reply with ONLY this JSON:
-{"reply": "<one or two spoken sentences, under 35 words, with the specific answer>", "mood": "idle|proud|unimpressed", "action": {"type": "none|city|tab|pitch|book|stay|eat|limit", "city": "<city name, if any>", "tab": "<map|tour|pulse|posters, if type is tab>", "room": "<exact room name from a rooms result, if type is book>", "limit": "<deposit|cut, if type is limit>", "value": <number, if type is limit>}}`;
+{"reply": "<one or two spoken sentences, under 35 words, with the specific answer>", "mood": "idle|proud|unimpressed", "action": {"type": "none|city|tab|pitch|book|spots|stay|eat|limit", "city": "<city name, if any>", "tab": "<map|tour|pulse|posters, if type is tab>", "room": "<exact room name from a rooms result, if type is book>", "limit": "<deposit|cut, if type is limit>", "value": <number, if type is limit>}}`;
 
 export async function answer(artist: ArtistRow, heard: string, screen: string | null, emit: (e: GusEvent) => void = () => {}, history: GusTurn[] = []): Promise<GusAnswer> {
   history = history.slice(-3).map((t) => ({ heard: String(t.heard ?? '').slice(0, 300), reply: String(t.reply ?? '').slice(0, 300) }));
@@ -527,6 +635,8 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     steps: [],
     evidence: { numbers: [ranked.length, ...(heard.match(/\d+/g) ?? []).map(Number)], names: [artist.name, ...ranked.slice(0, 12).map((m) => m.name)] },
     seenRooms: new Map(),
+    seenSpots: new Map(),
+    memories: await recall(artist.id).catch(() => []),
     memo: new Map(),
     emit,
     history,
@@ -539,6 +649,13 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
   if (!heard.trim()) return done({ model: 'gus-lite', reply: 'I didn’t catch anything. Hold me and talk.', mood: 'unimpressed', action: null });
   const lim = limitAsk(heard, history);
   if (lim) return done({ model: 'gus-lite', fallback: 'rule', ...lim });
+  const quiet = await quietAsk(artist.id, heard);
+  if (quiet) return done({ model: 'gus-lite', fallback: 'rule', ...quiet });
+  // What he remembers counts as something he knows: names and numbers in it are grounded.
+  for (const m of ctx.memories) {
+    ctx.evidence.names.push(m.fact);
+    ctx.evidence.numbers.push(...(m.fact.match(/\d+/g) ?? []).map(Number));
+  }
 
   const facts = [
     `Act: ${untrusted(artist.name)} (${artist.kind === 'comedy' ? 'stand-up comedian' : 'music'}).`,
@@ -546,6 +663,7 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     `Their best cities, best first: ${ranked.slice(0, 8).map((m) => `${m.name}${m.sleeper ? ' (nobody plays it yet)' : ''}`).join(', ')}.`,
     `Posters up in: ${map.opened.length ? map.opened.map((id) => metros.find((m) => m.id === id)?.name ?? id).join(', ') : 'none yet'}.`,
     artist.isDemo ? 'Signatures for this act are demo data.' : '',
+    ctx.memories.length ? `What the artist told you before (keep to it):\n${ctx.memories.map((m) => `- ${untrusted(m.fact)}`).join('\n')}` : '',
   ]
     .filter(Boolean)
     .join('\n');
@@ -620,6 +738,7 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
   else if (city && a.type === 'city') action = { type: 'city', id: city.id, name: city.name, label: `Go to ${city.name}` };
   else if (city && a.type === 'pitch') action = { type: 'pitch', id: city.id, name: city.name, label: `Pitch ${city.name}` };
   else if (city && (a.type === 'stay' || a.type === 'eat')) action = stayLink(city, a.type);
+  else if (city && a.type === 'spots' && ctx.seenSpots.get(city.id)?.length) action = spotsAction(city, ctx.seenSpots.get(city.id)!);
   else if (city && a.type === 'book') {
     // Only a room a tool actually returned for that city.
     const rooms = ctx.seenRooms.get(city.id) ?? [];
@@ -638,6 +757,9 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
         break;
       }
     }
+    const found = [...ctx.seenSpots].find(([, s]) => s.length);
+    const fm = found && metros.find((x) => x.id === found[0]);
+    if (!action && found && fm) action = spotsAction(fm, found[1]);
     const asked = citiesIn(heard, metros, map.opened)[0];
     if (!action && asked) action = { type: 'city', id: asked.id, name: asked.name, label: `Go to ${asked.name}` };
   }

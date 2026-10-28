@@ -223,6 +223,8 @@ export default function Settings() {
         </section>
       )}
 
+      <Memories slug={slug} />
+
       <section id="look">
         <div className="section-h">
           <h2>Look</h2>
@@ -342,5 +344,46 @@ function Hour({ label, value, onChange }: { label: string; value: number; onChan
         {hour(value)}
       </b>
     </label>
+  );
+}
+
+type Memory = { id: string; fact: string; at: number };
+
+/**
+ * What Gus remembers: lasting things you told him ("won't play Mondays"). He reads these before
+ * every answer. Strike one and he forgets it.
+ */
+function Memories({ slug }: { slug: string }) {
+  const url = `/artist/${slug}/memory`;
+  const mem = useApi<{ memories: Memory[] }>(url);
+  const list = mem.data?.memories ?? [];
+  const strike = async (id: string) => {
+    haptic('tap');
+    await api.post(url, { forget: id }).catch(() => {});
+    mutate(url).catch(() => {});
+  };
+  return (
+    <section id="memory">
+      <div className="section-h">
+        <h2>What Gus remembers</h2>
+      </div>
+      {list.length ? (
+        <ul className="st-group st-mem">
+          {[...list].reverse().map((m) => (
+            <li key={m.id} className="st-row">
+              <span className="st-mem-t">{m.fact}</span>
+              <button className="st-mem-x" aria-label={`Forget: ${m.fact}`} onClick={() => strike(m.id)}>
+                <Icon name="close" size={16} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="st-group">
+          <div className="st-row st-mem-empty">Nothing yet. Tell him things like “I don’t play Mondays” or “we tour in a van” and he’ll keep to them.</div>
+        </div>
+      )}
+      <p className="st-foot">He reads these before every answer. Strike one and he forgets it.</p>
+    </section>
   );
 }

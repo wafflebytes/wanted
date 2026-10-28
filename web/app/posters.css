@@ -106,3 +106,14 @@ html.on-wall { --page: #191410; --wall-hole: #191410; }
 @keyframes lift { from { opacity: 0; transform: translateY(40px) rotate(-3deg) scale(0.86); } }
 .pw-lift-acts { display: flex; gap: 10px; animation: rise var(--t-enter) var(--ease) 120ms both; }
 .pw-lift-acts .btn { min-width: 128px; }
+
+/* Where the posters go: pinned spots, numbered, each one opens in Maps. */
+.pw-spots { list-style: none; overflow: hidden; margin: 0; padding: 0; }
+.pw-spots li { animation: rise var(--t-move) var(--ease) both; animation-delay: calc(var(--i) * 50ms); }
+.pw-spots li + li { border-top: 1px solid var(--line); }
+.pw-spots a { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 8px 16px; color: inherit; text-decoration: none; }
+.pw-spots a:active { background: var(--well-bg); }
+.pw-spots i { display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%; font: 700 13px var(--display); font-style: normal; color: #fff; background: var(--wanted); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3); }
+.pw-spots span { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.pw-spots b { font: 600 15.5px/1.25 var(--display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pw-spots em { font: 500 12.5px/1.3 var(--body); font-style: normal; color: var(--ink-3); }

@@ -17,7 +17,10 @@ export type GusAction =
   | { type: 'pitch'; id: string; name: string; label: string }
   | { type: 'deal'; id: string; name: string; roomId: string; label: string }
   | { type: 'link'; url: string; label: string }
-  | { type: 'limit'; key: 'maxDeposit' | 'minSplit'; value: number; label: string };
+  | { type: 'limit'; key: 'maxDeposit' | 'minSplit'; value: number; label: string }
+  | { type: 'quiet'; start: number; end: number; label: string }
+  | { type: 'spots'; id: string; name: string; spots: Spot[]; label: string };
+export type Spot = { id: string; name: string; neighborhood: string | null; address: string | null; lat: number | null; lon: number | null };
 export type GusStep = { id: string; tool: string; label: string; source: 'qloo' | 'fans' | 'wanted'; status: 'running' | 'done' | 'failed'; found: string | null; ms: number };
 export type GusAnswer = { heard: string; reply: string; mood: 'idle' | 'proud' | 'unimpressed' | 'thinking'; action: GusAction | null; model: string; steps?: GusStep[] };
 
@@ -260,7 +263,7 @@ async function send(body: FormData | { text: string; screen: string; history?: {
   if (a.heard && a.reply) turns = [...turns.slice(-4), { heard: a.heard, reply: a.reply, at: Date.now() }];
   speak(a.reply, a.mood);
   // Still holding when the answer lands: he just takes you there (links always ask first).
-  if (state.holding && a.action && a.action.type !== 'link' && a.action.type !== 'limit') act(a.action);
+  if (state.holding && a.action && (a.action.type === 'city' || a.action.type === 'tab' || a.action.type === 'pitch' || a.action.type === 'deal')) act(a.action);
 }
 
 function act(a: GusAction) {

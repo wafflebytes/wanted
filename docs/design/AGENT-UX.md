@@ -86,7 +86,7 @@ A full-height sheet: Gus on the phone with a venue.
 
 Opens from the tray, the map card, Fan Mail, and any link with `?deal=<id>`.
 
-### 3.4 Gus puts posters up (Next)
+### 3.4 Gus puts posters up (Built: spots picked and pinned with Undo; map pins not yet)
 
 The ask: "Put Burlington's poster up near the colleges."
 
@@ -103,7 +103,7 @@ The ask: "Put Burlington's poster up near the colleges."
 The same choreography works for any rung-1 job: reorder the tour ("move Ithaca to Friday"),
 lock a night, pick the draw winner.
 
-### 3.5 Controls Gus hands you (Next, genUI)
+### 3.5 Controls Gus hands you (Built: limits and quiet hours; day chips, swap and draw next)
 
 Wanted has few knobs, so this is a short catalogue, and that's the point: Gus brings the
 control only when it's the fastest way to say yes.

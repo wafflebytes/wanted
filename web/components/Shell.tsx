@@ -10,7 +10,7 @@ import type { Deal, DealLetter, LogEntry, Mandate } from '@/lib/types';
 import type { ArtistState } from '@/ui/types';
 import { deals, useDeal } from '@web/lib/deals';
 import { haptic } from '@web/lib/haptics';
-import { gus, useGus, type GusAction } from '@web/lib/gus';
+import { gus, useGus, type GusAction, type Spot } from '@web/lib/gus';
 import { live, useLive, type Activity } from '@web/lib/live';
 import { api } from '@web/lib/api';
 import { mutate, useApi } from '@web/lib/hooks';
@@ -67,6 +67,8 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
     if (!q) return;
     u.searchParams.delete('ask');
     history.replaceState(null, '', u);
+    // This runs before the effect that wires Gus to the act, so name the act first.
+    if (gus.get().slug !== slug) gus.set({ slug });
     gus.open('voice');
     gus.ask(q.slice(0, 300));
   }, []);
@@ -111,6 +113,41 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
             });
           })
           .catch(() => gus.flash('Couldn’t change that'));
+        return;
+      }
+      if (a.type === 'quiet') {
+        const book = `/artist/${slug}/logbook`;
+        api
+          .get<{ mandate: Mandate }>(book)
+          .then(async ({ mandate }) => {
+            const was = { quietStart: mandate.quietStart, quietEnd: mandate.quietEnd };
+            await api.post(book, { mandate: { quietStart: a.start, quietEnd: a.end } });
+            mutate(book).catch(() => {});
+            haptic('commit');
+            gus.did(`Quiet ${fmtHour(a.start)} to ${fmtHour(a.end)}`, () => {
+              api.post(book, { mandate: was }).then(() => mutate(book)).catch(() => {});
+              haptic('tap');
+              gus.flash('Put it back', 1600);
+            });
+          })
+          .catch(() => gus.flash('Couldn’t change that'));
+        return;
+      }
+      if (a.type === 'spots') {
+        // Rung 1 too: pinning is a note to self, nothing leaves the app.
+        const url = `/artist/${slug}/spots`;
+        api
+          .post<{ was: Spot[] }>(url, { city: a.id, spots: a.spots })
+          .then(({ was }) => {
+            mutate(url).catch(() => {});
+            haptic('commit');
+            gus.did(`Pinned ${a.spots.length} spot${a.spots.length === 1 ? '' : 's'} in ${a.name}`, () => {
+              api.post(url, { city: a.id, spots: was }).then(() => mutate(url)).catch(() => {});
+              haptic('tap');
+              gus.flash('Unpinned', 1600);
+            });
+          })
+          .catch(() => gus.flash('Couldn’t pin those'));
         return;
       }
       if (a.type === 'tab') return router.push(`${base}${a.tab === 'map' ? '' : `/${a.tab}`}`);

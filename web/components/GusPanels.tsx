@@ -399,7 +399,110 @@ function Captions({ text, spoken }: { text: string; spoken: number }) {
  */
 function Proposal({ action }: { action: GusAction }) {
   if (action.type === 'limit') return <LimitProposal action={action} />;
+  if (action.type === 'quiet') return <QuietProposal action={action} />;
+  if (action.type === 'spots') return <SpotsProposal action={action} />;
   return <Offer action={action} />;
+}
+
+const ampm = (h: number) => (h === 0 ? '12 am' : h < 12 ? `${h} am` : h === 12 ? 'noon' : `${h - 12} pm`);
+
+/**
+ * Quiet hours, handed over: two hours you can nudge, a day strip with the quiet span lit, and
+ * your current span ghosted under it. One tap sets it; the island offers Undo.
+ */
+function QuietProposal({ action }: { action: Extract<GusAction, { type: 'quiet' }> }) {
+  const slug = gus.get().slug;
+  const book = useApi<{ mandate: Mandate }>(slug ? `/artist/${slug}/logbook` : null);
+  const [from, setFrom] = useState(action.start);
+  const [until, setUntil] = useState(action.end);
+  const m = book.data?.mandate;
+  const same = m ? m.quietStart === from && m.quietEnd === until : false;
+  const span = (a: number, b: number) => {
+    const len = (b - a + 24) % 24 || 24;
+    return a + len <= 24 ? [[a, len]] : [[a, 24 - a], [0, a + len - 24]];
+  };
+  const Step = ({ label, v, set }: { label: string; v: number; set: (h: number) => void }) => (
+    <div className="qp-h">
+      <span>{label}</span>
+      <div className="qp-step">
+        <button aria-label={`${label} earlier`} onClick={() => (haptic('tick'), set((v + 23) % 24))}>
+          <Icon name="minus" size={16} />
+        </button>
+        <b>{ampm(v)}</b>
+        <button aria-label={`${label} later`} onClick={() => (haptic('tick'), set((v + 1) % 24))}>
+          <Icon name="add" size={16} />
+        </button>
+      </div>
+    </div>
+  );
+  return (
+    <div className="pc qp">
+      <span className="pc-k">Want me to</span>
+      <p className="pc-line">
+        Keep quiet from <b className="tok">{ampm(from)}</b> until <b className="tok">{ampm(until)}</b>
+      </p>
+      <div className="qp-day" aria-hidden>
+        {m && span(m.quietStart, m.quietEnd).map(([a, l], i) => <i key={`w${i}`} className="qp-was" style={{ left: `${(a / 24) * 100}%`, width: `${(l / 24) * 100}%` }} />)}
+        {span(from, until).map(([a, l], i) => <i key={`n${i}`} className="qp-on" style={{ left: `${(a / 24) * 100}%`, width: `${(l / 24) * 100}%` }} />)}
+        <em style={{ left: '0%' }}>12 am</em>
+        <em style={{ left: '50%' }}>noon</em>
+        <em style={{ left: '100%' }}>12 am</em>
+      </div>
+      <div className="qp-row">
+        <Step label="From" v={from} set={setFrom} />
+        <Step label="Until" v={until} set={setUntil} />
+      </div>
+      <span className="lp-where">He keeps working while you sleep and tells you in the morning. This lives in Settings, under Quiet hours.</span>
+      <button className="btn hot block" disabled={same} onClick={() => (haptic('tap'), gus.act({ ...action, start: from, end: until }))}>
+        {same ? 'That’s already your quiet time' : 'Keep quiet then'}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Where the posters go: the spots Gus found, each one a row you can drop. Pinning is a note to
+ * self (nothing is sent), so it's a tap, and the island offers Undo.
+ */
+function SpotsProposal({ action }: { action: Extract<GusAction, { type: 'spots' }> }) {
+  const [keep, setKeep] = useState(() => new Set(action.spots.map((s) => s.id)));
+  const picked = action.spots.filter((s) => keep.has(s.id));
+  const toggle = (id: string) => {
+    haptic('tick');
+    setKeep((k) => {
+      const n = new Set(k);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
+  return (
+    <div className="pc sp">
+      <span className="pc-k">Where your posters go</span>
+      <p className="pc-line">
+        Pin these spots in <b className="tok">{action.name}</b>
+      </p>
+      <ul className="sp-list">
+        {action.spots.map((s, i) => (
+          <li key={s.id} style={{ ['--i' as string]: i }}>
+            <button className={`sp-row ${keep.has(s.id) ? 'on' : ''}`} onClick={() => toggle(s.id)} aria-pressed={keep.has(s.id)}>
+              <span className="sp-pin" aria-hidden>
+                <Icon name={keep.has(s.id) ? 'check' : 'add'} size={14} />
+              </span>
+              <span className="sp-txt">
+                <b>{s.name}</b>
+                {s.neighborhood && <em>{s.neighborhood}</em>}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <span className="lp-where">Places your fans already hang out. Ask the staff before you put one up.</span>
+      <button className="btn hot block" disabled={!picked.length} onClick={() => (haptic('tap'), gus.act({ ...action, spots: picked }))}>
+        {picked.length ? `Pin ${picked.length} spot${picked.length === 1 ? '' : 's'}` : 'Pick at least one'}
+      </button>
+    </div>
+  );
 }
 
 /**

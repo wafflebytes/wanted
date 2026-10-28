@@ -126,6 +126,13 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 - The objects on drawer cards (Map's next move, Tour's Gus) sit inside the card's top corner at 88 px. Breaking out over the edge got clipped by the drawer's scroll box on phone and desktop. Don't put breakout art inside a scrolling drawer.
 - Conflict radar and merch-for-the-city were tried and dropped: no keyless event API (Bandsintown 403s), and Qloo's brand answers barely change between cities.
 
+## Session 14: Gus acts in place, and remembers
+
+- **Poster spots** (AGENT-UX 3.4): Gus's `poster_spots` tool picks bars and cafes in the city's two strongest neighborhoods (Qloo hang spots, `src/server/spots.ts`). The answer card lists them as rows you can drop; Pin is a tap (nothing leaves the app), the island says `Pinned N spots in <city> · Undo`. Posters shows them under "Where your posters go" (each opens Maps), or a key that asks Gus. Route `/artist/:id/spots`.
+- **Memory**: `remember` tool writes lasting facts per act (`src/server/gus/memory.ts`, kv `gus-memory:<id>`, max 12, deduped, "None" refused). Every answer reads them as untrusted facts and counts them as grounded. Logbook gets "Noted: ..." once per fact. Settings has "What Gus remembers" with strike. Route `/artist/:id/memory`. No agent framework: the loop is ours on purpose (grounding, server policy, rules fallback).
+- **Quiet hours as genUI** (AGENT-UX 3.5): "Don't call me after 10" is parsed by rule (`quietAsk`, needs "call me"/"quiet hours" so "call the venue before Friday" doesn't trip it) and hands over a day strip with the span lit, From/Until steppers, one tap, Undo by the island.
+- Fixed: `?ask=` links on a fresh load asked `/artist/null/gus` (the ask effect ran before Gus was wired to the act). This is the link Gus hands out in Claude.
+
 ## Next steps
 
 (Tour and Posters done. Dark is the main mode: design there first, then check light. Use the material system above for every new control. Judge product and copy as well as pixels: one job per screen, one primary key, plain musician words.)
