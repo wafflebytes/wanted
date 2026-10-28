@@ -201,6 +201,24 @@ flowchart LR
 - **Outside the app.** The MCP server ([`mcp.ts`](src/server/mcp.ts)) gives Claude or ChatGPT `where_am_i_wanted`, `city_brief`, `deals`, `ask_gus` and `ask_rooms`. In Claude each answer comes back as a card you can tap ([`mcp-view.html`](src/server/mcp-view.html)).
 - **Plain words.** Every screen speaks to a musician on a first tour: one number and a sentence, no charts to decode ([`plain.ts`](src/lib/plain.ts)).
 
+## Under the hood: the agent engineering
+
+Gus isn't a chatbot with a map. Most of the work went into the parts around the model, so it can be trusted with a musician's calendar and money.
+
+| The hard part | What we built | Where |
+|---|---|---|
+| Models invent venues | A grounding check on every reply: each city, venue and number must come from a lookup, his notes or the artist. If not, the reply is dropped and a rules planner answers from the same lookups. | [`grounding.ts`](src/server/gus/grounding.ts) |
+| A next step that leads nowhere | The model can only offer an action backed by what a lookup returned, like asking a venue the `rooms` lookup found. If it names one without picking an action, the server attaches the right one. | [`ask.ts`](src/server/gus/ask.ts) |
+| Slow, rambling tool use | Our own loop: up to 4 rounds, up to 4 lookups run side by side per round, one 25-second budget for the whole answer. If time runs out, he answers from what he found instead of giving up. | [`ask.ts`](src/server/gus/ask.ts) |
+| Prompt injection | Names from lookups, the artist's own words and his notes go to the model wrapped as untrusted text, never as instructions. Limits, approvals and payments live in server code the model can't reach. | [`ask.ts`](src/server/gus/ask.ts), [`deal-scope.ts`](src/server/deal-scope.ts) |
+| Context | Each answer gets a short brief: the act, the screen they're on, their best cities, where posters are up, his notes on them, and the last few turns so "there" means the right city. | [`ask.ts`](src/server/gus/ask.ts) |
+| Memory | A `remember` lookup writes lasting facts in the artist's words, deduped and capped at 12. They're read before every answer and count as grounded. | [`memory.ts`](src/server/gus/memory.ts) |
+| Free models fail | A chain of models and keys with quota backoff, a response cache by prompt, and a rules fallback that says when it's answering. | [`llm.ts`](src/server/gus/llm.ts) |
+| Things the model shouldn't decide | Changing a limit ("make it 250") and quiet hours are parsed by rules before the model is called. How loudly to reach you is scored in code. | [`ask.ts`](src/server/gus/ask.ts), [`mandate.ts`](src/server/mandate.ts) |
+| Working with no one watching | Calls advance by the time that passed on every read, plus a scheduled sweep. Every step lands in the Logbook in plain words. | [`ambient.ts`](src/server/ambient.ts) |
+| Showing the work | Answers stream: each lookup appears as it runs, then the reply. In Claude, the same tools come back as cards you can tap. | [`mcp.ts`](src/server/mcp.ts) |
+| Knowing it works | A 25-case eval through the app's own route that checks every name and number against the raw lookups, a 12-scenario policy gate, and a live chatbot baseline. | [`evals/`](evals) |
+
 ## Evals
 
 | Eval | Result | Run it |
@@ -235,7 +253,7 @@ Not measured yet: real artist outcomes, real venue replies and ticket sales.
 
 ## Who made it
 
-I'm building this from India, for musicians in the US, so I started by listening. Over a few weeks I talked to independent artists on calls and in DMs, and read every firsthand account of DIY touring I could find. One story stuck with me. A four-piece sold out a 200-person venue in one city and played to eleven people two hours down the road, on the same tour. Same band, same songs. The only difference was where their fans happened to live, and nobody had a way to know that before booking the night. Wanted is the tool they should have had: ask the fans first, then book the venue.
+Most of what I listen to comes from artists with a few thousand monthly listeners, the ones you find three clicks deep on Bandcamp. I'm building this from India, for musicians in the US, so I started by listening to them too. Over a few weeks I talked to independent artists on calls and in DMs, and read every firsthand account of DIY touring I could find. One story stuck with me. A four-piece sold out a 200-person venue in one city and played to eleven people two hours down the road, on the same tour. Same band, same songs. The only difference was where their fans happened to live, and nobody had a way to know that before booking the night. Wanted is the tool they should have had: ask the fans first, then book the venue.
 
 Chaitanya Jha. Product and design, AI-native (IIT Patna '27, previously IBY Tokyo). I designed and built Wanted end to end: the research, the product, Gus's character and voice, the web and iPhone apps, and the agent underneath. The research behind it (customers, how touring actually works, the market) is in [docs/research](docs/research).
 
