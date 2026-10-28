@@ -237,6 +237,8 @@ Not measured yet: real artist outcomes, real venue replies and ticket sales.
 
 ## Who made it
 
+I've spent a lot of nights at small gigs, the kind where the band outnumbers the crowd for the first twenty minutes. A friend of mine plays guitar in a four-piece that sold out a 200-person venue in one city and played to eleven people two hours down the road, on the same tour. Same band, same songs. The only difference was where their fans happened to live, and nobody had a way to know that before booking the night. Wanted is the tool I wish he'd had: ask the fans first, then book the venue.
+
 Chaitanya Jha. Product and design, AI-native (IIT Patna '27, previously IBY Tokyo). I designed and built Wanted end to end: the research, the product, Gus's character and voice, the web and iPhone apps, and the agent underneath. The research behind it (customers, how touring actually works, the market) is in [docs/research](docs/research).
 
 ## Run it
