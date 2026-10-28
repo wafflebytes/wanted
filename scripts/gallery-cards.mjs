@@ -1,13 +1,16 @@
 /**
- * Devpost gallery cards (3:2) from real iPhone Safari screenshots (the iOS Simulator, 1179x2556,
- * `xcrun simctl io <device> screenshot`). Frameless, after Josh Puckett's seamless mobile Safari:
- * no device chrome, just the screen with its own corner radius, sitting on its page's colour so
- * Safari's bars, the app and the card read as one surface. Cards alternate light and dark.
+ * Devpost gallery cards (3:2). Real iPhone Safari screenshots (the iOS Simulator, 1179x2556) sit
+ * in a slim phone, and the surfaces Gus talks through (the Dynamic Island, an offer, Tap to talk)
+ * are drawn here in code from the app's own styles, filled with the live demo's real numbers.
+ * Each screen appears once. Gus's art floats around them like stickers, after App Store sets
+ * such as Mealy and Pool, and he's on the cover because that's the thumbnail.
  *
  *   node scripts/gallery-cards.mjs <shotsDir> docs/gallery
+ *
+ * Art comes from new-assets-gus/ (the 1200px sources, not committed) when it's there, else from
+ * web/public/art.
  */
 import { chromium } from 'playwright';
-import sharp from 'sharp';
 import { resolve } from 'node:path';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
@@ -15,88 +18,247 @@ const shots = resolve(process.argv[2] ?? '.data/gallery');
 const out = process.argv[3] ?? 'docs/gallery';
 const fonts = resolve('web/public/fonts');
 
+const hi = resolve('new-assets-gus');
+const art = (n) => {
+  const src = `${hi}/${n === 'obj-cassette' ? 'obj-casette' : n}.png`;
+  return `file://${existsSync(src) ? src : `${resolve('web/public/art')}/${n}.webp`}`;
+};
+const shot = (n) => `file://${shots}/${n}.png`;
+
+const icon = {
+  check: '<path d="M5 12.5l4.2 4.2L19 7" />',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
+  keys: '<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18"/>',
+  forward: '<path d="M5 12h13M13 6l6 6-6 6"/>',
+  pause: '<path d="M9 6v12M15 6v12"/>',
+  pin: '<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
+  pen: '<path d="M4 20l4-1 11-11-3-3L5 16l-1 4z"/>',
+};
+const svg = (n, s = 24) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${icon[n]}</svg>`;
+
+// ── Pieces ────────────────────────────────────────────────────────────────────
+
+/** A slim iPhone around a real screenshot. x, y are the phone's top-left in the card. */
+const phone = (name, { h = 860, x, y, rot = 0, blur = 0, z = 2 }) => {
+  const k = h / 2556, w = Math.round(1179 * k), b = Math.round(h * 0.016), r = Math.round(165 * k);
+  return `<div class="ph" style="left:${x}px; top:${y}px; width:${w + 2 * b}px; height:${h + 2 * b}px; padding:${b}px; border-radius:${r + b}px; transform:rotate(${rot}deg); z-index:${z}">
+    <div class="scr" style="border-radius:${r}px"><img src="${shot(name)}" style="${blur ? `filter: blur(${blur}px) brightness(.62) saturate(1.1); transform: scale(1.06)` : ''}">
+    <i class="isl" style="left:${402 * k}px; top:${34 * k}px; width:${373 * k}px; height:${109 * k}px"></i></div></div>`;
+};
+
+/** A piece of art, floating. */
+const sticker = (n, { x, y, s, rot = 0, z = 3, flip = false }) =>
+  `<img class="stk" src="${art(n)}" style="left:${x}px; top:${y}px; width:${s}px; transform:rotate(${rot}deg)${flip ? ' scaleX(-1)' : ''}; z-index:${z}">`;
+
+/** A small glass chip pulled out of the UI. */
+const chip = (html, { x, y, rot = 0, z = 4, tone = '' }) => `<div class="chip ${tone}" style="left:${x}px; top:${y}px; transform:rotate(${rot}deg); z-index:${z}">${html}</div>`;
+
+const at = (html, { x, y, z = 4, rot = 0, zoom = 1 }) => `<div class="at" style="left:${x}px; top:${y}px; z-index:${z}; transform:rotate(${rot}deg); zoom:${zoom}">${html}</div>`;
+
+// The Dynamic Island, as the app draws it (web/app/shell.css), at 2x.
+const island = (words, { dot = 'live', trail = '' } = {}) =>
+  `<div class="island"><span class="ig"></span><b>${words}</b>${trail ? `<span class="itrail">${trail}</span>` : ''}${dot ? `<i class="idot ${dot}"></i>` : ''}</div>`;
+const bump = (big, small) => `<div class="island bump"><span class="ig"></span><span><b>${big}</b><em>${small}</em></span></div>`;
+
+// ── Cards ─────────────────────────────────────────────────────────────────────
+
 const cards = [
   {
-    name: '0-cover', kicker: 'Wanted', title: 'Gus finds the cities that want your band.',
-    body: 'An AI tour manager for independent musicians, on Qloo’s taste graph. Fans sign the poster, then he books the venue.',
-    screens: ['home', 'fan-dark'],
+    name: '0-cover', theme: 'hot', cover: true,
+    title: 'Meet Gus, your AI tour manager.',
+    body: 'He finds the cities that want your band, gets the fans there to sign, and books the venue.',
+    stage: () => `
+      <div class="wall">WANTED</div>
+      <div class="halo" style="left:690px; top:40px; width:900px; height:900px"></div>
+      ${sticker('gus-tour-manager', { x: 780, y: 170, s: 780, z: 3 })}
+      ${at(island('Calling SPACE Gallery', { trail: 'Portland' }), { x: 712, y: 92, z: 6, zoom: 1.08 })}
+      ${chip(`<span class="ck ok">${svg('check', 22)}</span><span><b>50 of 50 signed</b><em>Ithaca opened</em></span>`, { x: 676, y: 600, rot: -4, z: 6 })}
+      ${sticker('obj-ticket', { x: 1290, y: 640, s: 230, rot: 16, z: 5 })}
+      ${sticker('pin-sleeper', { x: 1310, y: 210, s: 170, rot: 10, z: 2 })}
+      ${sticker('act-staple', { x: 640, y: 770, s: 200, rot: -12, z: 5 })}
+      ${sticker('obj-cassette', { x: 1360, y: 430, s: 150, rot: -14, z: 2 })}`,
   },
   {
-    name: '1-already-working', kicker: 'Open the app', title: 'He’s already working.',
-    body: 'Gus has been calling venues on his own. The Basement in Columbus said yes to Nov 20, and the offer is waiting for your OK.',
-    screens: ['home-dark'],
+    name: '1-island', theme: 'dark', kicker: 'Always on',
+    title: 'He works while you’re away.',
+    body: 'Gus calls venues, waits on replies and counts signatures on his own. The Dynamic Island says what he’s doing in four words, and grows when something needs you.',
+    stage: () => `
+      <div class="halo" style="left:780px; top:120px; width:760px; height:760px"></div>
+      ${phone('home-dark', { h: 900, x: 860, y: 40, blur: 16, z: 1 })}
+      ${at(island('Calling SPACE Gallery', { trail: '2:14' }), { x: 846, y: 120, z: 5, zoom: 1.12 })}
+      ${at(bump('Offer in', 'The Nocturnal Café, Ithaca'), { x: 756, y: 300, z: 5, zoom: 1.12 })}
+      ${at(`<div class="lact">
+          <div class="lact-top"><span class="ig big"></span><div><span class="kick ok">Booked</span><b>The Basement</b><em>Columbus · Fri, Nov 20</em></div></div>
+          <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+          <div class="steps-l"><span>Asked</span><span>Offer</span><span>Booked</span></div>
+          <p>Everyone who signed in Columbus hears first.</p>
+        </div>`, { x: 816, y: 520, z: 5 })}
+      ${sticker('act-phone', { x: 1290, y: 760, s: 170, rot: 12, z: 6 })}`,
   },
   {
-    name: '2-sleeper-cities', kicker: 'Where you’re wanted', title: 'He finds the cities nobody plays yet.',
-    body: 'Every US city and neighborhood is scored for your sound. He flags sleepers like Ithaca and knows which streets your fans live on.',
-    screens: ['city'],
+    name: '2-sleeper-cities', theme: 'cream', kicker: 'Where you’re wanted',
+    title: 'He finds the cities nobody plays yet.',
+    body: 'Every US city and neighborhood is scored for your sound on Qloo’s taste graph. Sleepers like Ithaca have far more fans than their size predicts.',
+    stage: () => `
+      <div class="halo" style="left:760px; top:100px; width:800px; height:800px"></div>
+      ${phone('city', { h: 880, x: 900, y: 70, rot: 3 })}
+      ${sticker('pin-sleeper', { x: 740, y: 110, s: 250, rot: -10, z: 4 })}
+      ${chip(`<span class="ck hot">${svg('pin', 22)}</span><span><b>Ithaca is a sleeper</b><em>More fans than its size predicts</em></span>`, { x: 700, y: 640, rot: -3 })}
+      ${sticker('obj-pick', { x: 1330, y: 760, s: 150, rot: 18, z: 4 })}`,
   },
   {
-    name: '3-wanted-poster', kicker: 'Proof', title: 'Fans sign the WANTED poster.',
-    body: '26 signed in Burlington so far. At fifty, Gus writes to the venues that fit you and skips the ones that are closed that night.',
-    screens: ['fan-dark'],
+    name: '3-wanted-poster', theme: 'dark', kicker: 'Proof',
+    title: 'Fans sign the WANTED poster.',
+    body: 'Each signature is a fan saying “come play here,” with their neighborhood. At fifty, Gus asks the venues that fit you.',
+    stage: () => `
+      <div class="halo" style="left:780px; top:100px; width:780px; height:780px"></div>
+      ${phone('fan-dark', { h: 880, x: 930, y: 70, rot: -3 })}
+      ${chip(`<span class="ck pen">${svg('pen', 20)}</span><span><b>Signed</b><em>Old North End</em></span>`, { x: 730, y: 250, rot: -4 })}
+      ${chip(`<span class="ck pen">${svg('pen', 20)}</span><span><b>Signed</b><em>South End</em></span>`, { x: 690, y: 380, rot: 2 })}
+      ${chip(`<span class="ck pen">${svg('pen', 20)}</span><span><b>Signed</b><em>Downtown</em></span>`, { x: 750, y: 510, rot: -2 })}
+      ${sticker('act-staple', { x: 1300, y: 690, s: 230, rot: 12, z: 4 })}
+      ${sticker('badge-fifty', { x: 740, y: 680, s: 190, rot: -10, z: 4 })}`,
   },
   {
-    name: '4-one-decision', kicker: 'The deal', title: 'You make one decision.',
-    body: 'He haggled inside your limits: you keep 71% of ticket sales, and a $110 deposit locks in the date. Slide to pay against that exact offer. Test mode, so no real money moves.',
-    screens: ['deal'],
+    name: '4-one-decision', theme: 'cream', kicker: 'The deal',
+    title: 'You make one decision.',
+    body: 'Gus haggles inside your limits and brings back one offer. A deposit locks in that exact date, and if the terms change, your yes is void. Test mode, so no real money moves.',
+    stage: () => `
+      <div class="halo" style="left:760px; top:90px; width:800px; height:800px"></div>
+      ${at(`<div class="approve">
+          <div class="ap-top"><img src="${art('act-deposit')}"><div><span class="kick">Needs your OK</span><b class="amt">$80</b><em>deposit to lock in the date at SPACE Gallery</em></div></div>
+          <dl><div><dt>Pay</dt><dd>SPACE Gallery</dd></div><div><dt>Date</dt><dd>Thu, Dec 10</dd></div><div><dt>Your cut</dt><dd>71% of ticket sales</dd></div><div><dt>Venue size</dt><dd>About 150 people</dd></div></dl>
+          <p class="ap-next">Then the date is yours, and everyone who signed in Portland hears first.</p>
+          <div class="slide"><span class="slide-fill"></span><span class="slide-l">Slide to pay $80</span><span class="knob">${svg('forward', 26)}</span></div>
+          <div class="ap-no">Not this one</div>
+          <div class="ap-fine">Test mode: no real money moves.</div>
+        </div>`, { x: 940, y: 60, z: 3, zoom: 0.9 })}
+      ${chip(`<span class="ck ok">${svg('check', 22)}</span><span><b>Inside your limits</b><em>At least 70%, deposit under $200</em></span>`, { x: 730, y: 850, rot: -3, z: 5 })}
+      ${sticker('self-approved', { x: 1330, y: 40, s: 190, rot: 14, z: 5 })}`,
   },
   {
-    name: '5-posters', kicker: 'Posters', title: 'Every city gets its own wall.',
-    body: 'In Burlington, The Flynn already said yes to Dec 10. Once you OK it, everyone who signed hears first.',
-    screens: ['posters-dark'],
+    name: '5-fan-mail', theme: 'dark', kicker: 'Fan Mail',
+    title: 'Your week, as a letter.',
+    body: 'Open it with your coffee: how the week felt, one big number, and the mail that needs you. Then the cities that are almost there and the newest signatures.',
+    stage: () => `
+      <div class="halo" style="left:780px; top:100px; width:780px; height:780px"></div>
+      ${phone('mail-dark', { h: 880, x: 920, y: 70, rot: 3 })}
+      ${sticker('empty-mail', { x: 720, y: 140, s: 260, rot: -12, z: 4 })}
+      ${sticker('act-reply', { x: 1320, y: 700, s: 190, rot: 12, z: 4 })}`,
   },
   {
-    name: '6-ask-gus', kicker: 'Ask anything', title: 'He checks before he answers.',
-    body: 'Ask which Burlington venues are open on a Tuesday. He names The Flynn, skips Monkey House because it’s closed that night, and offers to ask for the date.',
-    screens: ['gus'],
+    name: '6-ask-gus', theme: 'cream', kicker: 'Ask anything',
+    title: 'He checks before he answers.',
+    body: 'Tap to talk and ask which Burlington venues are open on a Tuesday. He looks it up first, names The Flynn, and skips Monkey House because it’s closed that night.',
+    stage: () => {
+      const reply = 'The Flynn fits you best and it’s open Tuesdays. Monkey House is closed that night, so I skipped it. Want me to ask The Flynn for a date?';
+      const words = reply.split(' ');
+      const lit = 17;
+      return `
+      <div class="halo" style="left:760px; top:90px; width:800px; height:800px"></div>
+      ${at(`<div class="voice">
+          <div class="q">Which Burlington venues are open on a Tuesday?</div>
+          <ul class="look"><li><span class="ck ok sm">${svg('check', 14)}</span>Venues that fit you<em>Burlington</em></li><li><span class="ck ok sm">${svg('check', 14)}</span>Hours on a Tuesday<em>Monkey House closed</em></li></ul>
+          <p class="cap">${words.map((w, i) => `<span class="${i < lit ? 'lit' : ''}">${w}</span>`).join(' ')}</p>
+          <div class="prop">Ask The Flynn for a date ${svg('forward', 20)}</div>
+          <div class="vbar"><span class="side">${svg('keys', 22)}</span><span class="tk"><span class="ring"></span><img src="${art('gus-glyph')}"></span><span class="side">${svg('close', 22)}</span></div>
+          <div class="tcap">Tap to talk</div>
+        </div>`, { x: 820, y: 40, z: 3 })}
+      ${sticker('gus-listening', { x: 1250, y: 520, s: 330, rot: 0, z: 5 })}`;
+    },
   },
   {
-    name: '7-logbook', kicker: 'Logbook', title: 'Everything he did, written down.',
-    body: 'Every call, offer and yes is on the record. This week one thing needed you, and Gus handled the rest.',
-    screens: ['logbook-dark'],
+    name: '7-logbook', theme: 'dark', kicker: 'Logbook',
+    title: 'Everything he did, written down.',
+    body: 'Every call, offer and yes, in plain words, with a dot for who made the call. Milestones collect on the shelf as the tour comes together.',
+    stage: () => `
+      <div class="halo" style="left:780px; top:100px; width:780px; height:780px"></div>
+      ${phone('logbook-dark', { h: 880, x: 930, y: 70, rot: -3 })}
+      ${chip(`<span class="ck hot">${svg('check', 20)}</span><span><b>Asked The Flynn while you were away</b><em>They came back with an offer</em></span>`, { x: 780, y: 600, rot: -3, z: 5 })}
+      ${sticker('badge-booked', { x: 730, y: 150, s: 200, rot: -12, z: 4 })}
+      ${sticker('badge-first-poster', { x: 1330, y: 100, s: 160, rot: 12, z: 4 })}
+      ${sticker('badge-fifty', { x: 1320, y: 730, s: 170, rot: -8, z: 4 })}`,
   },
   {
-    name: '8-how-it-works', kicker: 'How Gus works', title: 'Taste data in, one yes out.',
+    name: '8-how-it-works', theme: 'cream', kicker: 'How Gus works',
+    title: 'Taste data in, one yes out.',
     body: 'Qloo tells him where your crowd is. Fans prove it on the poster. Gus does the asking, and the money waits for you.',
-    theme: 'light', visual: 'how',
+    stage: () => {
+      const steps = [
+        ['obj-cassette', 'Your sound', 'Paste a Spotify, Apple Music or Bandcamp link.'],
+        ['pin-sleeper', 'Qloo’s taste graph', 'Every US city and neighborhood scored for it.'],
+        ['act-staple', 'The WANTED poster', 'Fans sign with their neighborhood. Fifty opens the city.'],
+        ['act-phone', 'Gus asks the venues', 'Only venues a lookup returned, never past your limits.'],
+        ['act-deposit', 'Your yes', 'The deposit is tied to that exact offer.'],
+      ];
+      return `<div class="halo" style="left:760px; top:100px; width:800px; height:800px"></div>
+        <div class="how">${steps.map(([a, t, d], k) => `<div class="tok" style="margin-left:${[0, 40, 80, 40, 0][k]}px"><span class="num">${k + 1}</span><img src="${art(a)}"><div><b>${t}</b><small>${d}</small></div></div>`).join('')}</div>
+        ${sticker('gus-working', { x: 1270, y: 650, s: 260, z: 5 })}`;
+    },
   },
   {
-    name: '9-with-qloo', kicker: 'Why taste data', title: 'A plain chatbot gets most venues wrong.',
+    name: '9-with-qloo', theme: 'dark', kicker: 'Why taste data',
+    title: 'A plain chatbot gets most venues wrong.',
     body: 'We asked one for venues in 8 cities and checked each. 46% held up. In Ithaca it was 1 of 8, and one was in Illinois.',
-    theme: 'dark', visual: 'versus',
+    stage: () => `<div class="halo" style="left:760px; top:100px; width:800px; height:800px"></div>
+      <div class="vs">
+        <div class="rcpt"><div class="rh">A plain chatbot<span>Ithaca</span></div>
+          <div class="big bad">1 <i>of</i> 8</div><div class="cap2">venues checked out</div>
+          <div class="dots"><b class="ok">✓</b>${'<b>✕</b>'.repeat(7)}</div>
+          <p>Some were closed for good, some were dark that night, and one was in Illinois.</p></div>
+        <div class="rcpt good"><div class="rh">Gus on Qloo<span>Ithaca</span></div>
+          <div class="big">Every</div><div class="cap2">venue came from a lookup</div>
+          <p>If Qloo didn’t return a place, Gus doesn’t say it. He checks the hours too.</p>
+          <img class="stamp" src="${art('self-approved')}"></div>
+      </div>
+      ${sticker('gus-oops', { x: 700, y: 690, s: 250, rot: -6, z: 5 })}`,
   },
   {
-    name: '10-loop', kicker: 'Why build all this', title: 'Every show makes the next one easier.',
+    name: '10-loop', theme: 'hot', kicker: 'Why build all this',
+    title: 'Every show makes the next one easier.',
     body: 'Signers fill the venue, the venue pays the band, and the crowd that came signs the next poster. Venues get nights that sell, and fans get the show in their own town.',
-    theme: 'light', visual: 'loop',
+    stage: () => {
+      const nodes = [['act-staple', 'Fans sign'], ['act-phone', 'Gus asks venues'], ['obj-ticket', 'The show sells'], ['act-deposit', 'The band gets paid'], ['act-megaphone', 'The crowd spreads it']];
+      const R = 300, C = 380, ox = 740, oy = 120;
+      return `<div class="loop" style="left:${ox}px; top:${oy - 10}px"><svg viewBox="0 0 760 760" width="760" height="760"><defs><marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#FFF4E8"/></marker></defs>
+        ${nodes.map((_, k) => {
+          const a0 = (k / nodes.length) * 2 * Math.PI - Math.PI / 2 + 0.36, a1 = ((k + 1) / nodes.length) * 2 * Math.PI - Math.PI / 2 - 0.36;
+          const p = (a) => `${C + R * Math.cos(a)} ${C + R * Math.sin(a)}`;
+          return `<path d="M${p(a0)} A${R} ${R} 0 0 1 ${p(a1)}" fill="none" stroke="#FFF4E8" stroke-width="4" stroke-dasharray="2 12" stroke-linecap="round" marker-end="url(#ah)"/>`;
+        }).join('')}</svg>
+        <img class="hub" src="${art('gus-proud')}">
+        ${nodes.map(([a, t], k) => {
+          const ang = (k / nodes.length) * 2 * Math.PI - Math.PI / 2;
+          return `<div class="node" style="left:${C + R * Math.cos(ang)}px; top:${C + R * Math.sin(ang)}px"><img src="${art(a)}"><b>${t}</b></div>`;
+        }).join('')}</div>`;
+    },
   },
   {
-    name: '11-in-claude', kicker: 'Gus in Claude', title: 'Ask him from Claude too.',
-    body: 'Add Gus as a connector and he answers as a card: 26 of 50 signed in Burlington, where your crowd lives, the venues that fit. Paying always comes back to Wanted for your yes.',
-    screens: ['claude'], optional: true,
+    name: '11-in-claude', theme: 'cream', kicker: 'Gus in Claude',
+    title: 'Ask him from Claude too.',
+    body: 'Add Gus as a connector and he answers as a card: who signed, where your crowd lives, the venues that fit. Paying always comes back to Wanted for your yes.',
+    optional: 'claude',
+    stage: () => `
+      <div class="halo" style="left:780px; top:100px; width:780px; height:780px"></div>
+      ${phone('claude', { h: 880, x: 920, y: 70, rot: 3 })}
+      ${sticker('gus-phone', { x: 690, y: 470, s: 330, rot: -4, z: 4 })}
+      ${chip(`<span class="ck ok">${svg('check', 20)}</span><span><b>No tool can pay</b><em>Your yes stays in Wanted</em></span>`, { x: 720, y: 220, rot: -3, z: 5 })}`,
   },
   {
-    name: '12-try-gus', kicker: 'Try it', title: 'Meet Gus on your phone.',
-    body: 'Scan for the live demo with Maya Ortiz’s tour. To ask him from Claude, add trywanted.vercel.app/api/mcp as a connector.',
-    theme: 'dark', visual: 'qr',
+    name: '12-try-gus', theme: 'hot', kicker: 'Try it',
+    title: 'Meet Gus on your phone.',
+    body: 'Scan for the live demo with Maya Ortiz’s tour already running. No sign-up. To ask him from Claude, add trywanted.vercel.app/api/mcp as a connector.',
+    stage: () => `
+      <div class="try"><div class="qr">${readFileSync(`${shots}/qr.svg`, 'utf8')}</div><b>trywanted.vercel.app</b></div>
+      ${sticker('gus-idle', { x: 1150, y: 380, s: 420, z: 5 })}
+      ${sticker('obj-ticket', { x: 740, y: 700, s: 180, rot: -16, z: 6 })}`,
   },
 ];
 
-// The page colour along the screen's edge (what Safari samples for its bars) becomes the card.
-async function edge(shot) {
-  const data = await sharp(`${shots}/${shot}.png`).extract({ left: 600, top: 8, width: 1, height: 1 }).removeAlpha().raw().toBuffer();
-  const [r, g, b] = data;
-  return { css: `rgb(${r} ${g} ${b})`, dark: 0.299 * r + 0.587 * g + 0.114 * b < 128 };
-}
+// ── Styles ────────────────────────────────────────────────────────────────────
 
-// iPhone 15 screen: 1179x2556 px, 55pt corners at 393pt wide. The simulator leaves the Dynamic
-// Island out of some captures, so every screen gets it drawn back in the same place.
-const screen = (shot, h) => {
-  const k = h / 2556;
-  return `<div class="scr" style="width:${Math.round(1179 * k)}px; height:${h}px; border-radius:${Math.round(165 * k)}px">
-    <img src="file://${shots}/${shot}.png"><i class="isl" style="left:${402 * k}px; top:${34 * k}px; width:${373 * k}px; height:${109 * k}px"></i></div>`;
-};
+const grain = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>')}")`;
 
 const css = `
 @font-face { font-family: WR; src: url(file://${fonts}/WantedRounded-600.woff2); font-weight: 600; }
@@ -105,146 +267,155 @@ const css = `
 @font-face { font-family: WR; src: url(file://${fonts}/WantedRounded-900.woff2); font-weight: 900; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { width: 1500px; height: 1000px; overflow: hidden; font-family: WR, system-ui; }
-/* Text and screen sit together as one centred group. */
-.card { position: relative; width: 1500px; height: 1000px; background: var(--bg); color: var(--ink); overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 120px; }
-.light { --ink: #15130F; --ink2: rgba(21,19,15,.62); --hair: rgba(21,19,15,.09); --drop: rgba(60,40,20,.18); }
-.dark { --ink: #F3EFE6; --ink2: rgba(243,239,230,.62); --hair: rgba(243,239,230,.1); --drop: rgba(0,0,0,.55); }
-.text { flex: none; width: 640px; align-self: stretch; position: relative; display: flex; flex-direction: column; justify-content: center; }
-.card.cover { gap: 72px; }
-.cover .text { width: 520px; }
-.cover h1 { font-size: 70px; }
-.kicker { font-weight: 800; font-size: 22px; letter-spacing: .14em; text-transform: uppercase; color: #F2541B; margin-bottom: 26px; }
-h1 { font-weight: 900; font-size: 76px; line-height: 1.03; letter-spacing: -.028em; text-wrap: balance; }
-.text p { margin-top: 28px; font-weight: 600; font-size: 28px; line-height: 1.42; color: var(--ink2); max-width: 560px; text-wrap: pretty; }
-.foot { position: absolute; left: 0; bottom: 54px; font-weight: 700; font-size: 19px; color: var(--ink2); opacity: .75; }
-.stage { flex: none; display: flex; gap: 36px; align-items: center; }
-.scr { position: relative; overflow: hidden; flex: none; box-shadow: 0 0 0 1.5px var(--hair), 0 50px 90px -40px var(--drop), 0 20px 40px -24px var(--drop); }
+.card { position: relative; width: 1500px; height: 1000px; overflow: hidden; background: var(--bg); color: var(--ink); }
+.card::after { content: ''; position: absolute; inset: 0; background: ${grain}; opacity: var(--grain); mix-blend-mode: overlay; pointer-events: none; z-index: 20; }
+.cream { --bg: radial-gradient(120% 90% at 20% 10%, #F8F3EA, #EDE5D6); --ink: #15130F; --ink2: rgba(21,19,15,.6); --acc: #E8490F; --hair: rgba(21,19,15,.09); --drop: rgba(70,40,10,.22); --halo: rgba(255,120,60,.30); --grain: .5;
+  --p1: #FFFDF8; --p2: #F6F1E7; --hl: #fff; }
+.dark { --bg: radial-gradient(120% 90% at 20% 10%, #1D1A16, #0D0C0A); --ink: #F5F0E6; --ink2: rgba(245,240,230,.6); --acc: #FF6A2B; --hair: rgba(245,240,230,.1); --drop: rgba(0,0,0,.6); --halo: rgba(255,90,31,.24); --grain: .35;
+  --p1: #27231E; --p2: #1C1915; --hl: rgba(255,255,255,.07); }
+.hot { --bg: radial-gradient(90% 90% at 72% 42%, #FF9A5C 0%, #FF5A1F 48%, #E2430C 100%); --ink: #FFF7EE; --ink2: rgba(255,247,238,.84); --acc: #FFF7EE; --hair: rgba(80,20,0,.16); --drop: rgba(110,30,0,.42); --halo: rgba(255,214,170,.42); --grain: .45;
+  --p1: #FFFDF8; --p2: #F6F1E7; --hl: #fff; }
+
+.text { position: absolute; left: 104px; top: 0; bottom: 0; width: 590px; display: flex; flex-direction: column; justify-content: center; z-index: 10; }
+.kicker { align-self: flex-start; font-weight: 800; font-size: 21px; letter-spacing: .13em; text-transform: uppercase; color: var(--acc); margin-bottom: 26px; }
+h1 { font-weight: 900; font-size: 78px; line-height: 1.02; letter-spacing: -.03em; text-wrap: balance; }
+.text p { margin-top: 28px; font-weight: 600; font-size: 27px; line-height: 1.42; color: var(--ink2); text-wrap: pretty; }
+.foot { position: absolute; left: 104px; bottom: 50px; font-weight: 700; font-size: 19px; color: var(--ink2); opacity: .8; z-index: 10; display: flex; align-items: center; gap: 12px; }
+.foot img { width: 34px; height: 34px; border-radius: 50%; }
+
+.ph { position: absolute; background: linear-gradient(145deg, #3B3935, #0B0B0A 30%, #161514 70%, #3a3834); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.14), 0 0 0 1px rgba(0,0,0,.35), 0 60px 100px -40px var(--drop), 0 24px 40px -20px var(--drop); }
+.scr { position: relative; width: 100%; height: 100%; overflow: hidden; background: #000; }
 .scr img { display: block; width: 100%; height: 100%; }
 .isl { position: absolute; border-radius: 999px; background: #000; }
-.two .scr:last-child { margin-top: 90px; }
-`;
+.stk { position: absolute; filter: drop-shadow(0 22px 26px var(--drop)) drop-shadow(0 6px 8px var(--drop)); }
+.halo { position: absolute; border-radius: 50%; background: radial-gradient(circle, var(--halo), transparent 64%); z-index: 0; }
+.at { position: absolute; }
 
-// Drawn cards: paper tokens with our own art, on the welcome screen's colours.
-const art = (n) => `file://${resolve('web/public/art')}/${n}.webp`;
-const themes = { light: 'rgb(239 233 221)', dark: 'rgb(14 13 11)' };
+.chip { position: absolute; display: flex; align-items: center; gap: 16px; padding: 16px 28px 16px 16px; border-radius: 999px; background: rgba(255,253,248,.94); color: #15130F; box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(21,19,15,.06), 0 28px 50px -22px rgba(40,20,0,.5), 0 8px 16px -10px rgba(40,20,0,.3); backdrop-filter: blur(20px); white-space: nowrap; }
+.chip b { display: block; font-weight: 800; font-size: 25px; letter-spacing: -.01em; }
+.chip em { display: block; font-style: normal; font-weight: 600; font-size: 19px; color: rgba(21,19,15,.58); margin-top: 2px; }
+.ck { flex: none; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+.ck.ok { background: linear-gradient(180deg, #2FB673, #1F9D63); }
+.ck.hot { background: linear-gradient(180deg, #FF7637, #F2510F); }
+.ck.pen { background: #15130F; }
+.ck.sm { width: 24px; height: 24px; }
 
-const visuals = {
-  how: () => {
-    const steps = [
-      ['obj-cassette', 'Your sound', 'Paste a Spotify, Apple Music or Bandcamp link.'],
-      ['pin-sleeper', 'Qloo’s taste graph', 'Every US city and neighborhood scored for it.'],
-      ['act-staple', 'The WANTED poster', 'Fans sign with their neighborhood. Fifty opens the city.'],
-      ['act-phone', 'Gus asks the venues', 'Only venues a lookup returned, never past your limits.'],
-      ['act-deposit', 'Your yes', 'The deposit is tied to that exact offer.'],
-    ];
-    return `<div class="how">${steps.map(([a, t, d], k) => `
-      <div class="tok"><span class="num">${k + 1}</span><img src="${art(a)}"><div><b>${t}</b><small>${d}</small></div></div>`).join('')}</div>`;
-  },
-  versus: () => {
-    return `<div class="vs">
-      <div class="rcpt"><div class="rh">A plain chatbot<span>Ithaca</span></div>
-        <div class="big bad">1 <i>of</i> 8</div><div class="cap">venues checked out</div>
-        <div class="dots"><b class="ok">✓</b>${'<b>✕</b>'.repeat(7)}</div>
-        <p>Some were closed for good, some were dark that night, and one was in Illinois.</p></div>
-      <div class="rcpt good"><div class="rh">Gus on Qloo<span>Ithaca</span></div>
-        <div class="big">Every</div><div class="cap">venue came from a lookup</div>
-        <p>If Qloo didn’t return a place, Gus doesn’t say it. He checks the hours too, so he never pitches a venue that’s closed that night.</p>
-        <img class="stamp" src="${art('self-approved')}"></div>
-    </div>`;
-  },
-  loop: () => {
-    const nodes = [
-      ['act-staple', 'Fans sign'],
-      ['act-phone', 'Gus asks venues'],
-      ['obj-ticket', 'The show sells'],
-      ['act-deposit', 'The band gets paid'],
-      ['act-megaphone', 'The crowd spreads it'],
-    ];
-    const R = 290, C = 370;
-    return `<div class="loop"><svg viewBox="0 0 740 740"><defs><marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#F2541B"/></marker></defs>
-      ${nodes.map((_, k) => {
-        const a0 = (k / nodes.length) * 2 * Math.PI - Math.PI / 2 + 0.36, a1 = ((k + 1) / nodes.length) * 2 * Math.PI - Math.PI / 2 - 0.36;
-        const p = (a) => `${C + R * Math.cos(a)} ${C + R * Math.sin(a)}`;
-        return `<path d="M${p(a0)} A${R} ${R} 0 0 1 ${p(a1)}" fill="none" stroke="#F2541B" stroke-width="4" stroke-dasharray="2 12" stroke-linecap="round" marker-end="url(#ah)"/>`;
-      }).join('')}</svg>
-      <div class="hub"><img src="${art('gus-proud')}"></div>
-      ${nodes.map(([a, t], k) => {
-        const ang = (k / nodes.length) * 2 * Math.PI - Math.PI / 2;
-        return `<div class="node" style="left:${C + R * Math.cos(ang)}px; top:${C + R * Math.sin(ang)}px"><img src="${art(a)}"><b>${t}</b></div>`;
-      }).join('')}</div>`;
-  },
-  qr: () => `<div class="try"><div class="qr">${readFileSync(`${shots}/qr.svg`, 'utf8')}</div>
-    <div class="tryfoot"><img src="${art('gus-tour-manager')}"><div><b>trywanted.vercel.app</b><small>No sign-up. Maya’s tour is already running.</small></div></div></div>`,
-};
+/* Dynamic Island */
+.island { display: inline-flex; align-items: center; gap: 14px; height: 76px; padding: 0 30px 0 12px; border-radius: 999px; background: #0A0908; color: #F6F4EF; white-space: nowrap;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), inset 0 2px 0 rgba(255,255,255,.08), 0 40px 70px -24px rgba(0,0,0,.7), 0 10px 20px -10px rgba(0,0,0,.5); }
+.ig { flex: none; width: 54px; height: 54px; border-radius: 50%; background: #2A2622 url(${art('gus-glyph')}) center 30% / 118% no-repeat; }
+.ig.big { width: 84px; height: 84px; }
+.island b { font-weight: 700; font-size: 29px; letter-spacing: -.01em; }
+.itrail { font-weight: 800; font-size: 26px; color: rgba(246,244,239,.62); font-variant-numeric: tabular-nums; }
+.idot { width: 14px; height: 14px; border-radius: 50%; background: #FF5A1F; box-shadow: 0 0 0 7px rgba(255,90,31,.22); }
+.island.bump { height: 128px; border-radius: 54px; padding: 0 44px 0 22px; gap: 20px; }
+.bump .ig { width: 80px; height: 80px; }
+.bump b { display: block; font-weight: 900; font-size: 44px; letter-spacing: -.02em; }
+.bump em { display: block; font-style: normal; font-weight: 600; font-size: 23px; color: rgba(246,244,239,.62); margin-top: 6px; }
+.lact { width: 560px; padding: 32px 34px 30px; border-radius: 58px; background: #0A0908; color: #F6F4EF; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), inset 0 2px 0 rgba(255,255,255,.08), 0 50px 90px -30px rgba(0,0,0,.8); }
+.lact-top { display: flex; gap: 20px; align-items: center; }
+.kick { display: block; font-weight: 800; font-size: 18px; letter-spacing: .12em; text-transform: uppercase; color: #FF8A4C; }
+.kick.ok { color: #4CD38C; }
+.lact b { display: block; font-weight: 900; font-size: 40px; letter-spacing: -.02em; margin-top: 4px; }
+.lact em { display: block; font-style: normal; font-weight: 600; font-size: 22px; color: rgba(246,244,239,.62); margin-top: 4px; }
+.steps { display: flex; gap: 10px; margin-top: 26px; }
+.steps i { flex: 1; height: 10px; border-radius: 9px; background: rgba(246,244,239,.16); }
+.steps i.on { background: linear-gradient(90deg, #2FB673, #4CD38C); }
+.steps-l { display: flex; justify-content: space-between; margin-top: 10px; font-weight: 700; font-size: 18px; color: rgba(246,244,239,.5); }
+.lact p { margin-top: 18px; font-weight: 600; font-size: 21px; color: rgba(246,244,239,.75); }
 
-const drawn = `
-.tok, .rcpt, .node, .try { background: linear-gradient(180deg, var(--p1), var(--p2)); box-shadow: inset 0 1px 0 var(--hl), 0 0 0 1px var(--hair), 0 24px 40px -26px var(--drop), 0 6px 12px -8px var(--drop); }
-.light { --p1: #FFFDF8; --p2: #F6F1E7; --hl: #fff; }
-.dark { --p1: #25211C; --p2: #1B1814; --hl: rgba(255,255,255,.06); }
-.how { width: 640px; display: flex; flex-direction: column; gap: 22px; position: relative; }
-.how::before { content: ''; position: absolute; left: 62px; top: 60px; bottom: 60px; border-left: 4px dotted #F2541B; opacity: .7; }
-.tok { position: relative; display: flex; align-items: center; gap: 22px; padding: 18px 28px 18px 18px; border-radius: 30px; }
-.tok img { width: 88px; height: 88px; object-fit: contain; flex: none; filter: drop-shadow(0 8px 10px var(--drop)); }
-.tok b { display: block; font-weight: 800; font-size: 30px; letter-spacing: -.01em; }
-.tok small { display: block; margin-top: 4px; font-weight: 600; font-size: 21px; color: var(--ink2); }
-.num { position: absolute; left: -14px; top: -10px; width: 36px; height: 36px; border-radius: 50%; background: #F2541B; color: #fff; font-weight: 900; font-size: 19px; display: grid; place-items: center; box-shadow: 0 4px 10px -4px rgba(242,84,27,.8); }
-.dots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
-.dots b { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 17px; font-weight: 900; color: #F2541B; background: rgba(242,84,27,.12); }
-.dots b.ok { color: #2E9E5B; background: rgba(46,158,91,.14); }
-.vs { display: flex; gap: 24px; align-items: flex-start; }
+/* The offer (web/components/Approval.tsx) */
+.approve { width: 590px; padding: 36px 38px 28px; border-radius: 44px; background: linear-gradient(180deg, #FFFFFF, #FBF8F2); color: #15130F; box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(21,19,15,.06), 0 60px 100px -40px rgba(70,40,10,.45), 0 20px 40px -20px rgba(70,40,10,.25); }
+.ap-top { display: flex; gap: 22px; align-items: center; }
+.ap-top img { width: 112px; height: 112px; object-fit: contain; filter: drop-shadow(0 12px 14px rgba(70,40,10,.3)); }
+.approve .kick { color: #C2410C; }
+.amt { display: block; font-weight: 900; font-size: 76px; line-height: 1; letter-spacing: -.035em; margin-top: 6px; }
+.ap-top em { display: block; font-style: normal; font-weight: 600; font-size: 21px; color: #6B675F; margin-top: 6px; }
+.approve dl { margin-top: 26px; border-radius: 26px; background: #F4F1EA; padding: 6px 24px; }
+.approve dl div { display: flex; justify-content: space-between; padding: 15px 0; font-size: 23px; }
+.approve dl div + div { border-top: 1.5px solid rgba(21,19,15,.07); }
+.approve dt { font-weight: 600; color: #6B675F; }
+.approve dd { font-weight: 800; }
+.ap-next { margin-top: 20px; font-weight: 600; font-size: 21px; line-height: 1.4; color: #6B675F; }
+.slide { position: relative; height: 92px; margin-top: 24px; border-radius: 999px; background: #ECE9E2; box-shadow: inset 0 2px 4px rgba(20,16,8,.1); overflow: hidden; }
+.slide-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 92px; border-radius: 999px; background: linear-gradient(90deg, rgba(255,118,55,.15), rgba(255,118,55,.42)); }
+.slide-l { position: absolute; inset: 0; display: grid; place-items: center; padding-left: 70px; font-weight: 800; font-size: 25px; color: #15130F; opacity: .55; }
+.knob { position: absolute; left: 7px; top: 7px; width: 78px; height: 78px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: radial-gradient(120% 80% at 50% 0%, rgba(255,236,220,.28), transparent 60%), linear-gradient(180deg, #FF7637, #F2510F); box-shadow: inset 0 1px 0 rgba(255,224,200,.6), 0 10px 20px -8px rgba(200,60,0,.7); }
+.ap-no { text-align: center; margin-top: 16px; font-weight: 700; font-size: 22px; color: #6B675F; }
+.ap-fine { text-align: center; margin-top: 8px; font-weight: 600; font-size: 17px; color: #A29E95; }
+
+/* Tap to talk (web/components/GusPanels.tsx) */
+.voice { width: 560px; padding: 34px 34px 28px; border-radius: 48px; background: linear-gradient(180deg, #FFFFFF, #FAF7F1); color: #15130F; box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(21,19,15,.06), 0 60px 100px -40px rgba(70,40,10,.45), 0 20px 40px -20px rgba(70,40,10,.25); }
+.q { margin-left: auto; width: fit-content; max-width: 420px; padding: 18px 24px; border-radius: 28px 28px 8px 28px; background: #15130F; color: #F6F4EF; font-weight: 700; font-size: 23px; line-height: 1.3; }
+.look { list-style: none; margin-top: 24px; display: grid; gap: 12px; }
+.look li { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 20px; color: #6B675F; }
+.look em { margin-left: auto; font-style: normal; font-weight: 700; font-size: 18px; color: #A29E95; }
+.cap { margin-top: 24px; font-weight: 800; font-size: 31px; line-height: 1.3; letter-spacing: -.01em; color: rgba(21,19,15,.24); }
+.cap .lit { color: #15130F; }
+.prop { display: inline-flex; align-items: center; gap: 10px; margin-top: 22px; padding: 16px 24px; border-radius: 999px; background: linear-gradient(180deg, #FF7637, #F2510F); color: #fff; font-weight: 800; font-size: 21px; box-shadow: inset 0 1px 0 rgba(255,224,200,.6), 0 12px 24px -12px rgba(200,60,0,.8); }
+.vbar { display: flex; align-items: center; justify-content: space-between; margin-top: 30px; padding: 0 12px; }
+.side { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: #F1EEE7; color: #6B675F; }
+.tk { position: relative; width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,.16), transparent 55%), linear-gradient(180deg, #2B2823, #121110); box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 16px 30px -12px rgba(0,0,0,.5); }
+.tk img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; }
+.ring { position: absolute; inset: -12px; border-radius: 50%; border: 5px solid rgba(255,90,31,.55); box-shadow: 0 0 0 12px rgba(255,90,31,.14); }
+.tcap { text-align: center; margin-top: 18px; font-weight: 700; font-size: 19px; color: #A29E95; }
+
+/* Drawn cards */
+.tok, .rcpt, .node { background: linear-gradient(180deg, var(--p1), var(--p2)); box-shadow: inset 0 1px 0 var(--hl), 0 0 0 1px var(--hair), 0 24px 40px -26px var(--drop), 0 6px 12px -8px var(--drop); }
+.how { position: absolute; left: 740px; top: 110px; width: 600px; display: flex; flex-direction: column; gap: 20px; z-index: 3; }
+.tok { position: relative; display: flex; align-items: center; gap: 22px; padding: 16px 28px 16px 16px; border-radius: 30px; width: 500px; }
+.tok img { width: 92px; height: 92px; object-fit: contain; flex: none; filter: drop-shadow(0 8px 10px var(--drop)); }
+.tok b { display: block; font-weight: 800; font-size: 29px; letter-spacing: -.01em; }
+.tok small { display: block; margin-top: 4px; font-weight: 600; font-size: 20px; color: var(--ink2); }
+.num { position: absolute; left: -14px; top: -10px; width: 36px; height: 36px; border-radius: 50%; background: #F2541B; color: #fff; font-weight: 900; font-size: 19px; display: grid; place-items: center; }
+.vs { position: absolute; left: 790px; top: 150px; display: flex; gap: 24px; align-items: flex-start; z-index: 3; }
 .rcpt { position: relative; width: 300px; padding: 30px 30px 36px; border-radius: 26px; }
 .rcpt.good { margin-top: 60px; }
-.rh { display: flex; justify-content: space-between; font-weight: 800; font-size: 20px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink2); padding-bottom: 18px; border-bottom: 2px dashed var(--hair); }
-.rh span { color: #F2541B; }
-.big { margin-top: 22px; font-weight: 900; font-size: 92px; line-height: 1; letter-spacing: -.03em; color: #2E9E5B; }
-.big.bad { color: #F2541B; }
+.rh { display: flex; justify-content: space-between; font-weight: 800; font-size: 19px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink2); padding-bottom: 18px; border-bottom: 2px dashed var(--hair); }
+.rh span { color: #FF6A2B; }
+.big { margin-top: 22px; font-weight: 900; font-size: 92px; line-height: 1; letter-spacing: -.03em; color: #2FB673; }
+.big.bad { color: #FF6A2B; }
 .big i { font-style: normal; font-size: 46px; color: var(--ink2); }
-.cap { font-weight: 700; font-size: 23px; color: var(--ink2); margin-top: 6px; }
+.cap2 { font-weight: 700; font-size: 23px; color: var(--ink2); margin-top: 6px; }
+.dots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.dots b { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 17px; font-weight: 900; color: #FF6A2B; background: rgba(255,106,43,.14); }
+.dots b.ok { color: #2FB673; background: rgba(47,182,115,.16); }
 .rcpt p { margin-top: 24px; font-weight: 600; font-size: 22px; line-height: 1.42; color: var(--ink2); }
 .stamp { position: absolute; right: -22px; bottom: -40px; width: 120px; transform: rotate(10deg); filter: drop-shadow(0 10px 14px var(--drop)); }
-.loop { position: relative; width: 740px; height: 740px; }
+.loop { position: absolute; width: 760px; height: 760px; z-index: 3; }
 .loop svg { position: absolute; inset: 0; }
-.hub { position: absolute; left: 370px; top: 370px; transform: translate(-50%, -50%); width: 250px; height: 250px; display: grid; place-items: center; }
-.hub img { width: 250px; filter: drop-shadow(0 18px 24px var(--drop)); }
-.node { position: absolute; transform: translate(-50%, -50%); width: 196px; padding: 16px 12px 18px; border-radius: 28px; text-align: center; }
-.node img { width: 92px; height: 92px; object-fit: contain; filter: drop-shadow(0 8px 10px var(--drop)); }
+.hub { position: absolute; left: 380px; top: 380px; width: 280px; transform: translate(-50%, -50%); filter: drop-shadow(0 20px 26px var(--drop)); }
+.node { position: absolute; transform: translate(-50%, -50%); width: 196px; padding: 14px 12px 18px; border-radius: 28px; text-align: center; color: #15130F; }
+.node img { width: 92px; height: 92px; object-fit: contain; }
 .node b { display: block; margin-top: 6px; font-weight: 800; font-size: 22px; line-height: 1.15; }
-.try { width: 520px; padding: 46px; border-radius: 44px; --p1: #FFFDF8; --p2: #F3EDE1; --hl: #fff; color: #15130F; }
-.qr { background: #fff; padding: 30px; border-radius: 26px; box-shadow: inset 0 0 0 1.5px rgba(21,19,15,.08); }
+.try { position: absolute; left: 760px; top: 150px; width: 480px; padding: 40px 40px 34px; border-radius: 48px; background: linear-gradient(180deg, #FFFDF8, #F3EDE1); color: #15130F; text-align: center; z-index: 3; transform: rotate(-3deg); box-shadow: inset 0 1px 0 #fff, 0 60px 100px -40px rgba(110,30,0,.6); }
+.qr { background: #fff; padding: 26px; border-radius: 26px; box-shadow: inset 0 0 0 1.5px rgba(21,19,15,.08); }
 .qr svg { display: block; width: 100%; height: auto; }
-.tryfoot { display: flex; align-items: center; gap: 18px; margin-top: 28px; }
-.tryfoot img { width: 92px; flex: none; }
-.tryfoot b { display: block; font-weight: 900; font-size: 30px; letter-spacing: -.01em; }
-.tryfoot small { display: block; margin-top: 4px; font-weight: 600; font-size: 20px; color: rgba(21,19,15,.62); }
-.drawn.card { gap: 70px; }
-.drawn .text { width: 580px; }
-.wide .text { width: 470px; }
-.wide.card { gap: 64px; }
-.win { position: relative; overflow: hidden; border-radius: 22px; box-shadow: 0 0 0 1.5px var(--hair), 0 50px 90px -40px var(--drop), 0 20px 40px -24px var(--drop); }
-.win img { display: block; width: 100%; }
+.try b { display: block; margin-top: 24px; font-weight: 900; font-size: 32px; letter-spacing: -.01em; }
+
+/* Cover */
+.wall { position: absolute; left: -30px; bottom: -70px; font-weight: 900; font-size: 380px; letter-spacing: -.04em; line-height: 1; color: rgba(255,247,238,.1); z-index: 0; white-space: nowrap; }
+.cover .text { width: 560px; }
+.cover h1 { font-size: 92px; line-height: .98; }
+.cover .text p { font-size: 29px; }
+.brand { display: flex; align-items: center; gap: 14px; margin-bottom: 34px; font-weight: 900; font-size: 34px; letter-spacing: -.02em; }
+.brand i { width: 58px; height: 58px; border-radius: 18px; background: #15130F url(${art('gus-glyph')}) center 30% / 120% no-repeat; box-shadow: 0 12px 24px -10px rgba(80,20,0,.6); }
+.pillq { align-self: flex-start; margin-top: 38px; padding: 14px 24px; border-radius: 999px; background: rgba(21,19,15,.9); color: #FFF7EE; font-weight: 800; font-size: 21px; }
 `;
 
 const b = await chromium.launch({ channel: 'chrome' });
 const p = await b.newPage({ viewport: { width: 1500, height: 1000 }, deviceScaleFactor: 2 });
+const only = process.env.ONLY?.split(',');
 for (const c of cards) {
-  if (c.optional && !existsSync(`${shots}/${c.screens[0]}.png`)) {
-    console.log('skip', c.name, `(no ${c.screens[0]}.png)`);
+  if (only && !only.some((o) => c.name.startsWith(o))) continue;
+  if (c.optional && !existsSync(`${shots}/${c.optional}.png`)) {
+    console.log('skip', c.name, `(no ${c.optional}.png)`);
     continue;
   }
-  const bg = c.visual ? { css: themes[c.theme], dark: c.theme === 'dark' } : await edge(c.screens[0]);
-  const two = !c.visual && c.screens.length > 1;
-  let stage;
-  if (c.visual) stage = visuals[c.visual]();
-  else if (c.wide) {
-    const { width, height } = await sharp(`${shots}/${c.screens[0]}.png`).metadata();
-    const w = Math.min(860, (820 * width) / height);
-    stage = `<div class="win" style="width:${w}px"><img src="file://${shots}/${c.screens[0]}.png"></div>`;
-  } else stage = c.screens.map((s) => screen(s, two ? 740 : 880)).join('');
-  const html = `<meta charset="utf-8"><style>${css}${drawn}</style>
-  <div class="card ${bg.dark ? 'dark' : 'light'} ${two ? 'cover' : ''} ${c.wide ? 'wide' : ''} ${c.visual ? 'drawn' : ''}" style="--bg:${bg.css}">
-    <div class="text"><div class="kicker">${c.kicker}</div><h1>${c.title}</h1><p>${c.body}</p><div class="foot">trywanted.vercel.app</div></div>
-    <div class="stage ${two ? 'two' : ''}">${stage}</div>
-  </div>`;
+  const text = c.cover
+    ? `<div class="text"><div class="brand"><i></i>Wanted</div><h1>${c.title}</h1><p>${c.body}</p><div class="pillq">Built on Qloo’s taste graph</div></div>`
+    : `<div class="text"><div class="kicker">${c.kicker}</div><h1>${c.title}</h1><p>${c.body}</p></div><div class="foot">trywanted.vercel.app</div>`;
+  const html = `<meta charset="utf-8"><style>${css}</style><div class="card ${c.theme} ${c.cover ? 'cover' : ''}">${text}${c.stage()}</div>`;
   writeFileSync(`${shots}/card.html`, html);
   await p.goto(`file://${shots}/card.html`, { waitUntil: 'load' });
   await p.evaluate(() => document.fonts.ready);

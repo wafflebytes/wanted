@@ -27,13 +27,17 @@ const screens = {
   fan: '/w/maya-ortiz/burlington-vt',
   posters: '/a/maya-ortiz/posters',
   logbook: '/a/maya-ortiz/logbook',
+  mail: '/a/maya-ortiz/pulse',
 };
+// ONLY=mail,city retakes just those screens
+const only = process.env.ONLY?.split(',');
 
 // 9:41, full bars, no charging bolt
 sim('status_bar', dev, 'override', '--time', '9:41', '--batteryState', 'discharging', '--batteryLevel', '100', '--cellularBars', '4', '--wifiBars', '3', '--dataNetwork', 'wifi');
 for (const mode of ['light', 'dark']) {
   sim('ui', dev, 'appearance', mode);
   for (const [name, path] of Object.entries(screens)) {
+    if (only && !only.includes(name)) continue;
     // A fresh query each time so Safari loads the page instead of restoring it
     sim('openurl', dev, `${BASE}${path}${path.includes('?') ? '&' : '?'}r=${mode}-${Date.now()}`);
     wait(name === 'gus' ? 40 : 13); // the map and the city sheet take a while; Gus looks things up before he answers

@@ -30,7 +30,7 @@ In the cities you pick, he puts up a WANTED poster. Fans sign it with their neig
 
 Then he helps fill the room. The signers hear first, posters go where the crowd hangs out, and an opener who shares your crowd gets an invite. After the show, he checks the room's ticket count against the door.
 
-You can ask Gus anything along the way, by typing or out loud. He looks things up as he answers and shows each lookup as it runs. He'll even call you about an offer. He also works as an MCP connector, so you can ask him from Claude or ChatGPT where you're wanted. In Claude his answers come back as cards in the chat (an MCP App): tap a city to open it, then send him to ask the room, without leaving the conversation.
+You can ask Gus anything along the way, by typing or out loud. He looks things up as he answers and shows each lookup as it runs. He'll even call you about an offer. He also works as an MCP connector, so you can ask him from Claude or ChatGPT where you're wanted. In Claude his answers come back as cards in the chat (an MCP App): tap a city to open it, then send him to ask the venue, without leaving the conversation.
 
 ### How we built it
 
@@ -81,4 +81,4 @@ qloo, typescript, next.js, react, expo, openrouter, libsql, turso, maplibre, dec
 
 ## Image gallery
 
-Upload [docs/gallery](gallery) in order: `0-cover.jpg` as the thumbnail, then cards 1 to 12. They're 3:2 and alternate light and dark. Cards 0 to 7 are real iPhone Safari screenshots of trywanted.vercel.app from the iOS Simulator, shown without a device frame. Cards 8 to 10 explain how Gus works, why taste data matters and the loop that pays the band, drawn with the app's own art. Card 11 is Gus answering as a card in the Claude iPhone app (`claude.png` in the shots folder), and card 12 has a QR code for the live demo. Build with `node scripts/gallery-shots.mjs <dir>`, then `node scripts/gallery-cards.mjs <dir> docs/gallery`.
+Upload [docs/gallery](gallery) in order: `0-cover.jpg` as the thumbnail (Gus himself, on Wanted orange), then cards 1 to 12. They're 3:2 and move between orange, cream and dark. Each screen appears once. Cards 2, 3, 5, 7 and 11 are real iPhone Safari screenshots of trywanted.vercel.app from the iOS Simulator; card 11 is the Claude iPhone app (`claude.png`, taken by hand). Cards 1, 4 and 6 draw the surfaces Gus talks through in code from the app's own styles and the demo's real numbers: the Dynamic Island, an offer waiting on your OK, and Tap to talk. Cards 8 to 10 explain how Gus works, why taste data matters and the loop that pays the band, and card 12 has a QR code for the live demo. `node scripts/gallery-refresh.mjs` retakes the screenshots and rebuilds every card; `ONLY=4 node scripts/gallery-cards.mjs .data/gallery docs/gallery` rebuilds one card.
