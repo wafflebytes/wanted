@@ -65,6 +65,23 @@ const island = (words, { dot = 'live', trail = '' } = {}) =>
   `<div class="island"><span class="ig"></span><b>${words}</b>${trail ? `<span class="itrail">${trail}</span>` : ''}${dot ? `<i class="idot ${dot}"></i>` : ''}</div>`;
 const bump = (big, small) => `<div class="island bump"><span class="ig"></span><span><b>${big}</b><em>${small}</em></span></div>`;
 
+
+// ── Background art: one quiet piece per card, behind everything ───────────────
+
+const wave = (y, x0 = 0, x1 = 1500) => {
+  const bars = [];
+  for (let x = x0; x < x1; x += 22) {
+    const h = 20 + Math.abs(Math.sin(x / 61) * Math.cos(x / 23)) * 220 * (0.4 + 0.6 * Math.sin(((x - x0) / (x1 - x0)) * Math.PI));
+    bars.push(`<rect x="${x}" y="${y - h / 2}" width="10" height="${h}" rx="5" fill="var(--wmc)"/>`);
+  }
+  return `<svg class="deco" width="1500" height="1000">${bars.join('')}</svg>`;
+};
+const deco = {
+  '5-fan-mail': () => `<div class="airmail top"></div><div class="airmail bot"></div>`,
+  '6-ask-gus': () => wave(520),
+  '7-logbook': () => `<div class="ruled"></div>`,
+};
+
 // ── Cards ─────────────────────────────────────────────────────────────────────
 
 const cards = [
@@ -121,7 +138,7 @@ const cards = [
           <p class="ap-next">Then the date is yours, and everyone who signed in Portland hears first.</p>
           <div class="slide"><span class="slide-fill"></span><span class="slide-l">Slide to pay $80</span><span class="knob">${svg('forward', 26)}</span></div>
           <div class="ap-no">Not this one</div>
-        </div>`, { x: 800, y: 110, z: 3, zoom: 1.08, tilt: 'perspective(2400px) rotateY(-16deg) rotateX(6deg) rotateZ(-3deg)' })}`,
+        </div>`, { x: 840, y: 120, z: 3, zoom: 1.0, tilt: 'perspective(2400px) rotateY(-14deg) rotateX(5deg) rotateZ(-2deg)' })}`,
   },
   {
     name: '5-fan-mail', theme: 'dark', layout: 'right', kicker: 'Fan Mail',
@@ -197,7 +214,7 @@ const cards = [
     body: 'Signers fill the venue, the venue pays the band, and the crowd that came signs the next poster. Venues get nights that sell, and fans get the show in their own town.',
     stage: () => {
       const nodes = [['act-staple', 'Fans sign'], ['act-phone', 'Gus asks venues'], ['obj-ticket', 'The show sells'], ['act-deposit', 'The band gets paid'], ['act-megaphone', 'The crowd spreads it']];
-      const R = 300, C = 380, ox = 740, oy = 120;
+      const R = 285, C = 380, ox = 690, oy = 120;
       return `<div class="loop" style="left:${ox}px; top:${oy - 10}px"><svg viewBox="0 0 760 760" width="760" height="760"><defs><marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#FFF4E8"/></marker></defs>
         ${nodes.map((_, k) => {
           const a0 = (k / nodes.length) * 2 * Math.PI - Math.PI / 2 + 0.36, a1 = ((k + 1) / nodes.length) * 2 * Math.PI - Math.PI / 2 - 0.36;
@@ -218,7 +235,7 @@ const cards = [
     optional: 'claude',
     stage: () => `
       <div class="halo" style="left:-60px; top:60px; width:900px; height:900px"></div>
-      ${phone('claude', { h: 1400, x: 160, y: -330 })}`,
+      ${phone('claude', { h: 860, x: 220, y: 70 })}`,
   },
   {
     name: '12-try-gus', theme: 'hot', kicker: 'Try it',
@@ -366,6 +383,18 @@ h1 { font-weight: 900; font-size: 78px; line-height: 1.02; letter-spacing: -.03e
 .qr svg { display: block; width: 100%; height: auto; }
 .try b { display: block; margin-top: 24px; font-weight: 900; font-size: 32px; letter-spacing: -.01em; }
 
+
+/* Background art */
+.cream { --wmc: rgba(21,19,15,.07); }
+.dark { --wmc: rgba(245,240,230,.075); }
+.hot { --wmc: rgba(255,247,238,.13); }
+.deco { position: absolute; inset: 0; z-index: 1; }
+.wm { position: absolute; z-index: 0; font-weight: 900; line-height: 1; letter-spacing: -.045em; white-space: nowrap; color: var(--wmc); }
+.wm i { font-style: normal; font-size: .42em; letter-spacing: -.02em; }
+.airmail { position: absolute; left: 0; right: 0; height: 16px; z-index: 1; opacity: .85; background: repeating-linear-gradient(-45deg, #E5484D 0 26px, transparent 26px 40px, #3A7BF2 40px 66px, transparent 66px 80px); }
+.airmail.top { top: 0; } .airmail.bot { bottom: 0; }
+.ruled { position: absolute; inset: 0; z-index: 0; background: linear-gradient(90deg, transparent 72px, rgba(255,90,31,.22) 72px 74px, transparent 74px), repeating-linear-gradient(180deg, transparent 0 47px, var(--wmc) 47px 49px); }
+
 /* Layouts */
 .text.right { left: 860px; width: 560px; }
 .foot.right { left: 860px; }
@@ -398,7 +427,7 @@ for (const c of cards) {
   const text = c.cover
     ? `<div class="text"><div class="brand"><i></i>Wanted</div><h1>${c.title}</h1><p>${c.body}</p><div class="pillq">Built on Qloo’s taste graph</div></div>`
     : `<div class="text ${c.layout ?? ''}"><div class="kicker">${c.kicker}</div><h1>${c.title}</h1><p>${c.body}</p></div>${c.layout === 'top' ? '' : `<div class="foot ${c.layout ?? ''}">trywanted.vercel.app</div>`}`;
-  const html = `<meta charset="utf-8"><style>${css}</style><div class="card ${c.theme} ${c.cover ? 'cover' : ''}">${text}${c.stage()}</div>`;
+  const html = `<meta charset="utf-8"><style>${css}</style><div class="card ${c.theme} ${c.cover ? 'cover' : ''}">${deco[c.name]?.() ?? ''}${text}${c.stage()}</div>`;
   writeFileSync(`${shots}/card.html`, html);
   await p.goto(`file://${shots}/card.html`, { waitUntil: 'load' });
   await p.evaluate(() => document.fonts.ready);
