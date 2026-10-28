@@ -1,14 +1,14 @@
 /* Map home: the drawer's three detents and the city sheet. */
 .home { position: relative; }
 
-/* Next move: the peek. The object breaks out over the drawer's edge; a meter of 50 ticks shows
+/* Next move: the peek. The object sits in the card's top corner (inside it, so no drawer edge or scroll can clip it); a meter of 50 ticks shows
    how close the city is, one tick per signature. */
 .nm { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding-top: 2px; }
-.nm-obj { position: absolute; right: -10px; top: -74px; z-index: 2; filter: drop-shadow(0 18px 18px rgba(60, 36, 10, 0.22)); transform: rotate(6deg); animation: nm-in 620ms var(--ease) both, bob 5s var(--ease) 620ms infinite; pointer-events: none; }
+.nm-obj { position: absolute; right: -4px; top: -6px; z-index: 2; filter: drop-shadow(0 18px 18px rgba(60, 36, 10, 0.22)); transform: rotate(6deg); animation: nm-in 620ms var(--ease) both, bob 5s var(--ease) 620ms infinite; pointer-events: none; }
 @keyframes nm-in { from { opacity: 0; transform: translateY(30px) rotate(-4deg) scale(0.8); } }
 @keyframes bob { 50% { transform: translateY(-4px) rotate(4.5deg); } }
-.nm .kicker { padding-right: 110px; }
-.nm-title { font: 800 30px/1.06 var(--display); letter-spacing: -0.03em; max-width: 11em; padding-right: 72px; text-wrap: balance; }
+.nm .kicker { padding-right: 96px; }
+.nm-title { font: 800 30px/1.06 var(--display); letter-spacing: -0.03em; max-width: 11em; padding-right: 88px; text-wrap: balance; }
 .nm-meter { width: 100%; margin-top: 6px; display: flex; flex-direction: column; gap: 8px; }
 .nm-count { display: flex; align-items: baseline; gap: 6px; }
 .nm-count b { font: 800 34px/1 var(--display); letter-spacing: -0.03em; color: var(--wanted-text); }

@@ -24,11 +24,11 @@
 .tr-replan { margin-top: 18px; }
 .tr-body .fine { margin-top: 10px; text-align: center; }
 
-/* Hero: the dates big, the run as a strip, the score as a ring. The van breaks out over the edge. */
+/* Hero: the dates big, the run as a strip, the score as a ring. Gus sits in the top corner, inside the card so the drawer never clips him. */
 .th { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-.th-obj { position: absolute; right: -14px; top: -70px; z-index: 2; filter: drop-shadow(0 18px 16px rgba(60, 36, 10, 0.22)); transform: scaleX(-1); animation: van-in 760ms var(--ease) both; pointer-events: none; }
+.th-obj { position: absolute; right: -6px; top: -8px; z-index: 2; filter: drop-shadow(0 18px 16px rgba(60, 36, 10, 0.22)); transform: scaleX(-1); animation: van-in 760ms var(--ease) both; pointer-events: none; }
 @keyframes van-in { from { opacity: 0; transform: scaleX(-1) translateX(80px); } }
-.th .kicker { padding-right: 110px; }
+.th .kicker { padding-right: 96px; }
 .th-title { display: flex; align-items: baseline; gap: 10px; font: 800 34px/1.05 var(--display); letter-spacing: -0.035em; margin-top: 2px; }
 .th-arrow { color: var(--ink-4); font-weight: 600; }
 .th-sub { font: 600 15px var(--body); color: var(--ink-2); }

@@ -16,6 +16,7 @@ import { ApiError, streamNdjson } from '@web/lib/api';
 import { gus } from '@web/lib/gus';
 import { mutate, useApi, useViewport } from '@web/lib/hooks';
 import { stage } from '@web/lib/stage';
+import '../../../home.css';
 import '../../../tour.css';
 
 type PlanAction = { kind: 'new' } | { kind: 'replan' } | { kind: 'lock'; stopIndex: number; locked: boolean } | { kind: 'fix'; fix: NonNullable<Roast['fix']> };
@@ -119,7 +120,7 @@ export default function TourPage() {
         {fixes.length > 0 && <span className="btn xs hot">{fixes.length === 1 ? '1 change' : `${fixes.length} changes`}</span>}
       </button>
       <div className="th" data-tour="run" ref={heroRef}>
-        <Gus mood={busy ? 'working' : fixes.length ? 'thinking' : 'proud'} size={124} className="th-obj" />
+        <Gus mood={busy ? 'working' : fixes.length ? 'thinking' : 'proud'} size={88} className="th-obj" />
         <span className="kicker k-hot">Your tour</span>
         <h2 className="th-title">
           {md(first!.date)}

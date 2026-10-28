@@ -122,6 +122,9 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 - Fan Mail drops rough, culture-war and non-English posts (`pulse.ts`, `chatter:v3`). Tour plan blurbs that are lists of weekdays fall back to the plain line (old demo plan on prod still has them).
 - `?ask=<question>` on any act page opens Gus and asks it. Gallery: `node scripts/gallery-refresh.mjs --wait /llms-full.txt <text>` waits for the deploy, then reshoots and rebuilds the cards with no taps.
 - Claude card view is `ui://wanted/gus-card-v3.html`.
+- Desktop Tour opened directly (reload, shared link) covered the whole screen: `home.css` (the `home-panel` rules) only loaded via the Map. Tour imports it now.
+- The objects on drawer cards (Map's next move, Tour's Gus) sit inside the card's top corner at 88 px. Breaking out over the edge got clipped by the drawer's scroll box on phone and desktop. Don't put breakout art inside a scrolling drawer.
+- Conflict radar and merch-for-the-city were tried and dropped: no keyless event API (Bandsintown 403s), and Qloo's brand answers barely change between cities.
 
 ## Next steps
 

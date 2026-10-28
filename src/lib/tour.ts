@@ -596,13 +596,13 @@ export function roastCard(r: Roast, stops: TourStop[], names: CardNames): RoastC
   const s = r.stopIndex !== null ? stops[r.stopIndex] : null;
   const f = r.fix;
   const city = (id: string) => names.city(id) ?? 'a better city';
-  const room = (metroId: string, id: string) => names.room(metroId, id) ?? 'a better room';
+  const room = (metroId: string, id: string) => names.room(metroId, id) ?? 'a better venue';
   const to = !f ? null : f.kind === 'swap-city' ? city(f.metroId) : f.kind === 'change-room' && s ? room(s.metroId, f.roomId) : f.kind === 'add-city' ? city(f.metroId) : f.kind === 'move-date' ? `${cap(dayOf(f.date))}` : null;
   const action = !f ? 'Got it' : f.kind === 'drop' ? `Drop ${s?.city ?? 'it'}` : f.kind === 'add-city' ? `Add ${to}` : f.kind === 'change-room' ? 'Switch venues' : f.kind === 'move-date' ? `Move to ${to}` : f.kind === 'swap-city' ? `Go to ${to}` : 'Swap the dates';
   const day = s ? cap(s.day) : '';
   switch (r.rule) {
     case 'wrong-side':
-      return { title: `A better room in ${s?.city}`, from: s?.room?.name ?? null, to, note: 'Closer to where your fans live.', action };
+      return { title: `A better venue in ${s?.city}`, from: s?.room?.name ?? null, to, note: 'Closer to where your fans live.', action };
     case 'closed-night':
       return { title: `${s?.room?.name} is closed that ${day}`, from: s?.room?.name ?? null, to, note: to ? 'Open that night.' : 'Push the show a day.', action };
     case 'cold-city':

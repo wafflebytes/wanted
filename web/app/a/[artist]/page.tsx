@@ -256,7 +256,7 @@ function NextMove({ move }: { move: Move }) {
 function NextMoveCard({ move, ask, r }: { move: Move; ask: boolean; r: React.RefObject<HTMLDivElement | null> }) {
   return (
     <div className={`nm ${ask ? 'is-ask' : ''}`} ref={r}>
-      <Art name={move.art} size={124} className="nm-obj" />
+      <Art name={move.art} size={88} className="nm-obj" />
       <span className={`kicker ${ask ? 'k-ask' : 'k-hot'}`}>{move.kicker}</span>
       <h2 className="nm-title">{move.title}</h2>
       {move.count ? (
