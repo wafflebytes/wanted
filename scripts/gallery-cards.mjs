@@ -40,9 +40,9 @@ const svg = (n, s = 24) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" 
 // ── Pieces ────────────────────────────────────────────────────────────────────
 
 /** A slim iPhone around a real screenshot. x, y are the phone's top-left in the card. */
-const phone = (name, { h = 860, x, y, rot = 0, blur = 0, z = 2 }) => {
+const phone = (name, { h = 860, x, y, rot = 0, tilt = '', blur = 0, z = 2 }) => {
   const k = h / 2556, w = Math.round(1179 * k), b = Math.round(h * 0.016), r = Math.round(165 * k);
-  return `<div class="ph" style="left:${x}px; top:${y}px; width:${w + 2 * b}px; height:${h + 2 * b}px; padding:${b}px; border-radius:${r + b}px; transform:rotate(${rot}deg); z-index:${z}">
+  return `<div class="ph" style="left:${x}px; top:${y}px; width:${w + 2 * b}px; height:${h + 2 * b}px; padding:${b}px; border-radius:${r + b}px; transform:${tilt || `rotate(${rot}deg)`}; z-index:${z}">
     <div class="scr" style="border-radius:${r}px"><img src="${shot(name)}" style="${blur ? `filter: blur(${blur}px) brightness(.62) saturate(1.1); transform: scale(1.06)` : ''}">
     <i class="isl" style="left:${402 * k}px; top:${34 * k}px; width:${373 * k}px; height:${109 * k}px"></i></div></div>`;
 };
@@ -54,7 +54,11 @@ const sticker = (n, { x, y, s, rot = 0, z = 3, flip = false }) =>
 /** A small glass chip pulled out of the UI. */
 const chip = (html, { x, y, rot = 0, z = 4, tone = '' }) => `<div class="chip ${tone}" style="left:${x}px; top:${y}px; transform:rotate(${rot}deg); z-index:${z}">${html}</div>`;
 
-const at = (html, { x, y, z = 4, rot = 0, zoom = 1 }) => `<div class="at" style="left:${x}px; top:${y}px; z-index:${z}; transform:rotate(${rot}deg); zoom:${zoom}">${html}</div>`;
+// zoom scales left/top too, so positions are divided by it to stay in card pixels.
+const at = (html, { x, y, z = 4, rot = 0, zoom = 1, tilt = '', center = false }) =>
+  center
+    ? `<div class="at" style="left:0; right:0; top:${y}px; z-index:${z}; display:flex; justify-content:center">${html}</div>`
+    : `<div class="at" style="left:${x / zoom}px; top:${y / zoom}px; z-index:${z}; transform:${tilt || `rotate(${rot}deg)`}; transform-origin: 0 0; zoom:${zoom}">${html}</div>`;
 
 // The Dynamic Island, as the app draws it (web/app/shell.css), at 2x.
 const island = (words, { dot = 'live', trail = '' } = {}) =>
@@ -69,66 +73,65 @@ const cards = [
     title: 'Meet Gus, your AI tour manager.',
     body: 'He finds the cities that want your band, gets the fans there to sign, and books the venue.',
     stage: () => `
-      <div class="halo" style="left:690px; top:40px; width:900px; height:900px"></div>
-      ${sticker('gus-tour-manager', { x: 780, y: 170, s: 780, z: 3 })}`,
+      <div class="halo" style="left:640px; top:20px; width:1000px; height:1000px"></div>
+      ${phone('home', { h: 1060, x: 1000, y: 90, tilt: 'perspective(2600px) rotateY(-18deg) rotateX(6deg) rotateZ(4deg)', z: 2 })}
+      ${sticker('gus-tour-manager', { x: 640, y: 330, s: 640, z: 3 })}`,
   },
   {
-    name: '1-island', theme: 'dark', kicker: 'Always on',
+    name: '1-island', theme: 'dark', layout: 'top', kicker: 'Always on',
     title: 'He works while you’re away.',
-    body: 'Gus calls venues, waits on replies and counts signatures on his own. The Dynamic Island says what he’s doing in four words, and grows when something needs you.',
+    body: 'He calls venues and counts signatures on his own. The Dynamic Island tells you what he’s doing, and grows when something needs you.',
     stage: () => `
-      <div class="halo" style="left:780px; top:120px; width:760px; height:760px"></div>
-      ${phone('home-dark', { h: 900, x: 860, y: 40, blur: 16, z: 1 })}
-      ${at(island('Calling SPACE Gallery', { trail: '2:14' }), { x: 860, y: 150, z: 5 })}
-      ${at(bump('Offer in', 'The Nocturnal Café, Ithaca'), { x: 830, y: 300, z: 5 })}
+      <img class="bd" src="${shot('home-dark')}">
+      ${at(island('Calling SPACE Gallery', { trail: '2:14' }), { x: 0, y: 392, z: 5, center: true })}
+      ${at(bump('Offer in', 'The Nocturnal Café, Ithaca'), { x: 0, y: 500, z: 5, center: true })}
       ${at(`<div class="lact">
           <div class="lact-top"><span class="ig big"></span><div><span class="kick ok">Booked</span><b>The Basement</b><em>Columbus · Fri, Nov 20</em></div></div>
           <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div>
           <div class="steps-l"><span>Asked</span><span>Offer</span><span>Booked</span></div>
           <p>Everyone who signed in Columbus hears first.</p>
-        </div>`, { x: 800, y: 500, z: 5 })}`,
+        </div>`, { x: 0, y: 660, z: 5, center: true })}`,
   },
   {
     name: '2-sleeper-cities', theme: 'cream', kicker: 'Where you’re wanted',
     title: 'He finds the cities nobody plays yet.',
     body: 'Every US city and neighborhood is scored for your sound on Qloo’s taste graph. Sleepers like Ithaca have far more fans than their size predicts.',
     stage: () => `
-      <div class="halo" style="left:760px; top:100px; width:800px; height:800px"></div>
-      ${phone('city', { h: 880, x: 905, y: 70 })}`,
+      <div class="halo" style="left:700px; top:60px; width:900px; height:900px"></div>
+      ${phone('city', { h: 1240, x: 840, y: 110, tilt: 'perspective(2600px) rotateY(-24deg) rotateX(8deg) rotateZ(5deg)' })}`,
   },
   {
-    name: '3-wanted-poster', theme: 'dark', kicker: 'Proof',
+    name: '3-wanted-poster', theme: 'dark', layout: 'top', kicker: 'Proof',
     title: 'Fans sign the WANTED poster.',
-    body: 'Each signature is a fan saying “come play here,” with their neighborhood. At fifty, Gus asks the venues that fit you.',
+    body: 'Each signature is a fan saying “come play here.” At fifty, Gus asks the venues that fit you.',
     stage: () => `
-      <div class="halo" style="left:780px; top:100px; width:780px; height:780px"></div>
-      ${phone('fan-dark', { h: 880, x: 905, y: 70 })}`,
+      <div class="halo" style="left:300px; top:300px; width:900px; height:900px"></div>
+      ${phone('fan-dark', { h: 1340, x: 418, y: 380 })}`,
   },
   {
     name: '4-one-decision', theme: 'cream', kicker: 'The deal',
     title: 'You make one decision.',
     body: 'Gus haggles inside your limits and brings back one offer. A deposit locks in that exact date, and if the terms change, your yes is void. Test mode, so no real money moves.',
     stage: () => `
-      <div class="halo" style="left:760px; top:90px; width:800px; height:800px"></div>
+      <div class="halo" style="left:700px; top:60px; width:900px; height:900px"></div>
       ${at(`<div class="approve">
           <div class="ap-top"><img src="${art('act-deposit')}"><div><span class="kick">Needs your OK</span><b class="amt">$80</b><em>deposit to lock in the date at SPACE Gallery</em></div></div>
           <dl><div><dt>Pay</dt><dd>SPACE Gallery</dd></div><div><dt>Date</dt><dd>Thu, Dec 10</dd></div><div><dt>Your cut</dt><dd>71% of ticket sales</dd></div><div><dt>Venue size</dt><dd>About 150 people</dd></div></dl>
           <p class="ap-next">Then the date is yours, and everyone who signed in Portland hears first.</p>
           <div class="slide"><span class="slide-fill"></span><span class="slide-l">Slide to pay $80</span><span class="knob">${svg('forward', 26)}</span></div>
           <div class="ap-no">Not this one</div>
-          <div class="ap-fine">Test mode: no real money moves.</div>
-        </div>`, { x: 940, y: 60, z: 3, zoom: 0.9 })}`,
+        </div>`, { x: 800, y: 110, z: 3, zoom: 1.08, tilt: 'perspective(2400px) rotateY(-16deg) rotateX(6deg) rotateZ(-3deg)' })}`,
   },
   {
-    name: '5-fan-mail', theme: 'dark', kicker: 'Fan Mail',
+    name: '5-fan-mail', theme: 'dark', layout: 'right', kicker: 'Fan Mail',
     title: 'Your week, as a letter.',
     body: 'Open it with your coffee: how the week felt, one big number, and the mail that needs you. Then the cities that are almost there and the newest signatures.',
     stage: () => `
-      <div class="halo" style="left:780px; top:100px; width:780px; height:780px"></div>
-      ${phone('mail-dark', { h: 880, x: 905, y: 70 })}`,
+      <div class="halo" style="left:-60px; top:60px; width:900px; height:900px"></div>
+      ${phone('mail-dark', { h: 1240, x: 150, y: 110, tilt: 'perspective(2600px) rotateY(24deg) rotateX(8deg) rotateZ(-5deg)' })}`,
   },
   {
-    name: '6-ask-gus', theme: 'cream', kicker: 'Ask anything',
+    name: '6-ask-gus', theme: 'cream', layout: 'right', kicker: 'Ask anything',
     title: 'He checks before he answers.',
     body: 'Tap to talk and ask which Burlington venues are open on a Tuesday. He looks it up first, names The Flynn, and skips Monkey House because it’s closed that night.',
     stage: () => {
@@ -136,7 +139,7 @@ const cards = [
       const words = reply.split(' ');
       const lit = 17;
       return `
-      <div class="halo" style="left:760px; top:90px; width:800px; height:800px"></div>
+      <div class="halo" style="left:-60px; top:60px; width:900px; height:900px"></div>
       ${at(`<div class="voice">
           <div class="q">Which Burlington venues are open on a Tuesday?</div>
           <ul class="look"><li><span class="ck ok sm">${svg('check', 14)}</span>Venues that fit you<em>Burlington</em></li><li><span class="ck ok sm">${svg('check', 14)}</span>Hours on a Tuesday<em>Monkey House closed</em></li></ul>
@@ -144,7 +147,7 @@ const cards = [
           <div class="prop">Ask The Flynn for a date ${svg('forward', 20)}</div>
           <div class="vbar"><span class="side">${svg('keys', 22)}</span><span class="tk"><span class="ring"></span><img src="${art('gus-glyph')}"></span><span class="side">${svg('close', 22)}</span></div>
           <div class="tcap">Tap to talk</div>
-        </div>`, { x: 820, y: 40, z: 3 })}`;
+        </div>`, { x: 150, y: 100, z: 3, zoom: 1.22, tilt: 'perspective(2400px) rotateY(14deg) rotateX(5deg) rotateZ(2deg)' })}`;
     },
   },
   {
@@ -152,8 +155,8 @@ const cards = [
     title: 'Everything he did, written down.',
     body: 'Every call, offer and yes, in plain words, with a dot for who made the call. Milestones collect on the shelf as the tour comes together.',
     stage: () => `
-      <div class="halo" style="left:780px; top:100px; width:780px; height:780px"></div>
-      ${phone('logbook-dark', { h: 880, x: 905, y: 70 })}`,
+      <div class="halo" style="left:700px; top:60px; width:900px; height:900px"></div>
+      ${phone('logbook-dark', { h: 1400, x: 800, y: -190 })}`,
   },
   {
     name: '8-how-it-works', theme: 'cream', kicker: 'How Gus works',
@@ -208,13 +211,13 @@ const cards = [
     },
   },
   {
-    name: '11-in-claude', theme: 'cream', kicker: 'Gus in Claude',
+    name: '11-in-claude', theme: 'cream', layout: 'right', kicker: 'Gus in Claude',
     title: 'Ask him from Claude too.',
-    body: 'Add Gus as a connector and he answers as a card: who signed, where your crowd lives, the venues that fit. Paying always comes back to Wanted for your yes.',
+    body: 'Add Gus as a connector and he answers as a card in the chat. Paying always comes back to Wanted for your yes.',
     optional: 'claude',
     stage: () => `
-      <div class="halo" style="left:780px; top:100px; width:780px; height:780px"></div>
-      ${phone('claude', { h: 880, x: 905, y: 70 })}`,
+      <div class="halo" style="left:-60px; top:60px; width:900px; height:900px"></div>
+      ${phone('claude', { h: 1400, x: 160, y: -330 })}`,
   },
   {
     name: '12-try-gus', theme: 'hot', kicker: 'Try it',
@@ -362,6 +365,16 @@ h1 { font-weight: 900; font-size: 78px; line-height: 1.02; letter-spacing: -.03e
 .qr svg { display: block; width: 100%; height: auto; }
 .try b { display: block; margin-top: 24px; font-weight: 900; font-size: 32px; letter-spacing: -.01em; }
 
+/* Layouts */
+.text.right { left: 860px; width: 560px; }
+.foot.right { left: 860px; }
+.text.top { left: 150px; right: 150px; width: auto; top: 78px; bottom: auto; align-items: center; text-align: center; }
+.text.top .kicker { align-self: center; margin-bottom: 18px; }
+.text.top h1 { font-size: 74px; }
+.text.top p { margin-top: 18px; max-width: 900px; font-size: 26px; }
+.bd { position: absolute; inset: -120px; width: calc(100% + 240px); height: calc(100% + 240px); object-fit: cover; filter: blur(46px) brightness(.42) saturate(1.2); z-index: 0; }
+.cover h1 { font-size: 100px; }
+
 /* Cover */
 .wall { position: absolute; left: -30px; bottom: -70px; font-weight: 900; font-size: 380px; letter-spacing: -.04em; line-height: 1; color: rgba(255,247,238,.1); z-index: 0; white-space: nowrap; }
 .cover .text { width: 560px; }
@@ -383,7 +396,7 @@ for (const c of cards) {
   }
   const text = c.cover
     ? `<div class="text"><div class="brand"><i></i>Wanted</div><h1>${c.title}</h1><p>${c.body}</p><div class="pillq">Built on Qloo’s taste graph</div></div>`
-    : `<div class="text"><div class="kicker">${c.kicker}</div><h1>${c.title}</h1><p>${c.body}</p></div><div class="foot">trywanted.vercel.app</div>`;
+    : `<div class="text ${c.layout ?? ''}"><div class="kicker">${c.kicker}</div><h1>${c.title}</h1><p>${c.body}</p></div>${c.layout === 'top' ? '' : `<div class="foot ${c.layout ?? ''}">trywanted.vercel.app</div>`}`;
   const html = `<meta charset="utf-8"><style>${css}</style><div class="card ${c.theme} ${c.cover ? 'cover' : ''}">${text}${c.stage()}</div>`;
   writeFileSync(`${shots}/card.html`, html);
   await p.goto(`file://${shots}/card.html`, { waitUntil: 'load' });
