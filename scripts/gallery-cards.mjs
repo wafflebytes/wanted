@@ -69,15 +69,8 @@ const cards = [
     title: 'Meet Gus, your AI tour manager.',
     body: 'He finds the cities that want your band, gets the fans there to sign, and books the venue.',
     stage: () => `
-      <div class="wall">WANTED</div>
       <div class="halo" style="left:690px; top:40px; width:900px; height:900px"></div>
-      ${sticker('gus-tour-manager', { x: 780, y: 170, s: 780, z: 3 })}
-      ${at(island('Calling SPACE Gallery', { trail: 'Portland' }), { x: 712, y: 92, z: 6, zoom: 1.08 })}
-      ${chip(`<span class="ck ok">${svg('check', 22)}</span><span><b>50 of 50 signed</b><em>Ithaca opened</em></span>`, { x: 676, y: 600, rot: -4, z: 6 })}
-      ${sticker('obj-ticket', { x: 1290, y: 640, s: 230, rot: 16, z: 5 })}
-      ${sticker('pin-sleeper', { x: 1310, y: 210, s: 170, rot: 10, z: 2 })}
-      ${sticker('act-staple', { x: 640, y: 770, s: 200, rot: -12, z: 5 })}
-      ${sticker('obj-cassette', { x: 1360, y: 430, s: 150, rot: -14, z: 2 })}`,
+      ${sticker('gus-tour-manager', { x: 780, y: 170, s: 780, z: 3 })}`,
   },
   {
     name: '1-island', theme: 'dark', kicker: 'Always on',
@@ -86,15 +79,14 @@ const cards = [
     stage: () => `
       <div class="halo" style="left:780px; top:120px; width:760px; height:760px"></div>
       ${phone('home-dark', { h: 900, x: 860, y: 40, blur: 16, z: 1 })}
-      ${at(island('Calling SPACE Gallery', { trail: '2:14' }), { x: 846, y: 120, z: 5, zoom: 1.12 })}
-      ${at(bump('Offer in', 'The Nocturnal Café, Ithaca'), { x: 756, y: 300, z: 5, zoom: 1.12 })}
+      ${at(island('Calling SPACE Gallery', { trail: '2:14' }), { x: 860, y: 150, z: 5 })}
+      ${at(bump('Offer in', 'The Nocturnal Café, Ithaca'), { x: 830, y: 300, z: 5 })}
       ${at(`<div class="lact">
           <div class="lact-top"><span class="ig big"></span><div><span class="kick ok">Booked</span><b>The Basement</b><em>Columbus · Fri, Nov 20</em></div></div>
           <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div>
           <div class="steps-l"><span>Asked</span><span>Offer</span><span>Booked</span></div>
           <p>Everyone who signed in Columbus hears first.</p>
-        </div>`, { x: 816, y: 520, z: 5 })}
-      ${sticker('act-phone', { x: 1290, y: 760, s: 170, rot: 12, z: 6 })}`,
+        </div>`, { x: 800, y: 500, z: 5 })}`,
   },
   {
     name: '2-sleeper-cities', theme: 'cream', kicker: 'Where you’re wanted',
@@ -102,10 +94,7 @@ const cards = [
     body: 'Every US city and neighborhood is scored for your sound on Qloo’s taste graph. Sleepers like Ithaca have far more fans than their size predicts.',
     stage: () => `
       <div class="halo" style="left:760px; top:100px; width:800px; height:800px"></div>
-      ${phone('city', { h: 880, x: 900, y: 70, rot: 3 })}
-      ${sticker('pin-sleeper', { x: 740, y: 110, s: 250, rot: -10, z: 4 })}
-      ${chip(`<span class="ck hot">${svg('pin', 22)}</span><span><b>Ithaca is a sleeper</b><em>More fans than its size predicts</em></span>`, { x: 700, y: 640, rot: -3 })}
-      ${sticker('obj-pick', { x: 1330, y: 760, s: 150, rot: 18, z: 4 })}`,
+      ${phone('city', { h: 880, x: 905, y: 70 })}`,
   },
   {
     name: '3-wanted-poster', theme: 'dark', kicker: 'Proof',
@@ -113,12 +102,7 @@ const cards = [
     body: 'Each signature is a fan saying “come play here,” with their neighborhood. At fifty, Gus asks the venues that fit you.',
     stage: () => `
       <div class="halo" style="left:780px; top:100px; width:780px; height:780px"></div>
-      ${phone('fan-dark', { h: 880, x: 930, y: 70, rot: -3 })}
-      ${chip(`<span class="ck pen">${svg('pen', 20)}</span><span><b>Signed</b><em>Old North End</em></span>`, { x: 730, y: 250, rot: -4 })}
-      ${chip(`<span class="ck pen">${svg('pen', 20)}</span><span><b>Signed</b><em>South End</em></span>`, { x: 690, y: 380, rot: 2 })}
-      ${chip(`<span class="ck pen">${svg('pen', 20)}</span><span><b>Signed</b><em>Downtown</em></span>`, { x: 750, y: 510, rot: -2 })}
-      ${sticker('act-staple', { x: 1300, y: 690, s: 230, rot: 12, z: 4 })}
-      ${sticker('badge-fifty', { x: 740, y: 680, s: 190, rot: -10, z: 4 })}`,
+      ${phone('fan-dark', { h: 880, x: 905, y: 70 })}`,
   },
   {
     name: '4-one-decision', theme: 'cream', kicker: 'The deal',
@@ -133,9 +117,7 @@ const cards = [
           <div class="slide"><span class="slide-fill"></span><span class="slide-l">Slide to pay $80</span><span class="knob">${svg('forward', 26)}</span></div>
           <div class="ap-no">Not this one</div>
           <div class="ap-fine">Test mode: no real money moves.</div>
-        </div>`, { x: 940, y: 60, z: 3, zoom: 0.9 })}
-      ${chip(`<span class="ck ok">${svg('check', 22)}</span><span><b>Inside your limits</b><em>At least 70%, deposit under $200</em></span>`, { x: 730, y: 850, rot: -3, z: 5 })}
-      ${sticker('self-approved', { x: 1330, y: 40, s: 190, rot: 14, z: 5 })}`,
+        </div>`, { x: 940, y: 60, z: 3, zoom: 0.9 })}`,
   },
   {
     name: '5-fan-mail', theme: 'dark', kicker: 'Fan Mail',
@@ -143,9 +125,7 @@ const cards = [
     body: 'Open it with your coffee: how the week felt, one big number, and the mail that needs you. Then the cities that are almost there and the newest signatures.',
     stage: () => `
       <div class="halo" style="left:780px; top:100px; width:780px; height:780px"></div>
-      ${phone('mail-dark', { h: 880, x: 920, y: 70, rot: 3 })}
-      ${sticker('empty-mail', { x: 720, y: 140, s: 260, rot: -12, z: 4 })}
-      ${sticker('act-reply', { x: 1320, y: 700, s: 190, rot: 12, z: 4 })}`,
+      ${phone('mail-dark', { h: 880, x: 905, y: 70 })}`,
   },
   {
     name: '6-ask-gus', theme: 'cream', kicker: 'Ask anything',
@@ -164,8 +144,7 @@ const cards = [
           <div class="prop">Ask The Flynn for a date ${svg('forward', 20)}</div>
           <div class="vbar"><span class="side">${svg('keys', 22)}</span><span class="tk"><span class="ring"></span><img src="${art('gus-glyph')}"></span><span class="side">${svg('close', 22)}</span></div>
           <div class="tcap">Tap to talk</div>
-        </div>`, { x: 820, y: 40, z: 3 })}
-      ${sticker('gus-listening', { x: 1250, y: 520, s: 330, rot: 0, z: 5 })}`;
+        </div>`, { x: 820, y: 40, z: 3 })}`;
     },
   },
   {
@@ -174,11 +153,7 @@ const cards = [
     body: 'Every call, offer and yes, in plain words, with a dot for who made the call. Milestones collect on the shelf as the tour comes together.',
     stage: () => `
       <div class="halo" style="left:780px; top:100px; width:780px; height:780px"></div>
-      ${phone('logbook-dark', { h: 880, x: 930, y: 70, rot: -3 })}
-      ${chip(`<span class="ck hot">${svg('check', 20)}</span><span><b>Asked The Flynn while you were away</b><em>They came back with an offer</em></span>`, { x: 780, y: 600, rot: -3, z: 5 })}
-      ${sticker('badge-booked', { x: 730, y: 150, s: 200, rot: -12, z: 4 })}
-      ${sticker('badge-first-poster', { x: 1330, y: 100, s: 160, rot: 12, z: 4 })}
-      ${sticker('badge-fifty', { x: 1320, y: 730, s: 170, rot: -8, z: 4 })}`,
+      ${phone('logbook-dark', { h: 880, x: 905, y: 70 })}`,
   },
   {
     name: '8-how-it-works', theme: 'cream', kicker: 'How Gus works',
@@ -193,8 +168,7 @@ const cards = [
         ['act-deposit', 'Your yes', 'The deposit is tied to that exact offer.'],
       ];
       return `<div class="halo" style="left:760px; top:100px; width:800px; height:800px"></div>
-        <div class="how">${steps.map(([a, t, d], k) => `<div class="tok" style="margin-left:${[0, 40, 80, 40, 0][k]}px"><span class="num">${k + 1}</span><img src="${art(a)}"><div><b>${t}</b><small>${d}</small></div></div>`).join('')}</div>
-        ${sticker('gus-working', { x: 1270, y: 650, s: 260, z: 5 })}`;
+        <div class="how">${steps.map(([a, t, d], k) => `<div class="tok" ><span class="num">${k + 1}</span><img src="${art(a)}"><div><b>${t}</b><small>${d}</small></div></div>`).join('')}</div>`;
     },
   },
   {
@@ -211,8 +185,7 @@ const cards = [
           <div class="big">Every</div><div class="cap2">venue came from a lookup</div>
           <p>If Qloo didn’t return a place, Gus doesn’t say it. He checks the hours too.</p>
           <img class="stamp" src="${art('self-approved')}"></div>
-      </div>
-      ${sticker('gus-oops', { x: 700, y: 690, s: 250, rot: -6, z: 5 })}`,
+      </div>`,
   },
   {
     name: '10-loop', theme: 'hot', kicker: 'Why build all this',
@@ -241,18 +214,14 @@ const cards = [
     optional: 'claude',
     stage: () => `
       <div class="halo" style="left:780px; top:100px; width:780px; height:780px"></div>
-      ${phone('claude', { h: 880, x: 920, y: 70, rot: 3 })}
-      ${sticker('gus-phone', { x: 690, y: 470, s: 330, rot: -4, z: 4 })}
-      ${chip(`<span class="ck ok">${svg('check', 20)}</span><span><b>No tool can pay</b><em>Your yes stays in Wanted</em></span>`, { x: 720, y: 220, rot: -3, z: 5 })}`,
+      ${phone('claude', { h: 880, x: 905, y: 70 })}`,
   },
   {
     name: '12-try-gus', theme: 'hot', kicker: 'Try it',
     title: 'Meet Gus on your phone.',
     body: 'Scan for the live demo with Maya Ortiz’s tour already running. No sign-up. To ask him from Claude, add trywanted.vercel.app/api/mcp as a connector.',
     stage: () => `
-      <div class="try"><div class="qr">${readFileSync(`${shots}/qr.svg`, 'utf8')}</div><b>trywanted.vercel.app</b></div>
-      ${sticker('gus-idle', { x: 1150, y: 380, s: 420, z: 5 })}
-      ${sticker('obj-ticket', { x: 740, y: 700, s: 180, rot: -16, z: 6 })}`,
+      <div class="try"><div class="qr">${readFileSync(`${shots}/qr.svg`, 'utf8')}</div><b>trywanted.vercel.app</b></div>`,
   },
 ];
 
@@ -362,7 +331,7 @@ h1 { font-weight: 900; font-size: 78px; line-height: 1.02; letter-spacing: -.03e
 
 /* Drawn cards */
 .tok, .rcpt, .node { background: linear-gradient(180deg, var(--p1), var(--p2)); box-shadow: inset 0 1px 0 var(--hl), 0 0 0 1px var(--hair), 0 24px 40px -26px var(--drop), 0 6px 12px -8px var(--drop); }
-.how { position: absolute; left: 740px; top: 110px; width: 600px; display: flex; flex-direction: column; gap: 20px; z-index: 3; }
+.how { position: absolute; left: 860px; top: 130px; width: 600px; display: flex; flex-direction: column; gap: 20px; z-index: 3; }
 .tok { position: relative; display: flex; align-items: center; gap: 22px; padding: 16px 28px 16px 16px; border-radius: 30px; width: 500px; }
 .tok img { width: 92px; height: 92px; object-fit: contain; flex: none; filter: drop-shadow(0 8px 10px var(--drop)); }
 .tok b { display: block; font-weight: 800; font-size: 29px; letter-spacing: -.01em; }
@@ -388,7 +357,7 @@ h1 { font-weight: 900; font-size: 78px; line-height: 1.02; letter-spacing: -.03e
 .node { position: absolute; transform: translate(-50%, -50%); width: 196px; padding: 14px 12px 18px; border-radius: 28px; text-align: center; color: #15130F; }
 .node img { width: 92px; height: 92px; object-fit: contain; }
 .node b { display: block; margin-top: 6px; font-weight: 800; font-size: 22px; line-height: 1.15; }
-.try { position: absolute; left: 760px; top: 150px; width: 480px; padding: 40px 40px 34px; border-radius: 48px; background: linear-gradient(180deg, #FFFDF8, #F3EDE1); color: #15130F; text-align: center; z-index: 3; transform: rotate(-3deg); box-shadow: inset 0 1px 0 #fff, 0 60px 100px -40px rgba(110,30,0,.6); }
+.try { position: absolute; left: 860px; top: 190px; width: 480px; padding: 40px 40px 34px; border-radius: 48px; background: linear-gradient(180deg, #FFFDF8, #F3EDE1); color: #15130F; text-align: center; z-index: 3; box-shadow: inset 0 1px 0 #fff, 0 60px 100px -40px rgba(110,30,0,.6); }
 .qr { background: #fff; padding: 26px; border-radius: 26px; box-shadow: inset 0 0 0 1.5px rgba(21,19,15,.08); }
 .qr svg { display: block; width: 100%; height: auto; }
 .try b { display: block; margin-top: 24px; font-weight: 900; font-size: 32px; letter-spacing: -.01em; }
