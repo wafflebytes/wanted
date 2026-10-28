@@ -38,7 +38,7 @@ const UA = 'Wanted/0.1 (tour planner; +https://wanted.fm)';
 async function blueskySearch(q: string): Promise<Omit<ChatterPost, 'kind'>[]> {
   const url = `https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=${encodeURIComponent(q)}&limit=25&sort=latest&lang=en`;
   recordOutbound({ kind: 'web', url, body: '' });
-  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(6000) });
   if (!res.ok) return [];
   const data = (await res.json()) as { posts?: { uri: string; author: { handle: string; displayName?: string; avatar?: string }; record: { text?: string; createdAt?: string }; likeCount?: number }[] };
   return (data.posts ?? []).map((p): Omit<ChatterPost, 'kind'> => {
@@ -61,7 +61,7 @@ async function blueskySearch(q: string): Promise<Omit<ChatterPost, 'kind'>[]> {
 async function lemmySearch(q: string): Promise<Omit<ChatterPost, 'kind'>[]> {
   const url = `https://lemmy.world/api/v3/search?q=${encodeURIComponent(q)}&type_=Posts&sort=New&limit=10`;
   recordOutbound({ kind: 'web', url, body: '' });
-  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(6000) });
   if (!res.ok) return [];
   const data = (await res.json()) as { posts?: { post: { id: number; name: string; body?: string; ap_id: string; published: string }; creator: { name: string; display_name?: string; avatar?: string }; community: { name: string }; counts?: { score?: number } }[] };
   return (data.posts ?? []).map((p) => ({

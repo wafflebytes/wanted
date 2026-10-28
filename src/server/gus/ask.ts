@@ -101,7 +101,7 @@ export async function transcribe(audio: Blob): Promise<string> {
   form.append('language', 'en');
   form.append('tag_audio_events', 'false');
   recordOutbound({ kind: 'asr', url: 'https://api.fish.audio/v1/asr', body: `audio ${audio.size} bytes` });
-  const res = await fetch('https://api.fish.audio/v1/asr', { method: 'POST', headers: { Authorization: `Bearer ${key}`, model: 'transcribe-1-pro' }, body: form });
+  const res = await fetch('https://api.fish.audio/v1/asr', { method: 'POST', headers: { Authorization: `Bearer ${key}`, model: 'transcribe-1-pro' }, body: form, signal: AbortSignal.timeout(15_000) }).catch(() => { throw new AsrError('Gus didn’t catch that. Try again?'); });
   const text = await res.text();
   if (!res.ok) throw new AsrError(`Gus didn’t catch that (${res.status}). ${redact(text).slice(0, 80)}`);
   const out = JSON.parse(text) as { text?: string };
@@ -122,6 +122,19 @@ const DAY_KEYS: DayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'frida
 const SHORT: Record<DayKey, string> = { monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun' };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
+const STOP = new Set(['the', 'and', 'that', 'this', 'with', 'for', 'play', 'plays', 'wont', 'dont', 'artist', 'band', 'they', 'their', 'only', 'always', 'never']);
+/** True when the fact shares a real word with what the artist said ("Mondays" ↔ "I can't do Monday"). */
+export function saidIt(fact: string, said: string): boolean {
+  const stem = (w: string) => w.replace(/(ing|es|s)$/, '');
+  const spoken = new Set(norm(said).split(' ').map(stem));
+  return norm(fact).split(' ').filter((w) => w.length > 2 && !STOP.has(w)).some((w) => spoken.has(stem(w)));
+}
+/** A request ("find me a city", "how is my poster doing") isn't something to remember; a statement about how they tour is. */
+export function isLastingStatement(said: string): boolean {
+  const t = said.trim();
+  if (/\?$/.test(t) || /^(?:find|who|which|what|how|where|when|why|should|can|could|would|is|are|does|do|book|show|tell|give|ask|pitch|plan|swap|open|take|put|get|let)\b/i.test(t)) return false;
+  return /\b(?:remember|never|always|don[’']?t|do not|won[’']?t|can[’']?t|cannot|only|skip|avoid|no \w+days?|tour|drive|van|sprinter|bus|band|allergic|vegan)\b/i.test(t);
+}
 const untrusted = (s: string) => `<untrusted>${s.replace(/<\/?untrusted>/g, '')}</untrusted>`;
 
 const STATES: Record<string, string> = Object.fromEntries(
@@ -166,6 +179,17 @@ function citiesIn(text: string, metros: Metro[], opened: string[] = []): Metro[]
     const same = hits.filter((h) => h.at === i).map((h) => h.m);
     return same.length > 1 ? (findCity(text, same, opened) ?? same[0]) : same[0];
   }).filter((m, i, a) => a.findIndex((x) => x.id === m.id) === i);
+}
+
+const DEICTIC = /\b(?:there|that (?:city|one|place|town)|it|those|the first one|the second one)\b/i;
+/** The city "there" means: said in the earlier turns (what Gus last named beats what the artist did), when this turn names none. */
+export function referent(heard: string, history: GusTurn[], metros: Metro[], opened: string[] = []): Metro | null {
+  if (!DEICTIC.test(heard) || citiesIn(heard, metros, opened).length) return null;
+  for (const turn of [...history].reverse()) {
+    const m = citiesIn(turn.reply, metros, opened)[0] ?? citiesIn(turn.heard, metros, opened)[0];
+    if (m) return m;
+  }
+  return null;
 }
 
 function dayIn(text: string): DayKey | null {
@@ -290,7 +314,7 @@ const TOOLS: ToolDef[] = [
     function: {
       name: 'remember',
       description: 'Write down something lasting the artist just told you about themselves or how they tour (nights they won’t play, their van, the band, cities to skip, how far they’ll drive). Not for questions or one-off asks.',
-      parameters: { type: 'object', properties: { fact: { type: 'string', description: 'In their words, third person, under 15 words, e.g. "Won’t play Mondays"' } }, required: ['fact'] },
+      parameters: { type: 'object', properties: { fact: { type: 'string', description: 'In their words, third person, under 15 words, e.g. "Tours in a Sprinter van"' } }, required: ['fact'] },
     },
   },
 ];
@@ -326,6 +350,10 @@ type Ctx = {
   seenSwaps: Map<string, Swap>;
   /** Draws still open, per city, so a "draw" action only offers a real one. */
   seenDraws: Map<string, Draw>;
+  /** What the artist said this turn, so a remembered fact can be checked against it. */
+  said: string;
+  /** Set once a note is written this turn. */
+  noted: boolean;
   /** What he already knows about this act from earlier conversations. */
   memories: Memory[];
   memo: Map<string, Promise<unknown>>;
@@ -486,6 +514,11 @@ async function execTool(ctx: Ctx, name: string, args: Record<string, string>): P
   }
   if (name === 'remember') {
     const fact = String(args.fact ?? '').slice(0, 200);
+    // A model once copied the tool's own example into a plain question. A fact has to come from what was just said.
+    // Questions and one-off asks aren't lasting facts, and one turn writes one note.
+    if (!isLastingStatement(ctx.said) || ctx.noted) return { out: { error: 'Nothing lasting to write down.' }, found: 'nothing to note' };
+    if (!saidIt(fact, ctx.said)) return { out: { error: 'The artist did not say that. Nothing written down.' }, found: 'nothing to note' };
+    ctx.noted = true;
     const m = await note(artist.id, fact);
     if (!m) return { out: { error: 'Nothing to write down.' }, found: 'nothing to note' };
     const known = ctx.memories.some((x) => x.fact.toLowerCase() === m.fact.toLowerCase());
@@ -514,13 +547,13 @@ function limitAction(which: 'deposit' | 'cut', value: number): GusAction {
 }
 
 /** "Never more than 300 down", "at least 70 percent of the door": a limit, offered on the real slider. */
-function limitAsk(heard: string, history: GusTurn[] = []): Omit<GusAnswer, 'heard' | 'model' | 'steps'> | null {
+export function limitAsk(heard: string, history: GusTurn[] = []): Omit<GusAnswer, 'heard' | 'model' | 'steps'> | null {
   const t = norm(heard);
   const amount = heard.match(/\$?\s?(\d{2,4})\s?(%|percent|dollars|bucks)?/i);
   if (!amount) return null;
   // "Actually make it 250" right after a limit: the same limit, a new number.
   const last = history.at(-1)?.reply ?? '';
-  const before = /percent of the door/.test(last) ? 'cut' : /dollars to hold a night/.test(last) ? 'deposit' : null;
+  const before = /percent of (?:the door|ticket sales)/.test(last) ? 'cut' : /dollars to (?:hold|book) a night|deposits? at \$|put down up to/.test(last) ? 'deposit' : null;
   const followUp = before && /(make it|instead|actually|change it|go with|lower|raise|how about|what about)/.test(t);
   if (!followUp && (!/(deposit|put down|up front|upfront|cut|split|door|percent|%)/.test(t) || !/(limit|up to|at most|max|most|never|less than|no less|at least|let|set|raise|lower|change|allow)/.test(t))) return null;
   const n = Number(amount[1]);
@@ -591,6 +624,8 @@ async function liteAgent(ctx: Ctx, heard: string): Promise<Omit<GusAnswer, 'hear
     await runTool(ctx, 'remember', { fact: keep[1].replace(/[.!]+$/, '') });
     return { reply: 'Noted. I’ll keep that in mind every time I plan for you.', mood: 'idle', action: null };
   }
+  // The model wrote a note, then its own words didn't pass: the note is still the answer.
+  if (ctx.noted) return { reply: 'Noted. I’ll keep that in mind every time I plan for you.', mood: 'idle', action: null };
   if (city && /(poster|flyer)/.test(t) && /(put|hang|where|spot|up|stick|staple)/.test(t)) {
     await runTool(ctx, 'poster_spots', { city: city.name });
     const spots = ctx.seenSpots.get(city.id) ?? [];
@@ -756,6 +791,8 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     seenNights: new Map(),
     seenSwaps: new Map(),
     seenDraws: new Map(),
+    said: heard,
+    noted: false,
     memories: await recall(artist.id).catch(() => []),
     memo: new Map(),
     emit,
@@ -777,12 +814,14 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
     ctx.evidence.numbers.push(...(m.fact.match(/\d+/g) ?? []).map(Number));
   }
 
+  const there = referent(heard, history, metros, map.opened);
   const facts = [
     `Act: ${untrusted(artist.name)} (${artist.kind === 'comedy' ? 'stand-up comedian' : 'music'}).`,
     `Screen they're on: ${screen ?? 'map'}.`,
     `Their best cities, best first: ${ranked.slice(0, 8).map((m) => `${m.name}${m.sleeper ? ' (nobody plays it yet)' : ''}`).join(', ')}.`,
     `Posters up in: ${map.opened.length ? map.opened.map((id) => metros.find((m) => m.id === id)?.name ?? id).join(', ') : 'none yet'}.`,
     artist.isDemo ? 'Signatures for this act are demo data.' : '',
+    there ? `In this message, "there", "it" or "that city" means ${there.name}, ${there.state}. Look up ${there.name}, not another city.` : '',
     ctx.memories.length ? `What the artist told you before (keep to it):\n${ctx.memories.map((m) => `- ${untrusted(m.fact)}`).join('\n')}` : '',
   ]
     .filter(Boolean)
@@ -826,6 +865,8 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
         }),
       );
       calls.forEach((call, i) => messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(outs[i]).slice(0, 5000) }));
+      // Writing something down is the whole job: no more lookups, answer.
+      if (ctx.noted) break;
     }
     // Out of turns or time with lookups done: answer from what came back instead of giving up.
     if (finalText === null && ctx.steps.length) {
@@ -851,7 +892,8 @@ export async function answer(artist: ArtistRow, heard: string, screen: string | 
   }
 
   const a = parsed?.action ?? {};
-  const city = a.city ? (findCity(a.city, metros, map.opened) ?? null) : null;
+  // "There" was settled by the earlier turns; a model that drifted to another city doesn't get to move it.
+  const city = there ?? (a.city ? (findCity(a.city, metros, map.opened) ?? null) : null);
   let action: GusAction | null = null;
   if (a.type === 'tab' && a.tab && a.tab in TABS) action = TABS[a.tab];
   else if (a.type === 'limit' && (a.limit === 'deposit' || a.limit === 'cut') && typeof a.value === 'number') action = limitAction(a.limit, a.value);

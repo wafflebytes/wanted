@@ -166,7 +166,7 @@ const photoCache = new Map<string, string | null>();
 async function photo(url: string): Promise<string | null> {
   if (photoCache.has(url)) return photoCache.get(url)!;
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
     if (!res.ok) throw new Error(String(res.status));
     const png = await sharpLib()(Buffer.from(await res.arrayBuffer())).resize(600, 600, { fit: 'cover', position: 'attention' }).png().toBuffer();
     const uri = `data:image/png;base64,${png.toString('base64')}`;

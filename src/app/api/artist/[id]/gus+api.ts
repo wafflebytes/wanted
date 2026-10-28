@@ -14,7 +14,11 @@ export const POST = handler(async (req: Request, { id }: Record<string, string>)
   let heard = '';
   let screen: string | null = null;
   let history: GusTurn[] = [];
-  const turns = (v: unknown) => (Array.isArray(v) ? v.slice(-3).filter((t) => t && typeof t === 'object') : []) as GusTurn[];
+  // Earlier turns come from the client, so each is clipped before it reaches the prompt.
+  const turns = (v: unknown): GusTurn[] =>
+    Array.isArray(v)
+      ? v.slice(-3).filter((t) => t && typeof t === 'object').map((t) => ({ heard: String(t.heard ?? '').slice(0, 400), reply: String(t.reply ?? '').slice(0, 600) }))
+      : [];
   const type = req.headers.get('content-type') ?? '';
   if (type.includes('multipart/form-data')) {
     // React Native's FormData typing has no getter; the server runtime's does.
@@ -27,7 +31,7 @@ export const POST = handler(async (req: Request, { id }: Record<string, string>)
     if (a && typeof a !== 'string') {
       if (a.size > 4_000_000) throw new HttpError(413, 'That was a long one. Keep it under a minute.');
       audio = a;
-    } else heard = String(form.get('text') ?? '');
+    } else heard = String(form.get('text') ?? '').slice(0, 400);
   } else {
     const b = (await req.json()) as { text?: string; screen?: string; history?: unknown };
     history = turns(b.history);

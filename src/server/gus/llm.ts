@@ -178,6 +178,8 @@ export async function chat(opts: ChatOptions): Promise<ChatResult> {
              on conflict(key) do update set body = excluded.body, model = excluded.model, created_at = excluded.created_at`,
             [cacheKey, model, JSON.stringify(result), Date.now()],
           );
+          // Every distinct question is a row; trim rows older than 60 days now and then (the demo prompts are well inside that) so the table can't grow without bound.
+          if (Math.random() < 0.02) await run('delete from llm_cache where created_at < ?', [Date.now() - 60 * 86_400_000]).catch(() => {});
         }
         return result;
       } catch (err) {

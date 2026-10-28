@@ -29,10 +29,16 @@ export type LinkResult = {
 
 const UA = 'Wanted/0.1 (tour planner; +https://wanted.fm)';
 
+/** A hung third party must not hold up someone pasting a link. */
+const FETCH_MS = 6000;
+
+/** `host` is `domain` or one of its subdomains, never a lookalike such as `evilbandcamp.com`. */
+const onDomain = (host: string, domain: string) => host === domain || host.endsWith(`.${domain}`);
+
 async function getJson<T>(url: string): Promise<T | null> {
   recordOutbound({ kind: 'web', url, body: '' });
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+    const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(FETCH_MS) });
     return res.ok ? ((await res.json()) as T) : null;
   } catch {
     return null;
@@ -42,7 +48,7 @@ async function getJson<T>(url: string): Promise<T | null> {
 async function getText(url: string): Promise<string | null> {
   recordOutbound({ kind: 'web', url, body: '' });
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': UA } });
+    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(FETCH_MS), redirect: 'error' });
     return res.ok ? (await res.text()).slice(0, 200_000) : null;
   } catch {
     return null;
@@ -65,42 +71,42 @@ async function identify(input: string): Promise<{ source: LinkSource; name: stri
   const host = url.hostname.replace(/^www\.|^m\./, '');
   const path = url.pathname;
 
-  if (host.endsWith('spotify.com')) {
+  if (onDomain(host, 'spotify.com')) {
     const id = path.match(/artist\/([A-Za-z0-9]{22})/)?.[1];
     const o = await getJson<{ title?: string; thumbnail_url?: string }>(`https://open.spotify.com/oembed?url=${encodeURIComponent(url.toString())}`);
     if (o?.title) return { source: 'spotify', name: o.title, spotifyId: id, image: o.thumbnail_url ?? null };
   }
-  if (host.endsWith('music.apple.com')) {
+  if (onDomain(host, 'music.apple.com')) {
     const id = path.match(/\/(\d{5,})(?:$|\?)/)?.[1] ?? path.split('/').pop();
     const o = id ? await getJson<{ results?: { artistName?: string }[] }>(`https://itunes.apple.com/lookup?id=${id}`) : null;
     const name = o?.results?.[0]?.artistName ?? (path.match(/artist\/([^/]+)/)?.[1] ? titleCase(decodeURIComponent(path.match(/artist\/([^/]+)/)![1])) : null);
     if (name) return { source: 'apple', name };
   }
-  if (host.endsWith('deezer.com')) {
+  if (onDomain(host, 'deezer.com')) {
     const id = path.match(/artist\/(\d+)/)?.[1];
     const o = id ? await getJson<{ name?: string; picture_xl?: string }>(`https://api.deezer.com/artist/${id}`) : null;
     if (o?.name) return { source: 'deezer', name: o.name, image: o.picture_xl ?? null };
   }
-  if (host.endsWith('soundcloud.com')) {
+  if (onDomain(host, 'soundcloud.com')) {
     const o = await getJson<{ author_name?: string; title?: string; thumbnail_url?: string }>(`https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(url.toString())}`);
     if (o?.author_name) return { source: 'soundcloud', name: o.author_name, image: o.thumbnail_url ?? null };
   }
-  if (host.endsWith('youtube.com') || host === 'youtu.be') {
+  if (onDomain(host, 'youtube.com') || host === 'youtu.be') {
     const o = await getJson<{ author_name?: string }>(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(url.toString())}`);
     if (o?.author_name) return { source: 'youtube', name: o.author_name.replace(/\s*-\s*Topic$/i, '').replace(/VEVO$/i, '') };
     const handle = path.match(/@([^/]+)/)?.[1];
     if (handle) return { source: 'youtube', name: titleCase(handle) };
   }
-  if (host.endsWith('bandcamp.com')) {
+  if (onDomain(host, 'bandcamp.com')) {
     const html = await getText(url.origin);
     const name = html?.match(/<meta property="og:site_name" content="([^"]+)"/)?.[1] ?? html?.match(/<meta property="og:title" content="([^"]+)"/)?.[1];
     return { source: 'bandcamp', name: name ?? titleCase(host.split('.')[0]) };
   }
-  if (host.endsWith('rateyourmusic.com') || host.endsWith('sonemic.com')) {
+  if (onDomain(host, 'rateyourmusic.com') || onDomain(host, 'sonemic.com')) {
     const slug = path.match(/artist\/([^/]+)/)?.[1];
     if (slug) return { source: 'rym', name: titleCase(decodeURIComponent(slug)) };
   }
-  if (host.endsWith('instagram.com') || host.endsWith('tiktok.com') || host.endsWith('x.com') || host.endsWith('twitter.com')) {
+  if (onDomain(host, 'instagram.com') || onDomain(host, 'tiktok.com') || onDomain(host, 'x.com') || onDomain(host, 'twitter.com')) {
     const handle = path.split('/').filter(Boolean)[0]?.replace(/^@/, '');
     if (handle) return { source: 'instagram', name: titleCase(handle.replace(/(music|official|\d+)$/i, '')) };
   }
