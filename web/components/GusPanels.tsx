@@ -13,6 +13,7 @@ import { deals, useDeal } from '@web/lib/deals';
 import { gus, useGus, type GusAction } from '@web/lib/gus';
 import { haptic } from '@web/lib/haptics';
 import { useApi, useDark } from '@web/lib/hooks';
+import { niceDate } from '@web/lib/road';
 import { Approval } from './Approval';
 import { DealRoom } from './DealRoom';
 import { Art, type ArtName } from './Art';
@@ -401,6 +402,7 @@ function Proposal({ action }: { action: GusAction }) {
   if (action.type === 'limit') return <LimitProposal action={action} />;
   if (action.type === 'quiet') return <QuietProposal action={action} />;
   if (action.type === 'spots') return <SpotsProposal action={action} />;
+  if (action.type === 'night') return <NightProposal action={action} />;
   return <Offer action={action} />;
 }
 
@@ -500,6 +502,41 @@ function SpotsProposal({ action }: { action: Extract<GusAction, { type: 'spots' 
       <span className="lp-where">Places your fans already hang out. Ask the staff before you put one up.</span>
       <button className="btn hot block" disabled={!picked.length} onClick={() => (haptic('tap'), gus.act({ ...action, spots: picked }))}>
         {picked.length ? `Pin ${picked.length} spot${picked.length === 1 ? '' : 's'}` : 'Pick at least one'}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Which night, as a choice: three day chips, best first, each with how many of the venues that
+ * suit you are open. The night he'd ask for now is marked. One tap picks; the island offers Undo.
+ */
+function NightProposal({ action }: { action: Extract<GusAction, { type: 'night' }> }) {
+  const [pick, setPick] = useState(action.nights[0]?.date);
+  const chosen = action.nights.find((n) => n.date === pick) ?? action.nights[0];
+  return (
+    <div className="pc np">
+      <span className="pc-k">Which night</span>
+      <p className="pc-line">
+        Play <b className="tok">{action.name}</b> on
+      </p>
+      <div className="np-chips" role="radiogroup" aria-label={`Nights in ${action.name}`}>
+        {action.nights.map((n, i) => {
+          const [wd, ...rest] = niceDate(n.date).split(' ');
+          return (
+            <button key={n.date} role="radio" aria-checked={n.date === pick} className={`np-chip ${n.date === pick ? 'on' : ''}`} style={{ ['--i' as string]: i }} onClick={() => (haptic('tick'), setPick(n.date))}>
+              {i === 0 && <span className="np-best">Best</span>}
+              <b>{wd.replace(',', '')}</b>
+              <span>{rest.join(' ')}</span>
+              <em>{n.venues ? `${n.open} of ${n.venues} open` : 'Open'}</em>
+              {n.date === action.current && <small>Asking now</small>}
+            </button>
+          );
+        })}
+      </div>
+      <span className="lp-where">Gus asks {action.name}’s venues for this night. It shows on the city’s card.</span>
+      <button className="btn hot block" disabled={!chosen || chosen.date === action.current} onClick={() => (haptic('tap'), gus.act({ ...action, nights: [chosen] }))}>
+        {chosen && chosen.date === action.current ? `Already asking for ${niceDate(chosen.date)}` : `Ask for ${chosen ? niceDate(chosen.date) : 'it'}`}
       </button>
     </div>
   );

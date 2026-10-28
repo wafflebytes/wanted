@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Deal } from '@/lib/types';
 import type { CityData, MapData } from '@/ui/types';
+import type { Spot } from '@web/lib/gus';
 import { useApi, useDark, usePrefersReducedMotion } from '@web/lib/hooks';
 import { gus } from '@web/lib/gus';
 import { stage, useStage } from '@web/lib/stage';
@@ -24,6 +25,7 @@ export function MapStage({ slug }: { slug: string }) {
   const held = useMemo(() => [...new Set(deals.data?.deals.filter((d) => d.status === 'held').map((d) => d.city) ?? [])], [deals.data]);
   const city = useApi<CityData>(s.city ? `/artist/${slug}/city/${s.city}` : null);
   const cityWait = useApi<CityData>(s.city && city.data?.neighborhoodsPending ? `/artist/${slug}/city/${s.city}?wait=1` : null);
+  const pins = useApi<{ spots: Record<string, Spot[]> }>(s.city ? `/artist/${slug}/spots` : null);
   const cd = cityWait.data && !cityWait.data.neighborhoodsPending ? cityWait.data : city.data;
   const metros = useMemo(() => map.data?.metros.map((m) => ({ id: m.id, name: m.name, state: m.state, lat: m.lat, lon: m.lon, score: m.score, heat: m.heat, rank: m.rank, sleeper: m.sleeper })) ?? [], [map.data]);
   const cityProp = useMemo(
@@ -37,9 +39,10 @@ export function MapStage({ slug }: { slug: string }) {
             neighborhoods: (cd.neighborhoods ?? []).map((n) => ({ name: n.name, rank: n.rank, lat: n.lat, lon: n.lon })),
             rooms: (cd.rooms ?? []).map((r) => ({ id: r.id, name: r.name, lat: r.lat, lon: r.lon, rank: r.rank })),
             outline: cd.outline,
+            spots: (pins.data?.spots[cd.metro.id] ?? []).flatMap((p) => (p.lat !== null && p.lon !== null ? [{ id: p.id, name: p.name, lat: p.lat, lon: p.lon }] : [])),
           }
         : null,
-    [s.city, cd],
+    [s.city, cd, pins.data],
   );
   // Opening a city swells the island with its name, the way the tabs do.
   const cityName = cd && cd.metro.id === s.city ? cd.metro.name : null;

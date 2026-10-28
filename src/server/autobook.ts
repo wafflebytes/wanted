@@ -11,12 +11,13 @@ import type { Deal } from '../lib/types';
 import { dayOf } from '../lib/tour';
 import type { ArtistRow } from './artists';
 import { isOpenOn } from './city';
-import { defaultDate, dealsFor, passDeal, runToEnd, startDeal } from './deals';
+import { dealsFor, passDeal, runToEnd, startDeal } from './deals';
 import { log } from './logbook';
 import { callsThisWeek, escalationLevel, mandateFor } from './mandate';
 import { metroById } from './score';
-import { cityData, crowdFor, loadPlan } from './service';
+import { cityData, crowdFor } from './service';
 import { postInbox } from './inbox';
+import { nightFor } from './nights';
 
 const nice = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 const listOf = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
@@ -45,8 +46,7 @@ export async function autoBook(artist: ArtistRow, city: string): Promise<{ deal:
 
   // 1. Rooms from Qloo, and the night we'd ask for.
   const d = await cityData(artist, city, true);
-  const plan = await loadPlan(artist.id);
-  const night = plan?.stops.find((s) => s.metroId === city)?.date ?? defaultDate();
+  const night = await nightFor(artist.id, city);
   const day = dayOf(night);
   await log(artist.id, {
     kind: 'lookup',

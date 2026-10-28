@@ -28,6 +28,8 @@ const RULES: [RegExp, string][] = [
   [/\bof the door\b/g, 'of ticket sales'],
   [/\b(ask|asks|asked|asking) (the )?rooms\b/g, '$1 $2venues'],
   [/\bAsk rooms\b/g, 'Ask venues'],
+  [/\brooms (are )?open\b/g, 'venues $1open'],
+  [/\bRooms (are )?open\b/g, 'Venues $1open'],
   [/\bSimulated offer: /g, 'Test offer: '],
   [/\s*Simulated offer only\. No venue transfer, agreement or settlement\./g, ' Test mode, so no real money moved.'],
   [/\s*No ticket link or delivery channel is connected\./g, ' It goes out when tickets are on sale.'],

@@ -11,6 +11,8 @@ export type MapCity = {
   neighborhoods: { name: string; rank: number; lat: number | null; lon: number | null }[];
   rooms: { id: string; name: string; lat: number | null; lon: number | null; rank: number }[];
   outline: [number, number][] | null;
+  /** Where the artist pinned the city's posters (web only). */
+  spots?: { id: string; name: string; lat: number; lon: number }[];
 };
 /** The map underneath the dots. All Esri raster tiles (no key); the web's dark one is OpenFreeMap vectors. */
 export type Basemap = 'dark' | 'satellite' | 'terrain' | 'streets';

@@ -14,6 +14,7 @@ import { gus, useGus, type GusAction, type Spot } from '@web/lib/gus';
 import { live, useLive, type Activity } from '@web/lib/live';
 import { api } from '@web/lib/api';
 import { mutate, useApi } from '@web/lib/hooks';
+import { niceDate } from '@web/lib/road';
 import { session } from '@web/lib/session';
 import { Gus, type GusMood } from './Gus';
 import { GusPanels } from './GusPanels';
@@ -148,6 +149,26 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
             });
           })
           .catch(() => gus.flash('Couldn’t pin those'));
+        return;
+      }
+      if (a.type === 'night') {
+        // Rung 1: it only changes which night Gus asks venues for.
+        const url = `/artist/${slug}/nights`;
+        const date = a.nights[0]?.date;
+        if (!date) return;
+        api
+          .post<{ was: string | null }>(url, { city: a.id, date })
+          .then(({ was }) => {
+            mutate(url).catch(() => {});
+            mutate(`${url}?city=${a.id}`).catch(() => {});
+            haptic('commit');
+            gus.did(`${a.name} on ${niceDate(date)}`, () => {
+              api.post(url, { city: a.id, date: was }).then(() => (mutate(url), mutate(`${url}?city=${a.id}`))).catch(() => {});
+              haptic('tap');
+              gus.flash('Put it back', 1600);
+            });
+          })
+          .catch(() => gus.flash('Couldn’t change that'));
         return;
       }
       if (a.type === 'tab') return router.push(`${base}${a.tab === 'map' ? '' : `/${a.tab}`}`);

@@ -133,6 +133,12 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 - **Quiet hours as genUI** (AGENT-UX 3.5): "Don't call me after 10" is parsed by rule (`quietAsk`, needs "call me"/"quiet hours" so "call the venue before Friday" doesn't trip it) and hands over a day strip with the span lit, From/Until steppers, one tap, Undo by the island.
 - Fixed: `?ask=` links on a fresh load asked `/artist/null/gus` (the ask effect ran before Gus was wired to the act). This is the link Gus hands out in Claude.
 
+## Session 15: map pins and which night
+
+- **Spots on the map** (AGENT-UX 3.4): a city's pinned poster spots are yellow dots on the city map with numbered pills that match Posters; the pills drop in 90 ms apart, place before neighbourhood labels, and take the spot's name past zoom 11.
+- **Which night** (AGENT-UX 3.5): `pick_night` tool and `src/server/nights.ts`. "Which night should I play Ithaca?" brings three day chips, best first (weekends draw, how many of the venues that suit you are open that night from Qloo hours, never a night the artist told Gus they won't play). One tap, Undo by the island. The picked night is what venues get asked for (`startDeal` and `autoBook` both read `nightFor`), and the city card says "Gus asks for Fri, Dec 18 · Change". A tour-plan date on a ruled-out day slides to the next night they play. Route `/artist/:id/nights`.
+- No signer availability exists yet, so chips show venues open instead of "how many signers can make it".
+
 ## Next steps
 
 (Tour and Posters done. Dark is the main mode: design there first, then check light. Use the material system above for every new control. Judge product and copy as well as pixels: one job per screen, one primary key, plain musician words.)

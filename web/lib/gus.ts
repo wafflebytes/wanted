@@ -19,7 +19,9 @@ export type GusAction =
   | { type: 'link'; url: string; label: string }
   | { type: 'limit'; key: 'maxDeposit' | 'minSplit'; value: number; label: string }
   | { type: 'quiet'; start: number; end: number; label: string }
-  | { type: 'spots'; id: string; name: string; spots: Spot[]; label: string };
+  | { type: 'spots'; id: string; name: string; spots: Spot[]; label: string }
+  | { type: 'night'; id: string; name: string; current: string; nights: Night[]; label: string };
+export type Night = { date: string; day: string; open: number; venues: number };
 export type Spot = { id: string; name: string; neighborhood: string | null; address: string | null; lat: number | null; lon: number | null };
 export type GusStep = { id: string; tool: string; label: string; source: 'qloo' | 'fans' | 'wanted'; status: 'running' | 'done' | 'failed'; found: string | null; ms: number };
 export type GusAnswer = { heard: string; reply: string; mood: 'idle' | 'proud' | 'unimpressed' | 'thinking'; action: GusAction | null; model: string; steps?: GusStep[] };

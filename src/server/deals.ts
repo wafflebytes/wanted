@@ -26,9 +26,10 @@ import { HttpError } from './http';
 import { recordOutbound } from './outbound';
 import { dealReview, assertDealReview, type DealReview } from './deal-scope';
 import { metroById } from './score';
-import { cityData, loadPlan } from './service';
+import { cityData } from './service';
 import { makeShowPlan } from './showplan';
 import { postInbox } from './inbox';
+import { nightFor } from './nights';
 
 import { limitsFor } from './deal-limits';
 import { plainWords } from '../lib/plain';
@@ -139,9 +140,8 @@ export async function startDeal(artist: ArtistRow, metroId: string, roomId: stri
   const hoods = (city.proof?.neighborhoods ?? []).slice(0, 2).map((n) => n.name);
   const limits = await limitsFor(artist.id);
 
-  // The night: the tour plan's date for this city if there is one, else a Friday a few weeks out.
-  const plan = await loadPlan(artist.id);
-  const asked = plan?.stops.find((s) => s.metroId === metroId)?.date ?? defaultDate();
+  // The night: the one the artist picked, else the tour plan's date, else a Friday a few weeks out.
+  const asked = await nightFor(artist.id, metroId);
   const date = openNight(room, asked);
   const band = room.sizeGuess ?? artist.roomBand ?? 'small';
   const house = housePolicy(band, dayOf(date), signatures, room);

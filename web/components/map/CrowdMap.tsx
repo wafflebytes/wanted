@@ -14,15 +14,16 @@ import { IconLayer, PathLayer, ScatterplotLayer } from '@deck.gl/layers';
  * in the display face, crisp at any zoom, and they're tappable. Diffed by key every frame.
  */
 type Pick = { kind: 'metro' | 'room' | 'neighborhood'; id: string };
-type Label = { key: string; lon: number; lat: number; text: string; cls: string; num?: number; pick?: Pick };
+type Label = { key: string; lon: number; lat: number; text: string; cls: string; num?: number; pick?: Pick; delay?: number };
 type Mark = { m: maplibregl.Marker; el: HTMLElement; sig: string };
 
 /** Drop labels that would sit on top of one already placed (list order is priority). Metros are pre-placed. */
 function declutter(map: maplibregl.Map | null, list: Label[]) {
   if (!map) return list;
   const kept: { x: number; y: number; w: number }[] = [];
-  // Named route ends place first so numbered stops yield to them.
-  const order = [...list].sort((a, b) => Number(b.cls.includes('named')) - Number(a.cls.includes('named')));
+  // Named route ends and poster spots place first so numbered stops and neighbourhoods yield to them.
+  const first = (l: Label) => Number(l.cls.includes('named') || l.cls.includes('ml-spot'));
+  const order = [...list].sort((a, b) => first(b) - first(a));
   const ok = new Set(order.filter((l) => {
     if (l.key.startsWith('m')) return true;
     const p = map.project([l.lon, l.lat]);
@@ -49,6 +50,7 @@ function syncLabels(map: maplibregl.Map | null, marks: Map<string, Mark>, list: 
     }
     if (mk.sig !== sig) {
       mk.el.className = `ml ${l.cls}`;
+      if (l.delay) mk.el.style.animationDelay = `${l.delay}ms`;
       mk.el.innerHTML = '';
       if (l.num !== undefined) {
         const n = document.createElement('i');
@@ -577,6 +579,28 @@ export default function CrowdMap(props: CrowdMapProps) {
         }),
       );
       if (zoom > 11.4) rooms.forEach((d) => labels.push({ key: `v${d.id}`, lon: d.lon!, lat: d.lat!, text: d.name, cls: 'ml-room', pick: { kind: 'room', id: d.id } }));
+      // Where the posters go: the spots the artist pinned with Gus, numbered as on Posters.
+      // Few enough to always name; each drops in a beat after the last.
+      type Spot = NonNullable<MapCity['spots']>[number];
+      const spots = city.spots ?? [];
+      if (spots.length) {
+        layers.push(
+          new ScatterplotLayer({
+            id: 'spots',
+            transitions: grow,
+            data: spots,
+            getPosition: (d: Spot) => [d.lon, d.lat],
+            getRadius: 6,
+            radiusUnits: 'pixels',
+            getFillColor: [242, 183, 5, 255],
+            stroked: true,
+            getLineColor: [...ink, 255] as [number, number, number, number],
+            lineWidthMinPixels: 2,
+            updateTriggers: { getLineColor: dark },
+          }),
+        );
+        spots.forEach((d, i) => labels.push({ key: `s${d.id}`, lon: d.lon, lat: d.lat, num: i + 1, text: zoom > 11 ? d.name : '', cls: `ml-spot${zoom > 11 ? ' named' : ''}`, delay: i * 90 }));
+      }
     }
 
     // Fan signatures: per-neighbourhood dots, white with an orange ring (never one dot per fan).

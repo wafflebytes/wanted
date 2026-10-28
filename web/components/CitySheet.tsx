@@ -9,6 +9,7 @@ import type { CityData, Crowd } from '@/ui/types';
 import { deals, useDeal } from '@web/lib/deals';
 import { gus } from '@web/lib/gus';
 import { useApi } from '@web/lib/hooks';
+import { niceDate } from '@web/lib/road';
 import { Icon } from './Icon';
 import { PlainChatbot } from './PlainChatbot';
 import { Reel } from './Reel';
@@ -16,6 +17,7 @@ import { Reel } from './Reel';
 export function CitySheet({ slug, d, opened, posting, onPost, onClose }: { slug: string; d: CityData; opened: boolean; posting: boolean; onPost: () => void; onClose: () => void }) {
   const crowd = useApi<Crowd>(`/artist/${slug}/crowd?city=${d.metro.id}`);
   const live = useDeal();
+  const night = useApi<{ current: string; picked: Record<string, string> }>(opened ? `/artist/${slug}/nights?city=${d.metro.id}` : null);
   const s = d.score;
   const signed = d.proof?.signatures ?? 0;
   const ratio = d.proof?.ratio ?? null;
@@ -73,6 +75,12 @@ export function CitySheet({ slug, d, opened, posting, onPost, onClose }: { slug:
             <Link className="btn light" href={`/a/${slug}/posters?city=${d.metro.id}`}>
               Poster
             </Link>
+            {night.data?.current && (
+              <p className="city-night">
+                Gus asks for <b>{niceDate(night.data.current)}</b>
+                <button onClick={() => (gus.open('voice'), gus.ask(`Which night should I play ${d.metro.name}?`))}>Change</button>
+              </p>
+            )}
           </>
         ) : (
           <button className="btn hot block" onClick={onPost} disabled={posting}>

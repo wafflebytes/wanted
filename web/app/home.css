@@ -86,6 +86,10 @@
 .city-stats { margin-top: 14px; animation: rise var(--t-hero) var(--ease) 100ms both; }
 .city-acts { display: flex; gap: 8px; margin-top: 16px; animation: rise var(--t-hero) var(--ease) 140ms both; }
 .city-acts .btn:first-child { flex: 1; }
+.city-acts:has(.city-night) { flex-wrap: wrap; }
+.city-night { flex-basis: 100%; display: flex; align-items: center; gap: 6px; margin-top: 2px; font: 500 13.5px/1.3 var(--body); color: var(--ink-3); }
+.city-night b { font-weight: 600; color: var(--ink-2); }
+.city-night button { margin-left: auto; min-height: 32px; padding: 0 4px; font: 600 13.5px var(--body); color: var(--wanted-text); }
 .city-skel { padding: 4px 0; }
 .hoods { list-style: none; }
 .hood-rank { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--veil-2); font: 800 13px var(--display); color: var(--ink-2); flex: none; }
