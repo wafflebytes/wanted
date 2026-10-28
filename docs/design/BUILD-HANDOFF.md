@@ -144,6 +144,7 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 - **Swap** (AGENT-UX 3.5): "Swap Albany" runs `swap_options` (`swapOptions` in `service.ts`: the planner's own `swapCandidates`, top two, with driving added or saved against the stop it replaces and fans signed). The card draws the tour small, framed on the stretch around the stop: the city going out struck and its legs faint, the two candidates as dashed orange ghosts through the neighbours, chips with the detour. One tap re-plans via `{kind:'swap'}`; Undo posts `{kind:'undo'}`, which restores the plan snapshot `planFor` saves before every edit (kv `plan-prev:<id>`, instant, undo twice is redo).
 - **The draw** (AGENT-UX 3.5): "Who wins the draw in Ithaca?" runs `fan_draw` (`bountyView`). Open: a ticket stub (admit one, the prize, fans and chances, the sealed code) with Hold to draw, no Undo (a promise to a fan); the card posts `/posters {action:'draw'}` itself and the winning number lands on the torn stub. Already drawn: Gus names the winner. Classes are `tk-` (`.dr` is the deal room).
 - Browser checks only when a change needs a look, dark at 375 px (the user's call).
+- **Folds** (AGENT-UX 3.8): Fan Mail's Earlier is city stacks (`fm-stack`, `is-stacked`/`is-deep` draw the sheets underneath) instead of one fold; the city sheet shows three neighbourhoods and three venues with a `fold-more` row each.
 
 ## Next steps
 

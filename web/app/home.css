@@ -132,3 +132,10 @@
 .plain.is-done { animation: plain-in 420ms var(--ease) both; }
 @keyframes plain-in { from { opacity: 0.4; transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) { .plain.is-done { animation: none; } }
+
+/* City sheet folds: the best three show, the rest wait behind one quiet row. */
+.fold-more { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 46px; padding: 0 16px; font: 600 13.5px var(--body); color: var(--wanted-text); }
+.fold-more svg { transform: rotate(90deg); transition: transform var(--t-move) var(--ease); }
+.fold-more svg.up { transform: rotate(-90deg); }
+.room-more { justify-content: center; gap: 5px; min-height: 48px; padding: 0 12px; font: 600 13.5px var(--body); color: var(--wanted-text); }
+.room-more b, .room-more span { font: inherit; color: inherit; }

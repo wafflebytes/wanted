@@ -209,14 +209,16 @@ attached. Built ones are marked.
 
 ---
 
-### 3.8 Progressive disclosure (Built in part)
+### 3.8 Progressive disclosure (Built)
 
 - **Map**: on the tour tab the heat goes quiet and only the route shows. On the country
   view, labels only for your top cities; the rest appear as you zoom.
 - **Logbook**: milestones fold into one row; each entry's detail folds to two lines.
 - **Deal room**: state first, letters folded.
-- **Next:** Fan Mail cards fold older notes from the same city into one stack ("3 more from
-  Burlington"); the city sheet leads with one sentence and folds rooms and neighbourhoods.
+- **Fan Mail**: Earlier notes from the same city stack under the newest ("6 more from
+  Burlington"), paper edges showing; four stacks show, the rest behind one key.
+- **City sheet**: leads with the sentence; neighbourhoods and venues show the best three and
+  fold the rest behind one row.
 
 ---
 

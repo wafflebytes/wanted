@@ -14,7 +14,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Deal, InboxMessage } from '@/lib/types';
 import type { Pulse } from '@/server/pulse';
-import type { ArtistState } from '@/ui/types';
+import type { ArtistState, MapData } from '@/ui/types';
 import { Art } from '@web/components/Art';
 import { Icon, type IconName } from '@web/components/Icon';
 import { Reel } from '@web/components/Reel';
@@ -63,6 +63,8 @@ export default function FanMail() {
   const inbox = useApi<{ messages: InboxMessage[] }>(`/artist/${slug}/inbox`, { every: 8000 });
   const dealList = useApi<{ deals: Deal[] }>(`/artist/${slug}/deals`, { every: 8000 });
   const [earlier, setEarlier] = useState(false);
+  const [openStacks, setOpenStacks] = useState<Set<string>>(new Set());
+  const map = useApi<MapData>(`/artist/${slug}/map`);
 
   // Airmail paper; the header and dock blur into it.
   useEffect(() => {
@@ -90,6 +92,31 @@ export default function FanMail() {
   const needs = mail.filter((m) => m.action && (!m.read || open(m))).slice(0, 2);
   const rest = mail.filter((m) => !needs.includes(m));
   const unread = mail.filter((m) => !m.read).length;
+  // Older notes from the same city fold into one stack under the newest ("3 more from Burlington").
+  const stacks = useMemo(() => {
+    const cityOf = (m: InboxMessage) => m.action?.city ?? (typeof m.evidence?.city === 'string' ? m.evidence.city : null);
+    const out: { key: string; city: string | null; notes: InboxMessage[] }[] = [];
+    const byCity = new Map<string, (typeof out)[number]>();
+    for (const m of rest) {
+      const c = cityOf(m);
+      const hit = c ? byCity.get(c) : undefined;
+      if (hit) hit.notes.push(m);
+      else {
+        const st = { key: c ?? m.id, city: c, notes: [m] };
+        out.push(st);
+        if (c) byCity.set(c, st);
+      }
+    }
+    return out;
+  }, [rest]);
+  const cityName = (id: string | null) => (id && map.data?.metros.find((m) => m.id === id)?.name) || 'there';
+  const toggleStack = (k: string) =>
+    setOpenStacks((o) => {
+      const n = new Set(o);
+      if (n.has(k)) n.delete(k);
+      else n.add(k);
+      return n;
+    });
 
   // Opening Fan Mail reads it, after a beat so the new marks register first.
   useEffect(() => {
@@ -271,33 +298,45 @@ export default function FanMail() {
         </section>
       )}
 
-      {rest.length > 0 && (
+      {stacks.length > 0 && (
         <section>
           <div className="section-h">
             <h2>Earlier</h2>
-            <button onClick={() => setEarlier((v) => !v)}>{earlier ? 'Fold away' : `Show ${rest.length}`}</button>
+            {stacks.length > 4 && <button onClick={() => setEarlier((v) => !v)}>{earlier ? 'Fold away' : `Show ${stacks.length - 4} more`}</button>}
           </div>
-          {earlier && (
-            <ul className="fm-earlier card">
-              {rest.slice(0, 20).map((m) => (
-                <li key={m.id}>
-                  <Icon name={ICON[m.action?.kind ?? ''] ?? 'mail'} size={18} className="ink-3" />
-                  <span>
-                    <p>{plain(m.body)}</p>
-                    <em className="ink-3 b-13">
-                      {ago(m.createdAt)}
-                      {m.action && (
-                        <>
-                          {' · '}
-                          <button onClick={() => act(m)}>{plain(m.action.label)}</button>
-                        </>
-                      )}
-                    </em>
-                  </span>
+          <ul className="fm-stacks">
+            {stacks.slice(0, earlier ? 20 : 4).map((st, si) => {
+              const opened = openStacks.has(st.key);
+              const more = st.notes.length - 1;
+              return (
+                <li key={st.key} className={`fm-stack ${more && !opened ? 'is-stacked' : ''} ${more > 1 && !opened ? 'is-deep' : ''}`} style={{ ['--i' as string]: si }}>
+                  {(opened ? st.notes : st.notes.slice(0, 1)).map((m, ni) => (
+                    <div key={m.id} className="fm-old" style={{ ['--j' as string]: ni }}>
+                      <Icon name={ICON[m.action?.kind ?? ''] ?? 'mail'} size={18} className="ink-3" />
+                      <span>
+                        <p>{plain(m.body)}</p>
+                        <em className="ink-3 b-13">
+                          {ago(m.createdAt)}
+                          {m.action && (
+                            <>
+                              {' · '}
+                              <button onClick={() => act(m)}>{plain(m.action.label)}</button>
+                            </>
+                          )}
+                        </em>
+                      </span>
+                    </div>
+                  ))}
+                  {more > 0 && (
+                    <button className="fm-more" aria-expanded={opened} onClick={() => toggleStack(st.key)}>
+                      {opened ? 'Fold them up' : `${more} more from ${cityName(st.city)}`}
+                      <Icon name="chevron" size={14} className={opened ? 'fm-more-up' : ''} />
+                    </button>
+                  )}
                 </li>
-              ))}
-            </ul>
-          )}
+              );
+            })}
+          </ul>
         </section>
       )}
     </main>

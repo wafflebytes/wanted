@@ -5,6 +5,7 @@
  * chatbot would have said instead.
  */
 import Link from 'next/link';
+import { useState } from 'react';
 import type { CityData, Crowd } from '@/ui/types';
 import { deals, useDeal } from '@web/lib/deals';
 import { gus } from '@web/lib/gus';
@@ -17,6 +18,9 @@ import { Reel } from './Reel';
 export function CitySheet({ slug, d, opened, posting, onPost, onClose }: { slug: string; d: CityData; opened: boolean; posting: boolean; onPost: () => void; onClose: () => void }) {
   const crowd = useApi<Crowd>(`/artist/${slug}/crowd?city=${d.metro.id}`);
   const live = useDeal();
+  // The sheet leads with the sentence; neighbourhoods and venues show their best three and fold the rest.
+  const [allHoods, setAllHoods] = useState(false);
+  const [allRooms, setAllRooms] = useState(false);
   const night = useApi<{ current: string; picked: Record<string, string> }>(opened ? `/artist/${slug}/nights?city=${d.metro.id}` : null);
   const s = d.score;
   const signed = d.proof?.signatures ?? 0;
@@ -96,13 +100,21 @@ export function CitySheet({ slug, d, opened, posting, onPost, onClose }: { slug:
         <p className="shimmer">Finding the neighbourhoods…</p>
       ) : (
         <ol className="card rows hoods">
-          {d.neighborhoods.slice(0, 6).map((n) => (
+          {d.neighborhoods.slice(0, allHoods ? 6 : 3).map((n) => (
             <li key={n.id} className="card-row">
               <span className={`hood-rank num ${n.rank <= 3 ? 'top' : ''}`}>{n.rank}</span>
               <span className="hood-name">{n.name}</span>
               {hoodCount[n.name] ? <span className="tag hot">{hoodCount[n.name]} signed</span> : null}
             </li>
           ))}
+          {d.neighborhoods.length > 3 && (
+            <li>
+              <button className="fold-more" aria-expanded={allHoods} onClick={() => setAllHoods((v) => !v)}>
+                {allHoods ? 'Just the top three' : `${Math.min(6, d.neighborhoods.length) - 3} more neighbourhoods`}
+                <Icon name="chevron" size={14} className={allHoods ? 'up' : ''} />
+              </button>
+            </li>
+          )}
         </ol>
       )}
 
@@ -112,7 +124,7 @@ export function CitySheet({ slug, d, opened, posting, onPost, onClose }: { slug:
             <h2>Venues that fit you</h2>
           </div>
           <div className="rooms" data-nodrag>
-            {d.rooms.slice(0, 6).map((r) => (
+            {d.rooms.slice(0, allRooms ? 6 : 3).map((r) => (
               <article key={r.id} className="room card">
                 <div className="room-img">{r.image ? <img src={r.image} alt="" loading="lazy" /> : null}</div>
                 <div className="room-txt">
@@ -129,6 +141,12 @@ export function CitySheet({ slug, d, opened, posting, onPost, onClose }: { slug:
                 )}
               </article>
             ))}
+            {!allRooms && d.rooms.length > 3 && (
+              <button className="room card room-more" onClick={() => setAllRooms(true)}>
+                <b>{Math.min(6, d.rooms.length) - 3} more</b>
+                <span>venues that fit</span>
+              </button>
+            )}
           </div>
           <p className="fine ink-3 b-13">Room sizes are a guess unless a source says so. Nothing is booked until a venue agrees and you say yes.</p>
         </>
