@@ -74,8 +74,8 @@ const cards = [
     body: 'He finds the cities that want your band, gets the fans there to sign, and books the venue.',
     stage: () => `
       <div class="halo" style="left:640px; top:20px; width:1000px; height:1000px"></div>
-      ${phone('home', { h: 1060, x: 1000, y: 90, tilt: 'perspective(2600px) rotateY(-18deg) rotateX(6deg) rotateZ(4deg)', z: 2 })}
-      ${sticker('gus-tour-manager', { x: 640, y: 330, s: 640, z: 3 })}`,
+      ${phone('home', { h: 860, x: 930, y: 70, tilt: 'perspective(2600px) rotateY(-18deg) rotateX(6deg) rotateZ(4deg)', z: 2 })}
+      ${sticker('gus-tour-manager', { x: 640, y: 450, s: 520, z: 3 })}`,
   },
   {
     name: '1-island', theme: 'dark', layout: 'top', kicker: 'Always on',
@@ -83,14 +83,14 @@ const cards = [
     body: 'He calls venues and counts signatures on his own. The Dynamic Island tells you what he’s doing, and grows when something needs you.',
     stage: () => `
       <img class="bd" src="${shot('home-dark')}">
-      ${at(island('Calling SPACE Gallery', { trail: '2:14' }), { x: 0, y: 392, z: 5, center: true })}
-      ${at(bump('Offer in', 'The Nocturnal Café, Ithaca'), { x: 0, y: 500, z: 5, center: true })}
+      ${at(island('Calling SPACE Gallery', { trail: '2:14' }), { x: 0, y: 340, z: 5, center: true })}
+      ${at(bump('Offer in', 'The Nocturnal Café, Ithaca'), { x: 0, y: 442, z: 5, center: true })}
       ${at(`<div class="lact">
           <div class="lact-top"><span class="ig big"></span><div><span class="kick ok">Booked</span><b>The Basement</b><em>Columbus · Fri, Nov 20</em></div></div>
           <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div>
           <div class="steps-l"><span>Asked</span><span>Offer</span><span>Booked</span></div>
           <p>Everyone who signed in Columbus hears first.</p>
-        </div>`, { x: 0, y: 660, z: 5, center: true })}`,
+        </div>`, { x: 0, y: 596, z: 5, center: true })}`,
   },
   {
     name: '2-sleeper-cities', theme: 'cream', kicker: 'Where you’re wanted',
@@ -98,7 +98,7 @@ const cards = [
     body: 'Every US city and neighborhood is scored for your sound on Qloo’s taste graph. Sleepers like Ithaca have far more fans than their size predicts.',
     stage: () => `
       <div class="halo" style="left:700px; top:60px; width:900px; height:900px"></div>
-      ${phone('city', { h: 1240, x: 840, y: 110, tilt: 'perspective(2600px) rotateY(-24deg) rotateX(8deg) rotateZ(5deg)' })}`,
+      ${phone('city', { h: 900, x: 920, y: 50, tilt: 'perspective(2600px) rotateY(-24deg) rotateX(8deg) rotateZ(5deg)' })}`,
   },
   {
     name: '3-wanted-poster', theme: 'dark', layout: 'top', kicker: 'Proof',
@@ -106,7 +106,7 @@ const cards = [
     body: 'Each signature is a fan saying “come play here.” At fifty, Gus asks the venues that fit you.',
     stage: () => `
       <div class="halo" style="left:300px; top:300px; width:900px; height:900px"></div>
-      ${phone('fan-dark', { h: 1340, x: 418, y: 380 })}`,
+      ${phone('fan-dark', { h: 1120, x: 472, y: 340 })}`,
   },
   {
     name: '4-one-decision', theme: 'cream', kicker: 'The deal',
@@ -147,7 +147,7 @@ const cards = [
           <div class="prop">Ask The Flynn for a date ${svg('forward', 20)}</div>
           <div class="vbar"><span class="side">${svg('keys', 22)}</span><span class="tk"><span class="ring"></span><img src="${art('gus-glyph')}"></span><span class="side">${svg('close', 22)}</span></div>
           <div class="tcap">Tap to talk</div>
-        </div>`, { x: 150, y: 100, z: 3, zoom: 1.22, tilt: 'perspective(2400px) rotateY(14deg) rotateX(5deg) rotateZ(2deg)' })}`;
+        </div>`, { x: 140, y: 110, z: 3, zoom: 1.0, tilt: 'perspective(2400px) rotateY(14deg) rotateX(5deg) rotateZ(2deg)' })}`;
     },
   },
   {
@@ -156,7 +156,7 @@ const cards = [
     body: 'Every call, offer and yes, in plain words, with a dot for who made the call. Milestones collect on the shelf as the tour comes together.',
     stage: () => `
       <div class="halo" style="left:700px; top:60px; width:900px; height:900px"></div>
-      ${phone('logbook-dark', { h: 1400, x: 800, y: -190 })}`,
+      ${phone('logbook-dark', { h: 1300, x: 800, y: 70 })}`,
   },
   {
     name: '8-how-it-works', theme: 'cream', kicker: 'How Gus works',
