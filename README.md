@@ -295,6 +295,8 @@ The app runs at http://localhost:3100.
 
 **Stack.** Next.js 16 for the web app in `web/`, Expo for the iPhone app in `src/app`, one TypeScript server in `src/server` behind both. libSQL on Turso, MapLibre and deck.gl for the map, OpenRouter for models, Fish Audio for Gus's voice, Qloo Insights for taste.
 
+**How it was built.** Iteratively, one screen and one agent behaviour at a time, with Claude Code as a pair programmer and the evals in [evals/](evals) checking Gus between changes.
+
 `node scripts/gallery-refresh.mjs` retakes the screenshots and rebuilds the gallery and README cards.
 
 ## License
