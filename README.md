@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/gallery/0-cover.jpg" alt="Meet Gus, your AI tour manager" width="100%"></p>
 
-# Wanted
+# Gus, by Wanted
 
 **Gus is an AI tour manager for independent musicians, and he runs on Qloo's taste graph.** He finds the cities where your sound already has fans, puts up a WANTED poster there for them to sign, and once fifty people sign, he asks the venues that fit for a date. He negotiates inside your limits and comes back with one question: yes or no.
 
