@@ -59,9 +59,7 @@ async function neighborhoodsFast(artist: ArtistRow, metroId: string, waitMs = 60
 // ---------- artist state ----------
 
 export async function artistState(artist: ArtistRow) {
-  const opened = await openedCities(artist.id);
-  const proof = await proofFor(artist.id, { includeDemo: artist.isDemo });
-  const messages = await inbox(artist.id, 30);
+  const [opened, proof, messages] = await Promise.all([openedCities(artist.id), proofFor(artist.id, { includeDemo: artist.isDemo }), inbox(artist.id, 30)]);
   return {
     artist: publicArtist(artist),
     opened: opened.map((c) => ({ ...c, proof: proof.find((p) => p.city === c.city) ?? null, posterPath: `/w/${artist.slug}/${c.city}` })),
@@ -88,14 +86,13 @@ export function publicArtist(a: ArtistRow) {
 // ---------- map ----------
 
 export async function mapData(artist: ArtistRow) {
-  const r = await scoutFor(artist);
-  const opened = await openedCities(artist.id);
-  const proof = await proofFor(artist.id, { includeDemo: artist.isDemo });
+  const [r, opened, proof] = await Promise.all([scoutFor(artist), openedCities(artist.id), proofFor(artist.id, { includeDemo: artist.isDemo })]);
   // Claims overlay: aggregate dots per neighborhood (never individual fans).
   const dots: { lat: number; lon: number; count: number; neighborhood: string; city: string; confirmed: boolean }[] = [];
-  for (const p of proof) {
-    if (!p.neighborhoods.length) continue;
-    const hoods = await neighborhoodsFast(artist, p.city);
+  const withHoods = proof.filter((p) => p.neighborhoods.length);
+  const hoodsBy = await Promise.all(withHoods.map((p) => neighborhoodsFast(artist, p.city)));
+  for (const [i, p] of withHoods.entries()) {
+    const hoods = hoodsBy[i];
     const metro = metroById(p.city)!;
     for (const n of p.neighborhoods) {
       const loc = hoods?.find((h) => h.name.toLowerCase() === n.name.toLowerCase());

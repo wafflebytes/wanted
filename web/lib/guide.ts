@@ -2,8 +2,9 @@
 /**
  * The tour with Gus: he lifts off the dock and walks you through the real app, one surface at
  * a time. Nothing is a slide. Each step points at a live element (`data-tour="<key>"`), says
- * one line, and either waits for you to press the real thing or offers Next. The rest of the
- * app is blurred and takes no presses until the tour ends, so there is one way forward.
+ * one line, and either waits for you to press the real thing, waits for you to ask Gus one of a
+ * few questions, or offers Next. The rest of the app is blurred and takes no presses until the
+ * tour ends, so there is one way forward. It can't be skipped: it is short, and it counts down.
  *
  * Borrowed: okvideo's speech bubbles over the live camera, avec's "try it, touch this" where
  * the gesture is the real action.
@@ -19,10 +20,15 @@ export type GuideStep = {
   say: string;
   /** The one thing to press inside the target (a selector); the target itself if unset. */
   cta?: string;
-  /** 'tap': wait for a press on the target. 'next': a Next key. */
-  wait: 'tap' | 'next';
-  /** Where the bubbles sit relative to the target. */
-  side?: 'above' | 'below';
+  /** 'tap': wait for a press on the target. 'next': a Next key. 'ask': question chips; the step
+   * is done when Gus has answered one. 'end': the closing card. */
+  wait: 'tap' | 'next' | 'ask' | 'end';
+  /** For 'ask': the questions offered, each known to come back with something to act on. */
+  asks?: string[];
+  /** What the line says while Gus works on the question. */
+  working?: string;
+  /** 'dock': the line sits just above the dock, whatever the target (it fills the middle). */
+  side?: 'dock';
   /** Runs before the step shows (open a panel, close one). */
   enter?: () => void;
   /** After a tap lands, how long to let the app respond before the next step. */

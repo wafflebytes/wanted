@@ -87,6 +87,15 @@ export function Shell({ slug, children }: { slug: string; children: ReactNode })
     history.replaceState(history.state, '', u);
   }, [dealList.data]);
 
+  // Posters render on the server and take a moment the first time: fetch them once things settle
+  // so the wall is up the moment you open it.
+  const cities = artist.data?.opened.map((o) => o.city).join(',') ?? '';
+  useEffect(() => {
+    if (!cities) return;
+    const t = setTimeout(() => cities.split(',').forEach((c) => (new Image().src = `/img/poster/${slug}/${c}?w=640&v=0`)), 1200);
+    return () => clearTimeout(t);
+  }, [cities, slug]);
+
   useEffect(() => {
     if (artist.data) session.addAct({ slug, name: artist.data.artist.name, sounds: artist.data.artist.sound.entities.map((e) => e.name) });
   }, [artist.data, slug]);
@@ -592,18 +601,17 @@ function Dock({ slug, tab, badge }: { slug: string; tab: string; badge: boolean 
   const [pill, setPill] = useState<{ x: number; w: number } | null>(null);
   // A show's day and a leg of the road live under the tour.
   const idx = TABS.findIndex((t) => t.key === (tab === 'show' || tab === 'road' ? 'tour' : tab));
+  // Measure on tab change and whenever the tabs change width (Gus leaving the dock for the
+  // tour and coming back widens and narrows them without a window resize).
   useLayoutEffect(() => {
-    const el = nav.current?.querySelectorAll<HTMLAnchorElement>('a')[idx];
-    if (!el) return setPill(null);
-    setPill({ x: el.offsetLeft, w: el.offsetWidth });
-  }, [idx]);
-  useEffect(() => {
-    const on = () => {
+    const measure = () => {
       const el = nav.current?.querySelectorAll<HTMLAnchorElement>('a')[idx];
-      if (el) setPill({ x: el.offsetLeft, w: el.offsetWidth });
+      setPill(el ? { x: el.offsetLeft, w: el.offsetWidth } : null);
     };
-    window.addEventListener('resize', on);
-    return () => window.removeEventListener('resize', on);
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (nav.current) ro.observe(nav.current);
+    return () => ro.disconnect();
   }, [idx]);
 
   // Tap: talk until a pause. Hold: talk until you let go.

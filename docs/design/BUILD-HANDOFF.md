@@ -159,6 +159,13 @@ Status as of 2026-10-27, mid-build. Read this first after a context reset.
 - **README** rewritten: the problem with sources, the gallery cards in pairs, the chatbot table, and six Mermaid diagrams (Qloo calls, one question, memory, money, reaching you, the whole system). Four README cards (`r-grounded`, `r-memory`, `r-money`, `r-ladder`) are drawn by `scripts/gallery-cards.mjs` in the gallery's look and land in `docs/readme` (`ONLY=r-`). The user wants the gallery's simplicity: one headline, one sentence, one visual; technical detail goes in Mermaid, not in images.
 - **Devpost** (`docs/DEVPOST.md`): voice notes, tagline, spoken pitch, About the project, Built with, About me. `llms.txt` and `llms-full.txt` cover memory, reaching you, the loops, eleven tools and plain words.
 
+## Session 19: the demo onboards you
+
+- **The demo link onboards.** `/a/maya-ortiz?tour=1` on a device that hasn't been through Welcome goes to `/?tour=1` first (head script in `web/app/layout.tsx`, flag `wanted.welcomed` in `session.ts`; visiting an act page sets `onboarded`, not `welcomed`). Welcome's demo opening: how it works, then a role card ("For this demo, you're Maya Ortiz") and one key, Start as Maya. No skip, no fan path in the demo (the real `?new=1` path is unchanged). The run ends on "Open Maya's map", which starts the tour, not the story.
+- **The tour** (`Guide.tsx`) can't be skipped and counts ("3 of 10"). Order: map, **you ask Gus** (three question chips; he hears it in his card and answers live; the line changes at 8 s, and a Go on key appears at 25 s), his answer card, island, offer, deal room, Posters, Tour, Fan Mail, Logbook, then an end card: "Maya's tour is under way", three live counts (posters up, shows booked, offers waiting), "Take it from here", and "Or watch Gus run the whole thing" (the story).
+- **Dock pill** re-measures with a ResizeObserver: Gus leaving and rejoining the dock left it on the old tab width.
+- **Speed.** Production functions ran in iad1 against Turso in ap-south-1, so every read was 0.8 to 2.6 s. `vercel.json` pins `regions: ["bom1"]`. `artistState` and `mapData` read in parallel. Welcome's run warms every tab's data (`warm()` in `hooks.ts`) and the poster images; the Shell preloads posters a second after load. Gus answers are still 6 to 30 s on the free Nemotron models; that is the model, not the lookups (about 1 s).
+
 ## Next steps
 
 (Tour and Posters done. Dark is the main mode: design there first, then check light. Use the material system above for every new control. Judge product and copy as well as pixels: one job per screen, one primary key, plain musician words.)

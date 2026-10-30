@@ -45,6 +45,11 @@ function load(path: string, force = false): Promise<unknown> {
   return p;
 }
 
+/** Fetch these into the cache ahead of time (a tour about to open them), quietly. */
+export function warm(paths: string[]) {
+  for (const p of paths) load(p).catch(() => {});
+}
+
 /** GET `path` (or nothing while `path` is null). Optional polling for live screens. */
 export function useApi<T>(path: string | null, opts: { every?: number } = {}) {
   const subscribe = useCallback(

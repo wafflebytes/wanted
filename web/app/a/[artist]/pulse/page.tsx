@@ -175,7 +175,7 @@ export default function FanMail() {
     <main className="fm">
       <div className="fm-ground" />
 
-      <section className="fm-letter">
+      <section className="fm-letter" data-tour="mail">
         <div className="fm-airmail" aria-hidden />
         <div className="fm-letter-in">
           <h1 className="fm-feel">{s.week === 0 ? 'Quiet so far this week.' : diff < 0 ? 'A little quieter than last week.' : feel(p.meter.value)}</h1>

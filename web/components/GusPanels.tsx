@@ -190,7 +190,7 @@ function VoiceCard({ open, suggest }: { open: boolean; suggest: Tile[] }) {
   const fresh = !g.heard && g.phase === 'idle' && !g.answer && !g.error;
   return (
     <div className={`vc ${open ? 'on' : ''} ${live ? 'is-live' : ''}`} aria-hidden={!open} inert={!open} role="dialog" aria-label="Talk to Gus">
-      <div className="vc-card">
+      <div className="vc-card" data-tour="vc">
         <div className="vc-top">
           <span className="vc-cap">
             <SwapLine text={caption} />

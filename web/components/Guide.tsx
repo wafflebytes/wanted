@@ -4,11 +4,21 @@
  * and flies to each live surface. One line at a time sits beside him. Everything else blurs
  * behind a veil with a cut-out, so the one thing he means comes through sharp and only it
  * takes presses; the thing to press shines. On Done he flies back into the dock.
+ *
+ * The order is what a newcomer needs, in turn: where Maya's fans are (context), asking Gus
+ * something yourself (he works on live data, and you did it), the offer and your slide (the
+ * money is yours), how fans prove a city, the tour it adds up to, and the record he keeps while
+ * you're away. It ends on what is now under way, not on an instruction.
  */
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Deal } from '@/lib/types';
+import type { ArtistState } from '@/ui/types';
 import { Gus } from './Gus';
-import { gus } from '@web/lib/gus';
+import { Icon } from './Icon';
+import { gus, useGus } from '@web/lib/gus';
+import { useApi } from '@web/lib/hooks';
+import { story } from '@web/lib/story';
 import { guide, useGuide, type GuideStep } from '@web/lib/guide';
 import { haptic } from '@web/lib/haptics';
 import { live } from '@web/lib/live';
@@ -19,14 +29,35 @@ const PAD = 6;
 const SIZE = 72;
 const GAP = 14;
 
+/** Each comes back with something Gus can do in place (night chips, a venue to ask, spots to pin). */
+const ASKS = ['Which night should I play Ithaca?', 'Which venues in Burlington fit me?', 'Where should I put posters in Burlington?'];
+
 export function steps(): GuideStep[] {
   return [
     {
       id: 'map',
       at: '',
-      say: 'Hi, I’m Gus, Maya’s tour manager. The brighter the map, the more of her fans live there.',
+      say: 'This is Maya’s map. The brighter it glows, the more of her fans live there. The pins are the cities you just found.',
       wait: 'next',
       enter: () => (gus.close(), live.expand(null)),
+    },
+    {
+      id: 'ask',
+      at: '',
+      say: 'I’m Gus, her tour manager. Ask me something, like you’d ask a person.',
+      wait: 'ask',
+      asks: ASKS,
+      working: 'Looking it up live. Each check shows up as I make it.',
+      side: 'dock',
+      enter: () => live.expand(null),
+    },
+    {
+      id: 'answer',
+      at: '',
+      target: 'vc',
+      side: 'dock',
+      say: 'Live data, not a script. When I can act on an answer, I offer to, and nothing goes out without your OK.',
+      wait: 'next',
     },
     {
       id: 'island',
@@ -65,16 +96,25 @@ export function steps(): GuideStep[] {
       id: 'held',
       at: '/tour',
       target: 'run',
-      say: 'Booked shows land on your tour. I plan the drives and every show day for you.',
+      say: 'Booked shows land on her tour. I plan the drives and every show day.',
       wait: 'next',
       enter: () => gus.close(),
     },
     {
-      id: 'gus',
-      at: '/tour',
-      say: 'Hold me to talk, tap me for jobs. I keep working while you’re gone.',
+      id: 'mail',
+      at: '/pulse',
+      target: 'mail',
+      say: 'Fan Mail: how many fans signed this week, and what they’re saying about Maya.',
       wait: 'next',
     },
+    {
+      id: 'log',
+      at: '/logbook',
+      target: 'log',
+      say: 'The Logbook: everything I did while you were away, and what needed you.',
+      wait: 'next',
+    },
+    { id: 'end', at: '', say: '', wait: 'end' },
   ];
 }
 
@@ -109,13 +149,23 @@ export function Guide({ slug }: { slug: string }) {
   const [launched, setLaunched] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [nudge, setNudge] = useState(0);
+  // The ask step: which question went to Gus, and whether he's taking long or lost it.
+  const [asked, setAsked] = useState<string | null>(null);
+  const [slow, setSlow] = useState(false);
+  const [mulling, setMulling] = useState(false);
+  const [missed, setMissed] = useState(false);
+  const voice = useGus();
   const flying = g.on && !g.parked && !!step;
+  const target = step?.wait === 'ask' ? (asked ? 'vc' : undefined) : step?.target;
+  const act = useApi<ArtistState>(g.on ? `/artist/${slug}` : null);
+  const dealList = useApi<{ deals: Deal[] }>(g.on ? `/artist/${slug}/deals` : null);
 
   useEffect(() => {
     guide.restore();
-    // A reload closes the island card and the deal room, so those steps start again from the island.
+    // A reload closes the island card, the deal room and Gus's card, so those steps start again.
     const s = guide.get();
     if (s.on && ['card', 'room'].includes(all[s.i]?.id)) guide.go(all.findIndex((x) => x.id === 'island'));
+    if (s.on && all[s.i]?.id === 'answer') guide.go(all.findIndex((x) => x.id === 'ask'));
     if (new URLSearchParams(location.search).has('tour')) {
       guide.start();
       const u = new URL(location.href);
@@ -137,10 +187,13 @@ export function Guide({ slug }: { slug: string }) {
   useEffect(() => {
     if (!flying || !step) return;
     const want = `/a/${slug}${step.at}`;
-    if (path !== want && !['island', 'card', 'room'].includes(step.id)) router.push(want);
+    if (path !== want && !['ask', 'answer', 'island', 'card', 'room'].includes(step.id)) router.push(want);
     step.enter?.();
     setLanding(false);
     setShown(false);
+    setAsked(null);
+    setSlow(false);
+    setMissed(false);
     const t = setTimeout(() => setShown(true), 380);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -152,7 +205,7 @@ export function Guide({ slug }: { slug: string }) {
     let raf = 0;
     let last = '';
     const read = () => {
-      const el = step?.target ? document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`) : null;
+      const el = target ? document.querySelector<HTMLElement>(`[data-tour="${target}"]`) : null;
       const r = el?.getBoundingClientRect();
       const c = el && step?.cta ? el.querySelector<HTMLElement>(step.cta) : el;
       const cr = c?.getBoundingClientRect();
@@ -168,7 +221,7 @@ export function Guide({ slug }: { slug: string }) {
     };
     raf = requestAnimationFrame(read);
     return () => cancelAnimationFrame(raf);
-  }, [g.on, step?.target]);
+  }, [g.on, target]);
 
   const finish = useCallback((done: boolean) => {
     setLeaving(true);
@@ -176,16 +229,51 @@ export function Guide({ slug }: { slug: string }) {
       guide.end(done);
       guide.markSeen();
       setLeaving(false);
-      if (done) live.bump({ big: 'All yours', small: 'Gus keeps working while you’re away', tone: 'ok' }, 2600);
+      if (done) live.bump({ big: 'All yours', small: 'Gus keeps working', tone: 'ok' }, 2600);
     }, 560);
   }, []);
 
   const advance = useCallback(() => {
     haptic('step');
     if (g.i >= all.length - 1) return finish(true);
-    if (all[g.i].id === 'room') gus.close();
+    if (all[g.i].id === 'room' || all[g.i].id === 'answer') gus.close();
     guide.next();
   }, [g.i, all, finish]);
+
+  // You picked a question: Gus hears it in his card, works it out in the open, and answers. The
+  // step is done when the answer is in. If he loses it, the questions come back; if he's slow,
+  // a key lets you go on without him.
+  const ask = (q: string) => {
+    haptic('tap');
+    setAsked(q);
+    setMissed(false);
+    setSlow(false);
+    setMulling(false);
+    gus.dictate(q);
+  };
+  useEffect(() => {
+    if (!flying || step?.wait !== 'ask' || !asked) return;
+    if (voice.phase === 'answer' && voice.answer) {
+      setLanding(true);
+      const t = setTimeout(() => {
+        setLanding(false);
+        guide.next();
+      }, 900);
+      return () => clearTimeout(t);
+    }
+    // He lost the thread, or the card was closed before he answered.
+    if ((voice.phase === 'answer' && voice.error) || (voice.panel === 'none' && voice.phase !== 'thinking')) {
+      setAsked(null);
+      setMissed(true);
+      gus.close();
+    }
+  }, [flying, step?.wait, asked, voice.phase, voice.answer, voice.error, voice.panel]);
+  useEffect(() => {
+    if (!asked) return;
+    const m = setTimeout(() => setMulling(true), 8000);
+    const t = setTimeout(() => setSlow(true), 25_000);
+    return () => (clearTimeout(m), clearTimeout(t));
+  }, [asked]);
 
   // A press on the one thing is the step. Everything else sits under the veil, and other
   // presses inside the cut-out are swallowed.
@@ -207,13 +295,6 @@ export function Guide({ slug }: { slug: string }) {
     return () => document.removeEventListener('click', onClick, true);
   }, [flying, step, advance]);
 
-  useEffect(() => {
-    if (!flying) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && finish(false);
-    addEventListener('keydown', onKey);
-    return () => removeEventListener('keydown', onKey);
-  }, [flying, finish]);
-
   if (!flying) return null;
 
   const vw = window.innerWidth;
@@ -225,7 +306,7 @@ export function Guide({ slug }: { slug: string }) {
   // last line sits right over Gus's spot in the dock, where he'll go back to.
   let top: number | undefined;
   let bottom: number | undefined;
-  if (step?.id === 'gus') bottom = vh - floor;
+  if (step?.side === 'dock') bottom = vh - floor;
   else if (!box) top = vh * 0.56;
   else if (box.y - PAD - GAP - 120 > 56) bottom = vh - (box.y - PAD - GAP);
   else if (box.y + box.h + PAD + GAP + 120 < floor) top = box.y + box.h + PAD + GAP;
@@ -238,7 +319,51 @@ export function Guide({ slug }: { slug: string }) {
   }
   const veil = box ? holePath(vw, vh, box) : undefined;
   const mask = box ? holeMask(vw, vh, box) : undefined;
-  const last = g.i === all.length - 1;
+  const end = step?.wait === 'end';
+  const count = all.filter((x) => x.wait !== 'end').length;
+  const working = step?.wait === 'ask' && !!asked;
+  const say = working ? (slow ? 'Taking longer than usual. You can wait, or go on and ask me later.' : mulling ? 'Thinking it through first, like a person would. A few more seconds.' : step!.working) : missed ? 'That one got away from me. Try another?' : step?.say;
+
+  if (end) {
+    const deals = dealList.data?.deals ?? [];
+    const facts = [
+      { n: act.data?.opened.length ?? 0, t: 'cities with a poster up' },
+      { n: deals.filter((d) => d.status === 'held').length, t: 'shows booked' },
+      { n: deals.filter((d) => d.status === 'waiting').length, t: 'offer waiting on you' },
+    ];
+    return (
+      <div className={`guide is-end ${leaving ? 'is-leaving' : ''}`} role="dialog" aria-label="The tour is done">
+        <div className="guide-veil is-full" />
+        <div className="guide-block" />
+        <div className="guide-end">
+          <Gus mood="proud" size={96} sticker={false} className="ge-gus" />
+          <h2>Maya’s tour is under way.</h2>
+          <p>I keep working while the app is closed: watching the posters, asking venues, and bringing you offers to approve.</p>
+          <dl className="ge-facts">
+            {facts.map((f) => (
+              <div key={f.t}>
+                <dt>{f.n}</dt>
+                <dd>{f.n === 1 ? f.t.replace('cities', 'city').replace('shows', 'show') : f.t.replace('offer waiting', 'offers waiting')}</dd>
+              </div>
+            ))}
+          </dl>
+          <button className="btn hot block" onClick={() => (haptic('commit'), finish(true))}>
+            Take it from here
+          </button>
+          <button
+            className="ge-again"
+            onClick={() => {
+              finish(true);
+              setTimeout(() => story.start(), 620);
+            }}
+          >
+            Or watch Gus run the whole thing
+            <Icon name="chevron" size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`guide ${landing ? 'is-landing' : ''} ${leaving ? 'is-leaving' : ''}`} aria-live="polite">
@@ -262,25 +387,33 @@ export function Guide({ slug }: { slug: string }) {
       >
         {step && (
           <div className={`guide-line ${shown && !landing && !leaving ? 'in' : ''}`} key={step.id}>
-            <p>{step.say}</p>
-            {step.wait === 'next' && (
-              <div className="guide-keys">
-                <button className="guide-next" onClick={advance}>
-                  <span>{last ? 'Done' : 'Next'}</span>
-                </button>
-                {!last && (
-                  <button className="guide-skip" onClick={() => finish(false)}>
-                    Skip tour
+            <p key={say}>{say}</p>
+            {step.wait === 'ask' && !asked && (
+              <div className="guide-asks">
+                {step.asks?.map((q) => (
+                  <button key={q} onClick={() => ask(q)}>
+                    <span>{q}</span>
+                    <Icon name="forward" size={16} />
                   </button>
-                )}
+                ))}
               </div>
             )}
+            <div className="guide-keys">
+              {(step.wait === 'next' || (working && slow)) && (
+                <button className="guide-next" onClick={working ? () => (gus.close(), guide.go(all.findIndex((x) => x.id === 'island'))) : advance}>
+                  <span>{working ? 'Go on' : 'Next'}</span>
+                </button>
+              )}
+              <span className="guide-count" aria-label={`Step ${g.i + 1} of ${count}`}>
+                {g.i + 1} of {count}
+              </span>
+            </div>
           </div>
         )}
       </div>
       <div className="guide-gus" style={{ transform: `translate(${gx}px, ${gy}px)` }} aria-hidden>
         <div className="guide-gus-in" key={nudge}>
-          <Gus mood={step?.wait === 'tap' ? 'talking' : 'idle'} size={SIZE} sticker={false} />
+          <Gus mood={working ? 'thinking' : step?.wait === 'tap' || step?.wait === 'ask' ? 'talking' : 'idle'} size={SIZE} sticker={false} />
         </div>
       </div>
     </div>

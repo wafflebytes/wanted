@@ -144,13 +144,148 @@
 .guide-next:active {
   transform: scale(0.97);
 }
-.guide-skip {
-  height: 36px;
-  padding: 0 12px;
+/* How far along: the tour can't be skipped, so it always says how much is left. */
+.guide-count {
+  margin-left: auto;
+  padding-left: 8px;
+  font: 600 13px var(--display);
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+.guide-line p {
+  animation: guide-say 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes guide-say {
+  from { opacity: 0; transform: translateY(3px); }
+}
+
+/* Questions to ask Gus: lit keys inside the line, one press each. */
+.guide-asks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.guide-asks button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 9px 12px 9px 14px;
+  border: 0;
+  border-radius: 14px;
+  text-align: left;
+  background: color-mix(in srgb, var(--bg) 12%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bg) 14%, transparent);
+  color: var(--bg);
+  font: 600 14.5px/1.25 var(--display);
+  animation: guide-say 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms;
+}
+.guide-asks button:nth-child(2) { animation-delay: 80ms; }
+.guide-asks button:nth-child(3) { animation-delay: 160ms; }
+.guide-asks button .icon,
+.guide-asks button svg {
+  flex: none;
+  color: var(--wanted);
+}
+.guide-asks button:first-child {
+  background: var(--wanted);
+  color: #fff;
+}
+.guide-asks button:first-child svg { color: #fff; }
+.guide-asks button:active { transform: scale(0.98); }
+
+/* The end: everything under one veil, and a card that says what is now running. */
+.guide-veil.is-full {
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+}
+.guide-end {
+  position: fixed;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  width: min(440px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 58px 20px 14px;
+  border-radius: 28px;
+  text-align: center;
+  background: var(--raise);
+  box-shadow: var(--bevel), 0 24px 60px rgba(0, 0, 0, 0.35);
+  animation: guide-end-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.guide.is-leaving .guide-end {
+  opacity: 0;
+  transform: translate(-50%, 16px);
+  transition: opacity 300ms cubic-bezier(0.22, 1, 0.36, 1), transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes guide-end-in {
+  from { opacity: 0; transform: translate(-50%, 24px); }
+}
+.ge-gus {
+  position: absolute;
+  top: -48px;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35));
+}
+.guide-end h2 {
+  font: 800 26px/1.1 var(--display);
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.guide-end > p {
+  margin-top: 8px;
+  max-width: 34ch;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.ge-facts {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 16px 0;
+}
+.ge-facts div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 6px;
+  border-radius: 16px;
+  background: var(--well-bg);
+  box-shadow: var(--well);
+  animation: guide-say 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.ge-facts div:nth-child(1) { animation-delay: 200ms; }
+.ge-facts div:nth-child(2) { animation-delay: 280ms; }
+.ge-facts div:nth-child(3) { animation-delay: 360ms; }
+.ge-facts dt {
+  font: 800 30px/1 var(--display);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.ge-facts div:last-child dt { color: var(--wanted-text); }
+.ge-facts dd {
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--ink-2);
+  text-wrap: balance;
+}
+.ge-again {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 44px;
+  margin-top: 4px;
   border: 0;
   background: none;
-  color: color-mix(in srgb, var(--bg) 60%, transparent);
-  font: 600 14px var(--display);
+  font: 600 14.5px var(--body);
+  color: var(--ink-2);
 }
 
 /* Gus: flies out of the dock and back into it, on his own, no badge behind him. */
@@ -191,7 +326,8 @@ html.guide-on .gus-btn {
   pointer-events: none;
 }
 /* One Gus at a time: the drawings of him on the screens step aside while he's out guiding. */
-html.guide-on .th-obj {
+html.guide-on .th-obj,
+html.guide-on .lb-gus {
   visibility: hidden;
 }
 
@@ -199,7 +335,11 @@ html.guide-on .th-obj {
   .guide-gus,
   .guide-row,
   .guide-line,
-  .guide-veil {
+  .guide-veil,
+  .guide-end,
+  .guide-asks button,
+  .ge-facts div,
+  .guide-line p {
     transition-duration: 1ms;
     animation: none;
   }

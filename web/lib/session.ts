@@ -24,6 +24,9 @@ export const defaultStart = () => new Date(Date.now() + 45 * 86400000).toISOStri
 export const session = {
   onboarded: () => read<boolean>('wanted.onboarded') ?? false,
   setOnboarded: (on: boolean) => write('wanted.onboarded', on),
+  /** Went through Welcome on this device (visiting an act page doesn't count). */
+  welcomed: () => read<boolean>('wanted.welcomed') ?? false,
+  setWelcomed: () => write('wanted.welcomed', true),
   lastArtist: () => read<string>('wanted.lastArtist'),
   setLastArtist: (slug: string) => write('wanted.lastArtist', slug),
   constraints: (artist: string) => read<Constraints>(`wanted.constraints.${artist}`),

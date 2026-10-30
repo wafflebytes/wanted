@@ -80,7 +80,7 @@ export default function Logbook() {
     <main className="lb">
       <div className="lb-ground" />
 
-      <header className="lb-hero">
+      <header className="lb-hero" data-tour="log">
         <Gus mood={dealList.data?.deals.some((d) => d.status === 'talking') ? 'phone' : entries.length ? 'working' : 'waiting'} size={132} className="lb-gus" />
         {entries.length ? (
           <>

@@ -14,7 +14,8 @@
  * The demo path (the default; `?new=1` is the real one): you play Maya Ortiz. Her link types
  * itself, the lookalikes and venue size are real questions with her answers filled in, and the
  * run shows what Qloo does with them (the cities come from her live map). A short "why" under
- * each question says what the answer is for. It ends on the story.
+ * each question says what the answer is for. It ends on her map, where Gus gives the tour.
+ * The demo link (`/a/maya-ortiz?tour=1`) lands here first on a device that hasn't been through it.
  */
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -24,6 +25,7 @@ import { Gus, type GusMood } from '@web/components/Gus';
 import { Icon } from '@web/components/Icon';
 import type { ArtistState, MapData } from '@/ui/types';
 import { api, streamNdjson } from '@web/lib/api';
+import { warm } from '@web/lib/hooks';
 import { defaultStart, session } from '@web/lib/session';
 import './welcome.css';
 
@@ -52,8 +54,10 @@ export default function Page() {
   const [phase, setPhase] = useState<'blank' | 'splash' | 'welcome'>('blank');
   const next = useRef<() => void>(() => {});
   useEffect(() => {
-    const fresh = new URLSearchParams(location.search).has('new');
-    const last = session.lastArtist();
+    const q = new URLSearchParams(location.search);
+    const fresh = q.has('new');
+    // The demo link sends someone new here first: Welcome even if an act page was opened before.
+    const last = q.has('tour') ? null : session.lastArtist();
     next.current = last && !fresh ? () => router.replace(`/a/${last}`) : () => setPhase('welcome');
     if (last && !fresh) router.prefetch(`/a/${last}`);
     // Once per visit, and never on "Add an act" or for people who asked for less motion.
@@ -244,6 +248,10 @@ function Welcome() {
     setReady(false);
     const sims = (matched?.similar ?? []).filter((x) => keep[x.name]).map((x) => x.name);
     const map = api.get<MapData>(`/artist/${DEMO}/map`).catch(() => null);
+    // The tour opens every tab next: fetch them while the cities come in, and the posters too.
+    const base = `/artist/${DEMO}`;
+    warm([base, `${base}/map`, `${base}/deals`, `${base}/logbook`, `${base}/plan`, `${base}/pulse`, `${base}/inbox`, `${base}/spots`]);
+    router.prefetch(`/a/${DEMO}`);
     const say = (ms: number, t: string) => later(ms, () => setLines((l) => [...l, t]));
     say(150, `Hearing the sound: ${sims.join(' and ') || 'Maya’s'}`);
     say(1200, 'Qloo scores every neighborhood for it');
@@ -260,11 +268,13 @@ function Welcome() {
             { metroId: 'ithaca-ny', name: 'Ithaca', state: 'NY', reason: '', sleeper: true },
           ];
       setRun({ title: 'Here’s where Maya is wanted', line: 'The first poster goes up in each of these.', picks });
+      picks.forEach((p) => (new Image().src = `/img/poster/${DEMO}/${p.metroId}?w=640&v=0`));
       later(1000 + picks.length * 220, () => setReady(true));
     });
     session.setConstraints(DEMO, { regions: [], dates: 10, roomBand: band, homeBase: null, startDate: defaultStart() });
     session.setLastArtist(DEMO);
     session.setOnboarded(true);
+    session.setWelcomed();
   };
 
   const paste = async () => {
@@ -310,6 +320,7 @@ function Welcome() {
             session.setConstraints(slug, { regions: [], dates: 10, roomBand: band, homeBase: null, startDate: defaultStart() });
             session.setLastArtist(slug);
             session.setOnboarded(true);
+            session.setWelcomed();
             session.addAct({ slug, name: e.artist.name, sounds: refs.map((r) => r.name) });
             setTimeout(() => router.replace(`/a/${slug}`), 2200 + e.picks.length * 220);
           }
@@ -348,19 +359,32 @@ function Welcome() {
               </li>
             ))}
           </ol>
-          <div className="wl-acts">
-            <button className="btn hot block" onClick={() => go('link')}>
-              I make music
-            </button>
-            <button className="btn light block" onClick={() => go('fan')}>
-              I’m a fan
-            </button>
-            <button className="wl-demo" onClick={() => router.push(`/a/${DEMO}?story=1`)}>
-              Skip setup and watch Gus work
-              <Icon name="chevron" size={14} />
-            </button>
-          </div>
-          {demo.current && <p className="wl-note">Demo: you play Maya Ortiz. Her cities are live Qloo data; venues and money are stand-ins.</p>}
+          {demo.current ? (
+            <>
+              <div className="wl-role">
+                <img src="/img/maya-avatar.webp" alt="" />
+                <div>
+                  <b>For this demo, you’re Maya Ortiz</b>
+                  <span>A folk singer planning her first tour. Three questions, then Gus shows you what he does for her.</span>
+                </div>
+              </div>
+              <div className="wl-acts">
+                <button className="btn hot block" onClick={() => go('link')}>
+                  Start as Maya
+                </button>
+              </div>
+              <p className="wl-note">Her cities are live Qloo data. Venues and money are stand-ins.</p>
+            </>
+          ) : (
+            <div className="wl-acts">
+              <button className="btn hot block" onClick={() => go('link')}>
+                I make music
+              </button>
+              <button className="btn light block" onClick={() => go('fan')}>
+                I’m a fan
+              </button>
+            </div>
+          )}
         </section>
       )}
 
@@ -507,8 +531,8 @@ function Welcome() {
                 )
               )}
               {demo.current && ready && (
-                <button className="btn hot block wl-go" onClick={() => router.replace(`/a/${DEMO}?story=1`)}>
-                  Watch Gus work
+                <button className="btn hot block wl-go" onClick={() => router.replace(`/a/${DEMO}?tour=1`)}>
+                  Open Maya’s map
                 </button>
               )}
             </div>
