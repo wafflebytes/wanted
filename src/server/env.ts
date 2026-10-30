@@ -58,5 +58,5 @@ export function redact(text: string): string {
   for (const key of [env.qlooKey, ...env.openrouterKeys, env.fishKey, env.setlistKey, env.contactKey]) {
     if (key) out = out.split(key).join('[redacted]');
   }
-  return out.replace(/hack_[A-Za-z0-9]{6,}/g, 'hack_[redacted]').replace(/sk-(or|fish)-[A-Za-z0-9-]{6,}/g, 'sk-[redacted]');
+  return out.replace(/hack_[A-Za-z0-9]{6,}/g, 'hack_[redacted]').replace(/sk[-_](or|fish|car)[-_][A-Za-z0-9-]{6,}/g, 'sk-[redacted]');
 }

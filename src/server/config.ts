@@ -111,7 +111,7 @@ export const config = {
 
   voice: {
     /** Gus's Fish Audio voice (picked by the team): a warm, gravelly tour-manager read. */
-    referenceId: '5fcadcafba014c62b2e73cc5f338bb63',
+    referenceId: '5ee9feff-1265-424a-9d7f-8e4d431a12c7',
     /** Drama 3 first; S2.1 Pro takes the same bracket directions if Drama 3 is unavailable. */
     models: ['drama-3', 's2.1-pro', 's2.1-pro-free'],
   },
