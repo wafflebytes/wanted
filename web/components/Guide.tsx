@@ -11,7 +11,7 @@
  * you're away. It ends on what is now under way, not on an instruction.
  */
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Deal } from '@/lib/types';
 import type { ArtistState } from '@/ui/types';
 import { Gus } from './Gus';
@@ -19,6 +19,7 @@ import { Icon } from './Icon';
 import { gus, useGus } from '@web/lib/gus';
 import { useApi } from '@web/lib/hooks';
 import { story } from '@web/lib/story';
+import { SAVED } from '@web/lib/saved-answers';
 import { guide, useGuide, type GuideStep } from '@web/lib/guide';
 import { haptic } from '@web/lib/haptics';
 import { live } from '@web/lib/live';
@@ -153,6 +154,8 @@ export function Guide({ slug }: { slug: string }) {
   const [asked, setAsked] = useState<string | null>(null);
   const [slow, setSlow] = useState(false);
   const [mulling, setMulling] = useState(false);
+  // Bumped when a saved answer replaces the live one, so a dictation still typing stops.
+  const [saved, setSaved] = useState(0);
   const [missed, setMissed] = useState(false);
   const voice = useGus();
   const flying = g.on && !g.parked && !!step;
@@ -249,7 +252,17 @@ export function Guide({ slug }: { slug: string }) {
     setMissed(false);
     setSlow(false);
     setMulling(false);
-    gus.dictate(q);
+    const at = saved;
+    gus.dictate(q, () => savedRef.current === at);
+  };
+  const savedRef = useRef(saved);
+  savedRef.current = saved;
+  const showSaved = () => {
+    const a = asked && SAVED[asked];
+    if (!a) return;
+    haptic('tap');
+    setSaved((n) => n + 1);
+    gus.replay(a);
   };
   useEffect(() => {
     if (!flying || step?.wait !== 'ask' || !asked) return;
@@ -322,7 +335,7 @@ export function Guide({ slug }: { slug: string }) {
   const end = step?.wait === 'end';
   const count = all.filter((x) => x.wait !== 'end').length;
   const working = step?.wait === 'ask' && !!asked;
-  const say = working ? (slow ? 'Taking longer than usual. You can wait, or go on and ask me later.' : mulling ? 'Thinking it through first, like a person would. A few more seconds.' : step!.working) : missed ? 'That one got away from me. Try another?' : step?.say;
+  const say = working ? (slow ? 'Taking longer than usual. Wait, see a saved answer, or go on.' : mulling ? 'Thinking it through first, like a person would. A few more seconds.' : step!.working) : missed ? 'That one got away from me. Try another?' : step?.id === 'answer' && saved ? 'A real answer I gave earlier. When I can act on one, I offer to, and nothing goes out without your OK.' : step?.say;
 
   if (end) {
     const deals = dealList.data?.deals ?? [];
@@ -397,6 +410,11 @@ export function Guide({ slug }: { slug: string }) {
                   </button>
                 ))}
               </div>
+            )}
+            {working && asked && SAVED[asked] && (
+              <button className="guide-saved" onClick={showSaved}>
+                Skip the wait: saved answer
+              </button>
             )}
             <div className="guide-keys">
               {(step.wait === 'next' || (working && slow)) && (

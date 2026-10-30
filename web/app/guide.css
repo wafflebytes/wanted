@@ -159,6 +159,23 @@
   from { opacity: 0; transform: translateY(3px); }
 }
 
+/* For the impatient: a real answer from earlier, right now. */
+.guide-saved {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg) 12%, transparent);
+  color: var(--bg);
+  font: 600 14px var(--display);
+  text-align: left;
+  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.guide-saved:active { transform: scale(0.98); }
+
 /* Questions to ask Gus: lit keys inside the line, one press each. */
 .guide-asks {
   display: flex;

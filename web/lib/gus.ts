@@ -375,6 +375,13 @@ export const gus = {
     if (!alive()) return;
     gus.ask(text);
   },
+  /** A saved answer in place of a live one (for people who'd rather not wait): drops the live ask. */
+  replay(a: GusAnswer) {
+    run++;
+    audio?.pause();
+    haptic('answer');
+    set({ panel: 'voice', phase: 'answer', answer: a, heard: a.heard, steps: a.steps ?? [], error: null, aside: null, speaking: false, spoken: 1, level: 0 });
+  },
   ask(text: string) {
     if (!text.trim()) return;
     gus.flash('On it');
