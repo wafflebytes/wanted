@@ -343,6 +343,16 @@ html.guide-on .gus-btn {
   pointer-events: none;
 }
 /* One Gus at a time: the drawings of him on the screens step aside while he's out guiding. */
+/* During the tour you ask through the line's questions, so Gus's card hides its own mic and
+   close keys: nothing peeks out from under the line. */
+html.guide-on .vc-bar,
+html.guide-on .vc-how {
+  visibility: hidden;
+}
+/* And it stands tall enough that the question stays clear of the line over its lower half. */
+html.guide-on .vc-card {
+  min-height: min(360px, 60vh);
+}
 html.guide-on .th-obj,
 html.guide-on .lb-gus {
   visibility: hidden;
